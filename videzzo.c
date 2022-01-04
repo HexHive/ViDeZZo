@@ -37,19 +37,22 @@ size_t ViDeZZoCustomMutator(uint8_t *Data, size_t Size,
     // Mutate all events
     // TODO: maybe 100 is tunable
     for (int i = 0; i < 100; i++) {
-        // weighted: select_weighted_mutators 
+        // weighted: select_weighted_mutators
         size_t aaaaaaa = select_mutators(rand());
 #ifdef VIDEZZO_DEBUG
         fprintf(stderr, "- %s\n", CustomMutatorNames[aaaaaaa]);
 #endif
         size_t NewSize = CustomMutators[aaaaaaa](input);
         if (NewSize) {
-            serialize(input, Data, MaxSize);
+            size_t SerializationSize = serialize(input, Data, MaxSize);
             free_input(input);
 #ifdef VIDEZZO_DEBUG
-            fprintf(stderr, "- NewSize , %zu\n", NewSize);
+            if (NewSize > MaxSize)
+                fprintf(stderr, "- NewSize (overflow), %zu\n", NewSize);
+            else
+                fprintf(stderr, "- NewSize, %zu\n", NewSize);
 #endif
-            return NewSize;
+            return SerializationSize;
         }
     }
     free_input(input);

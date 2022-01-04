@@ -3,3 +3,5 @@ vmm
 vmm-debug
 crash-*
 __pycache__
+*.o
+*.a

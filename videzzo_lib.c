@@ -107,7 +107,7 @@ static uint32_t around_event_size(uint8_t id, uint32_t raw_size) {
     if (id != INTERFACE_SOCKET_WRITE && id < INTERFACE_DYNAMIC)
         return raw_size % 0x10000; // 1M to avoid oom
     if (id == INTERFACE_SOCKET_WRITE)
-        return (raw_size - SOCKET_WRITE_MIN_SIZE) % 
+        return (raw_size - SOCKET_WRITE_MIN_SIZE) %
             (SOCKET_WRITE_MAX_SIZE - SOCKET_WRITE_MIN_SIZE) + SOCKET_WRITE_MIN_SIZE;
     InterfaceDescription ed = Id_Description[id];
     ed = Id_Description[id];
@@ -118,6 +118,8 @@ static uint32_t around_event_size(uint8_t id, uint32_t raw_size) {
 void print_interfaces() {
     for (int i = 0; i < n_interfaces; i++) {
         InterfaceDescription ed = Id_Description[i];
+        if (!ed.dynamic)
+            continue;
         fprintf(stderr, "  * %s, %s, 0x%lx +0x%x, %d,%d\n",
                 ed.name, EventTypeNames[ed.type],
                 ed.emb.addr, ed.emb.size,
@@ -164,7 +166,7 @@ static int get_interface_id(const char *name, EventType type) {
 }
 
 //
-// Event Callbacks 
+// Event Callbacks
 //
 static void change_addr_generic(Event *event, uint64_t new_addr) {
     event->addr = around_event_addr(event->interface, new_addr);
@@ -332,7 +334,7 @@ static Event *construct_mem_read_write(uint8_t type, uint8_t interface,
 }
 
 static Event *construct_socket_write(uint8_t type, uint8_t interface,
-        uint64_t addr, uint32_t size, uint64_t valu, uint8_t *data) { 
+        uint64_t addr, uint32_t size, uint64_t valu, uint8_t *data) {
     Event *event = __alloc_an_event(type, interface);
     event->size = around_event_size(interface, size);
     if (data == NULL)
@@ -343,7 +345,7 @@ static Event *construct_socket_write(uint8_t type, uint8_t interface,
 }
 
 static Event *construct_clock_step(uint8_t type, uint8_t interface,
-        uint64_t addr, uint32_t size, uint64_t valu, uint8_t *data) { 
+        uint64_t addr, uint32_t size, uint64_t valu, uint8_t *data) {
     Event *event = __alloc_an_event(type, interface);
     event->valu = valu % CLOCK_MAX_STEP;
     event->event_size = 10;
@@ -351,7 +353,7 @@ static Event *construct_clock_step(uint8_t type, uint8_t interface,
 }
 
 static Event *construct_group_event(uint8_t type, uint8_t interface,
-        uint64_t addr, uint32_t size, uint64_t valu, uint8_t *data) { 
+        uint64_t addr, uint32_t size, uint64_t valu, uint8_t *data) {
     Event *event = __alloc_an_event(type, interface);
     event->size = around_event_size(interface, size);
     assert(data != NULL);
@@ -454,28 +456,28 @@ EventOps event_ops[] = {
         .change_addr = change_addr_generic, .change_size = change_size_generic,
         .change_valu = NULL,                .change_data = NULL,
         .dispatch    = dispatch_mmio_read,  .print_event = print_event_mmio_read,
-        .serialize   = serialize_io_read,   
+        .serialize   = serialize_io_read,
         .construct   = construct_io_read,   .release     = release_nothing,
         .deep_copy   = deep_copy_no_data,
     }, [EVENT_TYPE_MMIO_WRITE] = {
         .change_addr = change_addr_generic, .change_size = change_size_generic,
         .change_valu = change_valu_generic, .change_data = NULL,
         .dispatch    = dispatch_mmio_write, .print_event = print_event_mmio_write,
-        .serialize   = serialize_io_write,  
+        .serialize   = serialize_io_write,
         .construct   = construct_io_write,  .release     = release_nothing,
         .deep_copy   = deep_copy_no_data,
     }, [EVENT_TYPE_PIO_READ] = {
         .change_addr = change_addr_generic, .change_size = change_size_generic,
         .change_valu = NULL,                .change_data = NULL,
         .dispatch    = dispatch_pio_read,   .print_event = print_event_pio_read,
-        .serialize   = serialize_io_read,   
+        .serialize   = serialize_io_read,
         .construct   = construct_io_read,   .release     = release_nothing,
         .deep_copy   = deep_copy_no_data,
     }, [EVENT_TYPE_PIO_WRITE] = {
         .change_addr = change_addr_generic, .change_size = change_size_generic,
         .change_valu = change_valu_generic, .change_data = NULL,
         .dispatch    = dispatch_pio_write,  .print_event = print_event_pio_write,
-        .serialize   = serialize_io_write,  
+        .serialize   = serialize_io_write,
         .construct   = construct_io_write,  .release     = release_nothing,
         .deep_copy   = deep_copy_no_data,
     }, [EVENT_TYPE_CLOCK_STEP] = {
@@ -526,7 +528,7 @@ void videzzo_dispatch_event(Event *event, void *object) {
     event_ops[event->type].dispatch(event, object);
 }
 
-// 
+//
 // Input Helpers
 //
 static size_t get_input_size(Input *input) {
@@ -796,7 +798,7 @@ uint32_t deserialize(Input *input) {
     fprintf(stderr, "- deserialize\n");
 #endif
     while (input_check_index(input, 2)) {
-        type = input_next_8(input); 
+        type = input_next_8(input);
         interface = input_next_8(input);
         switch (type) {
             case EVENT_TYPE_MMIO_READ:
@@ -834,7 +836,7 @@ uint32_t deserialize(Input *input) {
                 //   1B   1B   8B   4B   XB
                 // +TYPE+ ID +ADDR+SIZE+DATA+
                 if (!input_check_index(input, 8 + 4)) {
-                    input->index -= 2; 
+                    input->index -= 2;
                     return get_input_size(input);
                 }
                 addr = input_next_64(input);
@@ -937,14 +939,14 @@ uint32_t serialize(Input *input, uint8_t *Data, uint32_t MaxSize) {
 // Mutator helpers
 //
 static void __Mutate_ChangeAddr(Event *event, uint64_t new_addr) {
-    if (event_ops[event->type].change_addr) { // check 
+    if (event_ops[event->type].change_addr) { // check
         event_ops[event->type].change_addr(event, new_addr); // update
     }
 }
 
 static uint32_t __Mutate_ChangeSize(Event *event, uint32_t new_size) {
     if (event->type == EVENT_TYPE_SOCKET_WRITE) {
-        new_size = (new_size - SOCKET_WRITE_MIN_SIZE) % 
+        new_size = (new_size - SOCKET_WRITE_MIN_SIZE) %
             (SOCKET_WRITE_MAX_SIZE - SOCKET_WRITE_MIN_SIZE) + SOCKET_WRITE_MIN_SIZE;
     }
     if (event_ops[event->type].change_size) { // check
@@ -956,7 +958,7 @@ static uint32_t __Mutate_ChangeSize(Event *event, uint32_t new_size) {
 static void __Mutate_ChangeValu(Event *event, uint64_t new_value) {
     if (event_ops[event->type].change_valu) { // check
         event_ops[event->type].change_valu(event, new_value); // update
-    } 
+    }
 }
 
 static void __Mutate_ChangeData(Event *event, uint8_t *new_data) {
@@ -1007,7 +1009,7 @@ static size_t Mutate_InsertFragment(Input *input) { // insert
 // Shuffle fragments [e1, e2][e3, e4, e5] -> [e3, e4, e5][e1, e2].
 // Size||
 static size_t Mutate_ShuffleFragments(Input *input) { // swap
-    if (input->n_events == 1) return 0; // to avoid nonsense 
+    if (input->n_events == 1) return 0; // to avoid nonsense
     size_t Idx = (rand() % input->n_events) / 2 + 1; // split it to two parts
     swap_events(input, 0, Idx, Idx + 1, input->n_events - 1);
     return get_input_size(input);
@@ -1071,8 +1073,8 @@ static size_t Mutate_InsertEvent(Input *input) { // insert
 #define N_MAX_EVENTS_TO_INSERT 8
 static size_t Mutate_InsertRepeatedEvent(Input *input) { // duplicate
     size_t Idx = rand() % input->n_events; // choose one event
-    size_t N = rand() % (N_MAX_EVENTS_TO_INSERT - N_MIN_EVENTS_TO_INSERT)
-        + N_MIN_EVENTS_TO_INSERT; // insert N events
+    size_t N = (rand() - N_MIN_EVENTS_TO_INSERT) %
+        (N_MAX_EVENTS_TO_INSERT - N_MIN_EVENTS_TO_INSERT) + N_MIN_EVENTS_TO_INSERT; // insert N events
     __Mutate_InsertEvent(input, Idx, N);
     return get_input_size(input);
 }
@@ -1251,7 +1253,7 @@ bool DisableGroupMutator = 0;
 
 void GroupMutatorMiss(uint8_t id) {
     static int visited = 0;
-    if (visited) 
+    if (visited)
         return;
 
     if (DisableGroupMutator)
@@ -1272,7 +1274,7 @@ void GroupMutatorMiss(uint8_t id) {
 
 //
 // Maybe we can make the initial seed empty
-// 
+//
 size_t reset_data(uint8_t *Data, size_t MaxSize) {
     InterfaceDescription *ed;
     Event *event;

@@ -223,12 +223,14 @@ static void locate_fuzzable_objects(Object *obj, char *mrname) {
                 Id_Description[n_interfaces].emb.size = mr->size;
                 Id_Description[n_interfaces].min_access_size = min;
                 Id_Description[n_interfaces].max_access_size = max;
+                Id_Description[n_interfaces].dynamic = true;
                 memcpy(Id_Description[n_interfaces].name, mr->name,
                        strlen(mr->name) <= 32 ? strlen(mr->name) : 32);
                 Id_Description[n_interfaces + 1].emb.addr = addr;
                 Id_Description[n_interfaces + 1].emb.size = mr->size;
                 Id_Description[n_interfaces + 1].min_access_size = min;
                 Id_Description[n_interfaces + 1].max_access_size = max;
+                Id_Description[n_interfaces + 1].dynamic = true;
                 memcpy(Id_Description[n_interfaces + 1].name, mr->name,
                        strlen(mr->name) <= 32 ? strlen(mr->name) : 32);
                 n_interfaces += 2;
@@ -304,7 +306,7 @@ static void videzzo_qemu_pre(QTestState *s) {
         printf("No fuzzable interfaces found ...\n");
         exit(2);
     } else {
-        print_event_description();
+        print_interfaces();
     }
 
     videzzo_alloc = get_videzzo_alloc(s);
@@ -317,7 +319,7 @@ static void videzzo_qemu_pre(QTestState *s) {
 
 //
 // QEMU specific initialization - Show usage
-// 
+//
 static void usage(void) {
     printf("Please specify the following environment variables:\n");
     printf("QEMU_FUZZ_ARGS= the command line arguments passed to qemu\n");
