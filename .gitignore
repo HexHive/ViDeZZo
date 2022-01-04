@@ -2,3 +2,4 @@ test
 vmm
 vmm-debug
 crash-*
+__pycache__
