@@ -1,7 +1,7 @@
 # ViDeZZo: Virtual Device Fuzzing Framework
 
 ViDeZZo is a virtual device fuzzing framwork. Now, it supports QEMU, VirtualBox,
-and BHyve. Please follow the corresponding instructions to run it. 
+and BHyve.
 
 ## Contribution
 
