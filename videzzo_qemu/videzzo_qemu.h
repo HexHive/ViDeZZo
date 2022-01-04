@@ -16,7 +16,7 @@
 #include "qemu/osdep.h"
 #include <wordexp.h>
 #include "hw/core/cpu.h"
-#include "tests/qtest/libqos/libqtest.h"
+#include "tests/qtest/libqtest.h"
 #include "fuzz.h"
 #include "qos_fuzz.h"
 #include "fork_fuzz.h"
@@ -35,7 +35,7 @@
 #include <rfb/rfbclient.h>
 #include <sys/socket.h>
 
-bool StatefulFuzzer;
+bool ViDeZZoFuzzer;
 static bool qtest_log_enabled;
 static void usage(void);
 
@@ -56,33 +56,33 @@ static GHashTable *fuzzable_memoryregions;
 static GPtrArray *fuzzable_pci_devices;
 extern QTestState *get_qtest_state(void);
 
-// P.S. "stateful" is only a mark here.
-static QGuestAllocator *stateful_alloc;
+// P.S. "videzzo" is only a mark here.
+static QGuestAllocator *videzzo_alloc;
 
-static uint64_t (*stateful_guest_alloc)(size_t) = NULL;
-static void (*stateful_guest_free)(size_t) = NULL;
+static uint64_t (*videzzo_guest_alloc)(size_t) = NULL;
+static void (*videzzo_guest_free)(size_t) = NULL;
 
 static uint64_t __wrap_guest_alloc(size_t size) {
-    if (stateful_guest_alloc)
-        return stateful_guest_alloc(size);
+    if (videzzo_guest_alloc)
+        return videzzo_guest_alloc(size);
     else
         // alloc a dma accessible buffer in guest memory
-        return guest_alloc(stateful_alloc, size);
+        return guest_alloc(videzzo_alloc, size);
 }
 
 static void __wrap_guest_free(uint64_t addr) {
-    if (stateful_guest_free)
-        stateful_guest_free(addr);
+    if (videzzo_guest_free)
+        videzzo_guest_free(addr);
     else
         // free the dma accessible buffer in guest memory
-        guest_free(stateful_alloc, addr);
+        guest_free(videzzo_alloc, addr);
 }
 
-static uint64_t stateful_malloc(size_t size, bool chained) {
+static uint64_t videzzo_malloc(size_t size, bool chained) {
     return __wrap_guest_alloc(size);
 }
 
-static bool stateful_free(uint64_t addr) {
+static bool videzzo_free(uint64_t addr) {
     // give back the guest memory
     __wrap_guest_free(addr);
     return true;
@@ -176,13 +176,13 @@ static void uninit_vnc_client(void) {
     rfbClientCleanup(client);
 }
 
-typedef struct stateful_fuzz_config {
+typedef struct videzzo_qemu_config {
     const char *arch, *name, *args, *objects, *mrnames, *file;
     gchar* (*argfunc)(void); /* Result must be freeable by g_free() */
     bool socket; /* Need support or not */
     bool display; /* Need support or not */
     bool byte_address; /* Need support or not */
-} stateful_fuzz_config;
+} videzzo_qemu_config;
 
 typedef struct MemoryRegionPortioList {
     MemoryRegion mr;
@@ -190,7 +190,7 @@ typedef struct MemoryRegionPortioList {
     MemoryRegionPortio ports[];
 } MemoryRegionPortioList;
 
-static inline GString *stateful_fuzz_cmdline(FuzzTarget *t)
+static inline GString *videzzo_qemu_cmdline(FuzzTarget *t)
 {
     GString *cmd_line = g_string_new(TARGET_NAME);
     if (!getenv("QEMU_FUZZ_ARGS")) {
@@ -202,10 +202,10 @@ static inline GString *stateful_fuzz_cmdline(FuzzTarget *t)
     return cmd_line;
 }
 
-static inline GString *stateful_fuzz_predefined_config_cmdline(FuzzTarget *t)
+static inline GString *videzzo_qemu_predefined_config_cmdline(FuzzTarget *t)
 {
     GString *args = g_string_new(NULL);
-    const stateful_fuzz_config *config;
+    const videzzo_qemu_config *config;
     g_assert(t->opaque);
     int port = 0;
 
@@ -237,10 +237,10 @@ static inline GString *stateful_fuzz_predefined_config_cmdline(FuzzTarget *t)
 
     setenv("QEMU_FUZZ_OBJECTS", config->objects, 1);
     setenv("QEMU_FUZZ_MRNAME", config->mrnames, 1);
-    return stateful_fuzz_cmdline(t);
+    return videzzo_qemu_cmdline(t);
 }
 
-static QGuestAllocator *get_stateful_alloc(QTestState *qts) {
+static QGuestAllocator *get_videzzo_alloc(QTestState *qts) {
     QOSGraphNode *node;
     QOSGraphObject *obj;
 
@@ -273,7 +273,7 @@ static inline gchar *generic_fuzzer_virtio_9p_args(void){
     "-usb " \
     "-device usb-kbd "
 
-static const stateful_fuzz_config predefined_configs[] = {
+static const videzzo_qemu_config predefined_configs[] = {
     /* {
         .name = "virtio-net-pci-slirp",
         .args = "-M q35 -nodefaults "
@@ -798,7 +798,7 @@ static const stateful_fuzz_config predefined_configs[] = {
         .arch = "i386",
         .name = "fw-cfg",
         .args = "-machine q35 -nodefaults "
-        "-fw_cfg name=stateful,string=fuzz "
+        "-fw_cfg name=videzzo,string=fuzz "
         "-fw_cfg name=is,string=promising ",
         .objects = "*fwcfg.ctl*,*fwcfg.data*,*fwcfg.dma*,"
         "*fwcfg*",

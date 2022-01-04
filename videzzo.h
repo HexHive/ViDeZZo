@@ -144,9 +144,11 @@ typedef struct {
     bool dynamic;
 } InterfaceDescription;
 
+extern InterfaceDescription Id_Description[INTERFACE_END];
+extern uint32_t n_interfaces;
 void add_interface(EventType type, uint64_t addr, uint32_t size,
         char *name, uint8_t min_access_size, uint8_t max_access_size, bool dynamic);
-void print_interfaces();
+void print_interfaces(void);
 //
 // mutators
 //
@@ -171,21 +173,21 @@ typedef struct GenericFeedbackContext {
 
 extern GenericFeedbackContext gfctx;
 void gfctx_set_current_input(Input *input);
-Input *gfctx_get_current_input();
+Input *gfctx_get_current_input(void);
 void gfctx_set_current_event(int idx);
-int gfctx_get_current_event();
+int gfctx_get_current_event(void);
 void gfctx_set_object(void *object);
-void *gfctx_get_object();
+void *gfctx_get_object(void);
 void gfctx_set_data(uint8_t *Data);
-uint8_t *gfctx_get_data();
+uint8_t *gfctx_get_data(void);
 void gfctx_set_size(uint32_t MaxSize);
-uint32_t gfctx_get_size();
+uint32_t gfctx_get_size(void);
 // a local handler of a feedback should take the current input and
 // the index of the event just issued as parameters and return a new input
 // Input *(* FeedbackHandler)(Input *current_input, uint32_t current_event);
 typedef Input *(* FeedbackHandler)(Input *current_input, uint32_t current_event);
 
-uint32_t videzzo_randint();
+uint32_t videzzo_randint(void);
 
 void GroupMutatorMiss(uint8_t id);
 extern FeedbackHandler group_mutator_handlers[0xff];
@@ -196,5 +198,12 @@ extern FeedbackHandler group_mutator_handlers[0xff];
 void __videzzo_execute_one_input(Input *input, void *object);
 void videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object);
 size_t ViDeZZoCustomMutator(uint8_t *Data, size_t Size, size_t MaxSize, unsigned int Seed);
+
+//
+// libFuzzer
+//
+size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize);
+size_t LLVMFuzzerCustomMutator(
+        uint8_t *Data, size_t Size, size_t MaxSize, unsigned int Seed);
 
 #endif /* VIDEZZO_H */
