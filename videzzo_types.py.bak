@@ -1,0 +1,525 @@
+import os
+from demolib import *
+
+# results of static analysis
+## struct, type, size
+add_object('XHCITRB', {
+    'parameter.0#0x4': PTR_OBJECT,  'parameter.1#0x4': PTR_CONSTANT, 'status#0x4': PTR_FLAGS, 'control#0x4': PTR_FLAGS})
+add_object('XHCIEvRingSeg', {
+    'addr_low#0x4': PTR_OBJECT, 'addr_high#0x4': PTR_CONSTANT, 'size#0x4': PTR_ZERO, 'rsvd#0x4': PTR_ZERO})
+add_object('UHCI_QH', {
+    'link#0x4': PTR_OBJECT, 'el_link#0x4': PTR_OBJECT})
+add_object('UHCI_TD', {
+    'link#0x4': PTR_SELF, 'ctrl#0x4': PTR_FLAGS, 'token#0x4': PTR_FLAGS, 'buffer#0x4': PTR_BUFFER})
+
+#### OHCI ####
+t = {}
+for i in range(0, 32):
+    t['intr{}#0x4'.format(i)] = PTR_OBJECT
+t.update({'frame#0x2': PTR_ZERO, 'pad#0x2': PTR_ZERO, 'done#0x4': PTR_ZERO})
+add_object('OHCI_HCCA', t)
+add_object('OHCI_ED', {
+    'flags#0x4': PTR_FLAGS, 'tail#0x4': PTR_ZERO, 'head#0x4': PTR_OBJECT, 'next#0x4': PTR_SELF})
+add_object('OHCI_TD', {
+    'flags#0x4': PTR_FLAGS, 'cbp#0x4': PTR_ZERO, 'next#0x4': PTR_SELF, 'be#0x4': PTR_ZERO})
+add_object('OHCI_ISO_TD', {
+    'flags#0x4': PTR_FLAGS, 'bp#0x4': PTR_ZERO, 'next#0x4': PTR_SELF, 'be#0x4': PTR_ZERO,
+    'offset0#0x2': PTR_BUFFER, 'offset1#0x2': PTR_BUFFER, 'offset2#0x2': PTR_BUFFER, 'offset3#0x2': PTR_BUFFER,
+    'offset4#0x2': PTR_BUFFER, 'offset5#0x2': PTR_BUFFER, 'offset6#0x2': PTR_BUFFER, 'offset7#0x2': PTR_BUFFER})
+#### EHCI ####
+add_object('EHCIqh', {
+    'next#0x4': PTR_SELF, 'epchar#0x4': PTR_FLAGS, 'epcap#0x4': PTR_FLAGS,
+    'current_qtd#0x4': PTR_OBJECT, 'next_qtd#0x4': PTR_OBJECT, 'altnext_qtd#0x4': PTR_OBJECT,
+    'token#0x4': PTR_FLAGS,
+    'bufptr0#0x4': PTR_BUFFER, 'bufptr1#0x4': PTR_BUFFER,
+    'bufptr2#0x4': PTR_BUFFER, 'bufptr3#0x4': PTR_BUFFER, 'bufptr4#0x4': PTR_BUFFER})
+add_object('EHCIqtd', {
+    'next#0x4': PTR_SELF, 'altnext#0x4': PTR_SELF, 'token#0x4': PTR_FLAGS,
+    'bufptr0#0x4': PTR_BUFFER, 'bufptr1#0x4': PTR_BUFFER, 'bufptr2#0x4': PTR_BUFFER,
+    'bufptr3#0x4': PTR_BUFFER, 'bufptr4#0x4': PTR_BUFFER})
+add_object('EHCIsitd', {
+    'next#0x4': PTR_SELF, 'epchar#0x4': PTR_FLAGS, 'uframe#0x4': PTR_FLAGS, 'results#0x4': PTR_FLAGS,
+    'bufptr0#0x4': PTR_BUFFER, 'bufptr1#0x4': PTR_BUFFER, 'backptr#0x4': PTR_SELF})
+add_object('EHCIitd', {
+    'next#0x4': PTR_SELF,
+    'transact0#0x4': PTR_FLAGS, 'transact1#0x4': PTR_FLAGS, 'transact2#0x4': PTR_FLAGS,
+    'transact3#0x4': PTR_FLAGS, 'transact4#0x4': PTR_FLAGS, 'transact5#0x4': PTR_FLAGS,
+    'transact6#0x4': PTR_FLAGS, 'transact7#0x4': PTR_FLAGS,
+    'bufptr0#0x4': PTR_BUFFER, 'bufptr1#0x4': PTR_BUFFER, 'bufptr2#0x4': PTR_BUFFER, 'bufptr3#0x4': PTR_BUFFER,
+    'bufptr4#0x4': PTR_BUFFER, 'bufptr5#0x4': PTR_BUFFER, 'bufptr6#0x4': PTR_BUFFER})
+add_object('e1000_rx_desc', {
+    'buffer_addr.0#0x4': PTR_BUFFER, 'buffer_addr.1#0x4': PTR_CONSTANT,
+    'length#0x2': PTR_ZERO, 'csum#0x2': PTR_ZERO, 'status#0x1': PTR_FLAGS, 'errors#0x1': PTR_ZERO, 'special#0x2': PTR_ZERO})
+add_object('e1000_tx_desc', {
+    'buffer_addr.0#0x4': PTR_BUFFER, 'buffer_addr.1#0x4': PTR_CONSTANT,
+    'length#0x2': PTR_ZERO, 'cso#0x1': PTR_ZERO, 'cmd#0x1': PTR_FLAGS, 'status#0x1': PTR_ZERO, 'css#0x1': PTR_ZERO, 'special#0x2': PTR_ZERO})
+add_object('rtl8139_rx_ring_desc', {
+    'rxdw0#0x4': PTR_FLAGS, 'rxdw1#0x4': PTR_ZERO, 'rxbufL0#0x4': PTR_BUFFER, 'rxbufHI#0x4': PTR_CONSTANT})
+add_object('rtl8139_tx_ring_desc', {
+    'txdw0#0x4': PTR_FLAGS, 'txdw1#0x4': PTR_FLAGS, 'txbufL0#0x4': PTR_BUFFER, 'txbufHI#0x4': PTR_CONSTANT})
+add_object('rtl8139_buffer', {'buffer#0x2000': PTR_ZERO})
+add_object('pcnet_initblk32', {
+    'mode#0x2': PTR_ZERO, 'rlen#0x1': PTR_ZERO, 'tlen#0x1': PTR_ZERO, 'padr0#0x2': PTR_ZERO,
+    'padr1#0x2': PTR_ZERO, 'padr2#0x2': PTR_ZERO, '_res#0x2': PTR_ZERO, 'ladrf0#0x2': PTR_ZERO,
+    'ladrf1#0x2': PTR_ZERO, 'ladrf2#0x2': PTR_ZERO, 'ladrf3#0x2': PTR_ZERO, 'rdra#0x4': PTR_ZERO,
+    'tdra#0x4': PTR_ZERO})
+add_object('pcnet_initblk16', {
+    'mode#0x2': PTR_ZERO, 'padr0#0x2': PTR_ZERO, 'padr1#0x2': PTR_ZERO, 'padr2#0x2': PTR_ZERO,
+    'ladrf0#0x2': PTR_ZERO, 'ladrf1#0x2': PTR_ZERO, 'ladrf2#0x2': PTR_ZERO, 'ladrf3#0x2': PTR_ZERO,
+    'rdra#0x4': PTR_ZERO, 'tdra#0x4': PTR_ZERO})
+add_object('pcnet_xda', {'tbadr#0x4': PTR_BUFFER, 'length#0x2': PTR_ZERO, 'status#0x2': PTR_ZERO})
+add_object('pcnet_TMD', {'tbadr#0x4': PTR_BUFFER, 'length#0x2': PTR_ZERO, 'status#0x2': PTR_FLAGS, 'misc#0x4': PTR_FLAGS, 'res#0x4': PTR_ZERO})
+add_object('pcnet_rda', {'rbadr#0x4': PTR_BUFFER, 'buf_length#0x2': PTR_ZERO, 'msg_length#0x2': PTR_ZERO})
+add_object('pcnet_RMD', {'rbadr#0x4': PTR_BUFFER, 'buf_length#0x2': PTR_ZERO, 'status#0x2': PTR_FLAGS, 'msg_length#0x4': PTR_ZERO, 'res#0x4': PTR_ZERO})
+add_object('Vmxnet3_TxDesc', {'addr.0#0x4': PTR_BUFFER, 'addr.1#0x4': PTR_CONSTANT, 'val1#0x4': PTR_ZERO, 'val2#0x4': PTR_ZERO})
+add_object('Vmxnet3_TxCompDesc', {'val1#0x4': PTR_ZERO, 'ext2#0x4': PTR_ZERO, 'ext3#0x4': PTR_ZERO, 'val2#0x4': PTR_ZERO})
+Vmxnet3_TxQueueDesc = {}
+Vmxnet3_TxQueueCtrl = {'txNumDeferred#0x4': PTR_ZERO, 'txThreshold#0x4': PTR_ZERO, 'reserved#0x8': PTR_ZERO}
+dict_append(Vmxnet3_TxQueueDesc, Vmxnet3_TxQueueCtrl)
+Vmxnet3_TxQueueConf = {'txRingBasePA.0#0x4': PTR_OBJECT, 'txRingBasePA.1#0x4': PTR_CONSTANT,
+    'dataRingBasePA#0x8': PTR_ZERO, 'compRingBasePA.0#0x4': PTR_OBJECT, 'compRingBasePA.1#0x4': PTR_CONSTANT,
+    'ddPA#0x8': PTR_ZERO, 'reserved#0x8': PTR_ZERO, 'txRingSize#0x4': PTR_ZERO, 'dataRingSize#0x4': PTR_ZERO,
+    'compRingSize#0x4': PTR_ZERO, 'ddLen#0x4': PTR_ZERO, 'intrIdx#0x1': PTR_ZERO, '_pad#0x7': PTR_ZERO}
+dict_append(Vmxnet3_TxQueueDesc, Vmxnet3_TxQueueConf)
+Vmxnet3_QueueStatus = {'stopped#0x1': PTR_ZERO, '_pad#0x3': PTR_ZERO, 'reserved#0x8': PTR_ZERO}
+dict_append(Vmxnet3_TxQueueDesc, Vmxnet3_QueueStatus)
+UPT1_RxStats = {'LROPktsRxOK#0x8': PTR_ZERO, 'LROBytesRxOK#0x8': PTR_ZERO, 'ucastPktsRxOK#0x8': PTR_ZERO, 'ucastBytesRxOK#0x8': PTR_ZERO,
+    'mcastPktsRxOK#0x8': PTR_ZERO, 'mcastBytesRxOK#0x8': PTR_ZERO, 'bcastPktsRxOK#0x8': PTR_ZERO, 'bcastBytesRxOK#0x8': PTR_ZERO,
+    'pktsRxOutOfBuf#0x8': PTR_ZERO, 'pktsRxError#0x8': PTR_ZERO}
+dict_append(Vmxnet3_TxQueueDesc, UPT1_RxStats)
+add_object('Vmxnet3_TxQueueDesc', Vmxnet3_TxQueueDesc)
+Vmxnet3_DriverShared = {}
+Vmxnet3_DriverShared_p1 = {'magic#0x4': PTR_CONSTANT, 'pad#0x4': PTR_ZERO}
+dict_append(Vmxnet3_DriverShared, Vmxnet3_DriverShared_p1)
+Vmxnet3_DSDevRead = {}
+Vmxnet3_MiscConf = {}
+Vmxnet3_DriverInfo = {'version#0x4': PTR_ZERO, 'gos#0x4': PTR_ZERO,
+                    'vmxnet3RevSpt#0x4': PTR_ZERO, 'uptVerSpt#0x4': PTR_ZERO}
+dict_append(Vmxnet3_MiscConf, Vmxnet3_DriverInfo)
+Vmxnet3_MiscConf_p1 = {'uptFeature#0x8': PTR_ZERO, 'ddPA#0x8': PTR_ZERO,
+                       'queueDescPA.0#0x4': PTR_OBJECT, 'queueDescPA.1#0x4': PTR_CONSTANT,
+                       'ddLen#0x4': PTR_ZERO,
+                       'queueDescLen#0x4': PTR_ZERO, 'mtu#0x4': PTR_ZERO,
+                       'maxNumRxSG#0x2': PTR_ZERO, 'numTxQueues#0x1': PTR_ZERO,
+                       'numRxQueues#0x1': PTR_ZERO, 'reserved#0x10': PTR_ZERO}
+dict_append(Vmxnet3_MiscConf, Vmxnet3_MiscConf_p1)
+dict_append(Vmxnet3_DSDevRead, Vmxnet3_MiscConf)
+Vmxnet3_IntrConf = {'autoMask#0x1': PTR_ZERO, 'numIntrs#0x1': PTR_ZERO,
+                    'eventIntrIdx#0x1': PTR_ZERO, 'modLevels#0x19': PTR_ZERO,
+                    'intrCtrl#0x4': PTR_ZERO, 'reserved#0x8': PTR_ZERO}
+dict_append(Vmxnet3_DSDevRead, Vmxnet3_IntrConf)
+Vmxnet3_RxFilterConf = {'rxMode#0x4': PTR_ZERO, 'mfTableLen#0x2': PTR_ZERO, '_pad#0x2': PTR_ZERO,
+                        'mfTablePA#0x8': PTR_ZERO, 'vfTable#0x2000': PTR_ZERO}
+dict_append(Vmxnet3_DSDevRead, Vmxnet3_RxFilterConf)
+Vmxnet3_VariableLenConfDesc = {'confVer#0x4': PTR_ZERO, 'confLen#0x4': PTR_ZERO, 'confPA#0x8': PTR_ZERO}
+dict_append(Vmxnet3_DSDevRead, Vmxnet3_VariableLenConfDesc)
+dict_append(Vmxnet3_DSDevRead, Vmxnet3_VariableLenConfDesc)
+dict_append(Vmxnet3_DSDevRead, Vmxnet3_VariableLenConfDesc)
+dict_append(Vmxnet3_DriverShared, Vmxnet3_DSDevRead)
+Vmxnet3_DriverShared_p2 = {'ecr#0x4': PTR_ZERO, 'reserved#0x14': PTR_ZERO}
+dict_append(Vmxnet3_DriverShared, Vmxnet3_DriverShared_p2)
+add_object('Vmxnet3_DriverShared', Vmxnet3_DriverShared)
+mfi_frame_header = {'frame_cmd#0x1': PTR_ZERO, 'sense_len#0x1': PTR_ZERO, 'cmd_status#0x1': PTR_ZERO,
+    'scsi_status#0x1': PTR_ZERO, 'target_id#0x1': PTR_ZERO, 'lun_id#0x1': PTR_ZERO, 'cdb_len#0x1': PTR_ZERO,
+    'sge_count#0x1': PTR_ZERO, 'context#0x8': PTR_ZERO, 'flags#0x2': PTR_FLAGS, 'timeout#0x2': PTR_ZERO,
+    'data_len#0x4': PTR_ZERO}
+mfi_sgl = {'addr#0x8': PTR_ZERO, 'len#0x4': PTR_ZERO, 'flag#0x4': PTR_ZERO}
+mfi_frame0 = {} # header
+dict_append(mfi_frame0, mfi_frame_header)
+add_object('mfi_frame0', mfi_frame0)
+mfi_frame1 = {} # init
+dict_append(mfi_frame1, mfi_frame_header)
+dict_append(mfi_frame1, {'qinfo_new_addr_lo#0x4': PTR_BUFFER, 'qinfo_new_addr_hi#0x4': PTR_CONSTANT,
+    'qinfo_old_addr_lo#0x4': PTR_ZERO, 'qinfo_old_addr_hi#0x4': PTR_CONSTANT, 'reserved#0x18': PTR_ZERO})
+add_object('mfi_frame1', mfi_frame1)
+mfi_frame2 = {} # io_frame
+dict_append(mfi_frame2, mfi_frame_header)
+dict_append(mfi_frame2, {'sense_addr_lo#0x4': PTR_BUFFER, 'sense_addr_hi#0x4': PTR_CONSTANT,
+    'lba_lo#0x4': PTR_BUFFER, 'lba_hi#0x4': PTR_CONSTANT})
+dict_append(mfi_frame2, mfi_sgl)
+add_object('mfi_frame2', mfi_frame2)
+mfi_frame3 = {} # pass_frame
+dict_append(mfi_frame3, mfi_frame_header)
+dict_append(mfi_frame3, {'sense_addr_lo#0x4': PTR_BUFFER, 'sense_addr_hi#0x4': PTR_CONSTANT, 'cdb#0x10': PTR_ZERO})
+dict_append(mfi_frame3, mfi_sgl)
+add_object('mfi_frame3', mfi_frame3)
+mfi_frame4 = {} # dcmd_frame
+dict_append(mfi_frame4, mfi_frame_header)
+dict_append(mfi_frame4, {'opcode#0x4': PTR_CONSTANT, 'mbox#0xc': PTR_ZERO})
+dict_append(mfi_frame4, mfi_sgl)
+add_object('mfi_frame4', mfi_frame4)
+mfi_frame5 = {} # abort_frame
+dict_append(mfi_frame5, mfi_frame_header)
+dict_append(mfi_frame5, {'abort_context#0x8': PTR_ZERO, 'abort_mfi_addr_lo#0x4': PTR_BUFFER,
+    'abort_mfi_addr_hi#0x4': PTR_CONSTANT, 'reserved1#0x18': PTR_ZERO})
+add_object('mfi_frame5', mfi_frame5)
+mfi_frame6 = {} # smp_frame
+dict_append(mfi_frame6, mfi_frame_header)
+dict_append(mfi_frame6, {'sas_addr#0x8': PTR_ZERO})
+mfi_sgl6 = {'addr61#0x8': PTR_ZERO, 'len61#0x4': PTR_ZERO, 'addr62#0x8': PTR_ZERO, 'len62#0x4': PTR_ZERO}
+dict_append(mfi_frame6, mfi_sgl6)
+add_object('mfi_frame6', mfi_frame6)
+mfi_frame7 = {} # stp_frame
+dict_append(mfi_frame7, mfi_frame_header)
+dict_append(mfi_frame7, {'fis#0x14': PTR_ZERO, 'stp_flags#0x4': PTR_ZERO})
+mfi_sgl7 = {'addr71#0x8': PTR_ZERO, 'len71#0x4': PTR_ZERO, 'addr72#0x8': PTR_ZERO, 'len72#0x4': PTR_ZERO}
+add_object('mfi_frame7', mfi_frame7)
+add_object('mfi_frame8', {'raw#0x40': PTR_ZERO})
+add_object('mfi_frame9', {'bytes#0x40': PTR_ZERO})
+add_object('NvmeCmd', {'opcode#0x1': PTR_CONSTANT, 'flags#0x1': PTR_FLAGS, 'cid#0x2': PTR_ZERO, 'nsid#0x4': PTR_ZERO,
+    'res1#0x8': PTR_ZERO, 'mptr0#0x4': PTR_BUFFER, 'mptr1#0x4': PTR_CONSTANT,
+    'dptr0#0x8': PTR_ZERO, 'dptr1#0x8': PTR_ZERO, 'cdw10#0x4': PTR_ZERO, 'cdw11#0x4': PTR_ZERO,
+    'cdw12#0x4': PTR_ZERO, 'cdw13#0x4': PTR_ZERO, 'cdw14#0x4': PTR_ZERO, 'cdw15#0x4': PTR_ZERO})
+add_object('lsi_dsp', {'code#0x100000': PTR_ZERO})
+add_object('ahci', {'cmd#0x80': PTR_ZERO})
+add_object('xhci_ictl_ctx', {'ictl_ctx.0#0x4': PTR_CONSTANT, 'ictl_ctx.1#0x4': PTR_FLAGS, 'slot_ctx#0x10': PTR_ZERO, 'ep0_ctx#0x14': PTR_ZERO}) # trb.parameter
+## pointer field
+add_tag('XHCITRB', [{'op': '&', 'tag': '0xffffffc0'}])
+add_tag('UHCI_QH', [{'op': '&', 'tag': '0xfffffffe'}, {'op': '|', 'tag': '0x2'}])
+add_tag('XHCIEvRingSeg', [])
+add_tag('UHCI_TD', [{'op': '&', 'tag': '0xfffffffe'}])
+add_tag('OHCI_HCCA', [{'op': '&', 'tag': '0xffffff00'}])
+add_tag('OHCI_ED', [])
+add_tag('OHCI_TD', [{'op': '&', 'tag': '0xfffffff0'}])
+add_tag('OHCI_ISO_TD', [{'op': '&', 'tag': '0xfffffff0'}])
+add_tag('EHCIqh', [{'op': '&', 'tag': '0xffffffe0'}, {'op': '|', 'tag': '0x1'}])
+add_tag('EHCIqtd', [{'op': '&', 'tag': '0xffffffe0'}, {'op': '|', 'tag': '0x0'}])
+add_tag('EHCIitd', [{'op': '&', 'tag': '0xffffffe0'}, {'op': '|', 'tag': '0x0'}])
+add_tag('EHCIsitd', [{'op': '&', 'tag': '0xffffffe0'}, {'op': '|', 'tag': '0x2'}])
+add_tag('Vmxnet3_DriverShared', [])
+add_tag('e1000_rx_desc', [])
+add_tag('e1000_tx_desc', [])
+add_tag('rtl8139_rx_ring_desc', [])
+add_tag('rtl8139_tx_ring_desc', [])
+add_tag('rtl8139_buffer', [])
+add_tag('pcnet_initblk32', [])
+add_tag('pcnet_initblk16', [])
+add_tag('pcnet_xda', [])
+add_tag('pcnet_TMD', [])
+add_tag('pcnet_rda', [])
+add_tag('pcnet_RMD', [])
+add_tag('Vmxnet3_TxQueueDesc', [])
+add_tag('Vmxnet3_TxDesc', [])
+add_tag('Vmxnet3_TxCompDesc', [])
+add_tag('mfi_frame0', [{'op': '&', 'tag': '0xffffffe0'}])
+add_tag('mfi_frame1', [{'op': '&', 'tag': '0xffffffe0'}])
+add_tag('mfi_frame2', [{'op': '&', 'tag': '0xffffffe0'}])
+add_tag('mfi_frame3', [{'op': '&', 'tag': '0xffffffe0'}])
+add_tag('mfi_frame4', [{'op': '&', 'tag': '0xffffffe0'}])
+add_tag('mfi_frame5', [{'op': '&', 'tag': '0xffffffe0'}])
+add_tag('mfi_frame6', [{'op': '&', 'tag': '0xffffffe0'}])
+add_tag('mfi_frame7', [{'op': '&', 'tag': '0xffffffe0'}])
+add_tag('mfi_frame8', [{'op': '&', 'tag': '0xffffffe0'}])
+add_tag('mfi_frame9', [{'op': '&', 'tag': '0xffffffe0'}])
+add_tag('mfi_frame9', [{'op': '&', 'tag': '0xffffffe0'}])
+add_tag('lsi_dsp', [])
+add_tag('ahci', [])
+add_tag('xhci_ictl_ctx', [])
+add_point_to('XHCIEvRingSeg.addr_low', ['XHCITRB'])
+add_point_to('UHCI_QH.link', ['UHCI_TD'])
+add_point_to('UHCI_QH.el_link', ['UHCI_TD'])
+for i in range(0, 32):
+    add_point_to('OHCI_HCCA.intr{}'.format(i), ['OHCI_ED'])
+add_point_to('OHCI_ED.head', ['OHCI_TD', 'OHCI_ISO_TD'])
+add_point_to('EHCIqh.current_qtd', ['EHCIqtd'])
+add_point_to('EHCIqh.next_qtd', ['EHCIqtd'])
+add_point_to('EHCIqh.altnext_qtd', ['EHCIqtd'])
+add_point_to('Vmxnet3_DriverShared.queueDescPA.0', ['Vmxnet3_TxQueueDesc'])
+add_point_to('Vmxnet3_TxQueueDesc.txRingBasePA.0', ['Vmxnet3_TxDesc'])
+add_point_to('Vmxnet3_TxQueueDesc.compRingBasePA.0', ['Vmxnet3_TxCompDesc'])
+add_point_to('XHCITRB.parameter.0', ['xhci_ictl_ctx'])
+## data field
+add_flag('XHCITRB.control', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 9: 1, 10: 6, 16: 5, 21: 3, 24: 8})
+add_flag('XHCITRB.status', {0: 16, 16: 6, 22: 10})
+add_flag('UHCI_TD.ctrl', {0: 18, 18: 1, 19: 1, 20: 1, 21: 1, 22: 1, 23: 1, 24: 1, 25: 1, 27: 2, 29: 1, 30: 2})
+add_flag('UHCI_TD.token', {0: 8, 8: '7@0', 15: 4, 21: 11})
+add_flag('OHCI_ED.flags', {0: '7@0', 7: 4, 11: 2, 13: 1, 14: 1, 15: 1, 16: 11, 27:5})
+add_flag('OHCI_TD.flags', {0: 16, 18: 1, 19: 2, 21: 3, 24: 1, 25: 1, 26: 2, 28: 4})
+add_flag('OHCI_ISO_TD.flags', {0: 16, 18: 1, 19: 2, 21: 3, 24: 1, 25: 1, 26: 2, 28: 4})
+add_flag('EHCIqh.epchar', {0: '7@0', 7: 1, 8: 4, 12: 2, 14: 1, 15: 1, 16: 11, 27: 1, 28: 4})
+add_flag('EHCIqh.epcap', {0: 8, 8: 8, 16: 4, 23: 7, 30: 2})
+add_flag('EHCIqh.token',
+         {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 2, 10: 2, 12: 3, 15: 1, 16: 15, 31: 1})
+add_flag('EHCIqtd.token',
+         {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 2, 10: 2, 12: 3, 15: 1, 16: 15, 31: 1})
+add_flag('EHCIsitd.epchar', {0: 7, 7: 1, 8: 4, 12: 4, 16: 7, 23: 1, 24: 7, 31: 1})
+add_flag('EHCIsitd.uframe', {0: 8, 8: 8, 16: 16})
+add_flag('EHCIsitd.results', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 8, 16: 11, 27: 3, 30: 1, 31: 1})
+add_flag('EHCIitd.transact0', {0: 12, 12: 3, 15: 1, 16: 12, 28: 1, 29: 1, 30: 1, 31: 1})
+add_flag('EHCIitd.transact1', {0: 12, 12: 3, 15: 1, 16: 12, 28: 1, 29: 1, 30: 1, 31: 1})
+add_flag('EHCIitd.transact2', {0: 12, 12: 3, 15: 1, 16: 12, 28: 1, 29: 1, 30: 1, 31: 1})
+add_flag('EHCIitd.transact3', {0: 12, 12: 3, 15: 1, 16: 12, 28: 1, 29: 1, 30: 1, 31: 1})
+add_flag('EHCIitd.transact4', {0: 12, 12: 3, 15: 1, 16: 12, 28: 1, 29: 1, 30: 1, 31: 1})
+add_flag('EHCIitd.transact5', {0: 12, 12: 3, 15: 1, 16: 12, 28: 1, 29: 1, 30: 1, 31: 1})
+add_flag('EHCIitd.transact6', {0: 12, 12: 3, 15: 1, 16: 12, 28: 1, 29: 1, 30: 1, 31: 1})
+add_flag('EHCIitd.transact7', {0: 12, 12: 3, 15: 1, 16: 12, 28: 1, 29: 1, 30: 1, 31: 1})
+add_flag('e1000_rx_desc.status', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1})
+add_flag('e1000_tx_desc.cmd', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1})
+add_flag('rtl8139_rx_ring_desc.rxdw0', {0: 13, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 4, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
+add_flag('rtl8139_tx_ring_desc.txdw0', {0: 16, 16: 1, 17: 1, 18: 9, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
+add_flag('rtl8139_tx_ring_desc.txdw1', {0: 16, 16: 1, 17: 1, 18: 14})
+add_flag('pcnet_TMD.status', {0: 7, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 16})
+add_flag('pcnet_TMD.misc', {0: 4, 4: 12, 16: 10, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
+add_flag('pcnet_RMD.status', {0: 4, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 16})
+add_flag('pcnet_RMD.msg_length', {0: 12, 12: 4, 16: 8, 24: 8})
+add_flag('mfi_frame0.flags', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 10})
+add_flag('mfi_frame1.flags', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 10})
+add_flag('mfi_frame2.flags', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 10})
+add_flag('mfi_frame3.flags', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 10})
+add_flag('mfi_frame4.flags', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 10})
+add_flag('mfi_frame5.flags', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 10})
+add_flag('mfi_frame6.flags', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 10})
+add_flag('mfi_frame7.flags', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 10})
+add_flag('mfi_frame8.flags', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 10})
+add_flag('mfi_frame9.flags', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 10})
+add_flag('NvmeCmd.flags', {0: 2, 2: 4, 6: 2, 8: 24})
+add_flag('xhci_ictl_ctx.ictl_ctx.1', {0: 1, 1: 1, 2: 30})
+## constant
+add_constant('XHCIEvRingSeg.addr_high', '0x0')
+add_constant('Vmxnet3_DriverShared.magic', '0xbabefee1')
+add_constant('e1000_rx_desc.buffer_addr.1', '0x0')
+add_constant('e1000_tx_desc.buffer_addr.1', '0x0')
+add_constant('rtl8139_rx_ring_desc.rxbufHI', '0x0')
+add_constant('rtl8139_tx_ring_desc.txbufHI', '0x0')
+add_constant('Vmxnet3_DriverShared.queueDescPA.1', '0x0')
+add_constant('Vmxnet3_TxDesc.addr.1', '0x0')
+add_constant('Vmxnet3_TxQueueDesc.txRingBasePA.1', '0x0')
+add_constant('Vmxnet3_TxQueueDesc.compRingBasePA.1', '0x0')
+add_constant('mfi_frame1.qinfo_old_addr_hi', '0x0')
+add_constant('mfi_frame1.qinfo_new_addr_hi', '0x0')
+add_constant('mfi_frame2.sense_addr_hi', '0x0')
+add_constant('mfi_frame2.lba_hi', '0x0')
+add_constant('mfi_frame3.sense_addr_hi', '0x0')
+add_array('mfi_frame4_opcode', ['0x0100e100', '0x01010000', '0x01020100', '0x01020200',
+    '0x01030000', '0x01030100', '0x01030200', '0x01030300', '0x01030400', '0x01030500',
+    '0x01040100', '0x01040200', '0x01040300', '0x01040400', '0x01040500', '0x01050000',
+    '0x01060000', '0x01080101', '0x01080102', '0x010c0100', '0x010c0200', '0x010d0000',
+    '0x010e0201', '0x010e0202', '0x01101000', '0x02010000', '0x02010100', '0x02020000',
+    '0x02030100', '0x02040100', '0x02070100', '0x02070200', '0x03010000', '0x03010100',
+    '0x03020000', '0x03030000', '0x03040000', '0x03090000', '0x04010000', '0x04020000',
+    '0x04030000', '0x04060100', '0x04060400', '0x05010000', '0x05020000', '0x05030000',
+    '0x05050100', '0x08000000', '0x08010100', '0x08010200'])
+add_constant('mfi_frame4.opcode', 'mfi_frame4_opcode[get_data_from_pool4() % (sizeof(mfi_frame4_opcode) / 4)]')
+add_constant('mfi_frame5.abort_mfi_addr_hi', '0x0')
+add_constant('NvmeCmd.opcode', ['0x0', '0x1', '0x2', '0x4', '0x5', '0x8', '0x9',
+     '0xc', '0x19', '0x79', '0x7a', '0x7d'])
+add_constant('XHCITRB.parameter.1', '0x0')
+add_constant('xhci_ictl_ctx.ictl_ctx.0', '0x0')
+## head buffer
+add_head('uhci', {
+    'head_struct': ['UHCI_QH'], 'head_name': 'uhci_qh',
+    'instrumentation': 'hw/usb/hcd-uhci.c:uhci_process_frame:frame_addr =',
+    'io_events': [
+        # high and low
+        {'name': 'uhci', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x8', 'size': '0x4'},
+        {'name': 'uhci', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0xa', 'size': '0x4'},
+    ], 'spray': {'size': '0x1000'}})
+add_head('ohci', {
+    'head_struct': ['OHCI_HCCA'], 'head_name': 'ohci_hcca',
+    'instrumentation': 'hw/usb/hcd-ohci.c:ohci_frame_boundary:if (ohci_read_',
+    'io_events': [
+        {'name': 'ohci', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x18', 'size': '0x4'}
+    ]})
+add_head('ehci0', {
+    'head_struct': ['EHCIqh'], 'head_name': 'ehci_qh',
+    'instrumentation': 'hw/usb/hcd-ehci.c:ehci_state_waitlisthead:uint32_t entry =',
+    'io_events': [
+        {'name': 'operational', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x14', 'size': '0x4'}
+    ]})
+add_head('ehci1', {
+    'head_struct': ['EHCIqh', 'EHCIitd', 'EHCIsitd'], 'head_name': 'ehci_mix',
+    'instrumentation': 'hw/usb/hcd-ehci.c:ehci_advance_periodic_state:list = ehci->periodiclistbase',
+    'io_events': [
+        {'name': 'operational', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x14', 'size': '0x4'}
+    ], 'spray': {'size': '0x1000'}})
+add_head('vmxnet31', {
+    'head_struct': ['Vmxnet3_DriverShared'], 'head_name': 'dshmem',
+    'instrumentation': 'hw/net/vmxnet3.c:vmxnet3_activate_device:/* Verify configuration consistency',
+    'io_events': [
+        {'name': 'vmxnet3-b1', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x10', 'size': '0x4'},
+        {'name': 'vmxnet3-b1', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x18', 'size': '0x4', 'value': '0x0'},
+    ]
+})
+add_head('xhci0', {
+    'head_struct': ['XHCITRB'], 'head_name': 'xhci_trb',
+    'instrumentation': 'hw/usb/hcd-xhci.c:xhci_process_commands:while ((type =',
+    'io_events': [
+        {'name': 'operational', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x18', 'size': '0x4'},
+        {'name': 'operational', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x1c', 'size': '0x0', 'value': '0x0'}
+    ]
+})
+add_head('e10000', {
+    'head_struct': ['e1000_tx_desc'], 'head_name': 'e1000_desc0',
+    'instrumentation': 'hw/net/e1000.c:start_xmit:while (s->mac_reg',
+    'io_events': [
+        {'name': 'e1000-mmio', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x3800', 'size': '0x4'},
+        # {'name': 'e1000-mmio', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x3804', 'size': '0x4', 'value': '0x0'},
+        {'name': 'e1000-mmio', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x3810', 'size': '0x4', 'value': '0x0'}
+    ]
+})
+add_head('e10001', {
+    'head_struct': ['e1000_rx_desc'], 'head_name': 'e1000_desc1',
+    'instrumentation': 'hw/net/e1000.c:e1000_receive_iov:do {',
+    'io_events': [
+        {'name': 'e1000-mmio', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x2800', 'size': '0x4'},
+        {'name': 'e1000-mmio', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x2804', 'size': '0x4', 'value': '0x0'},
+        {'name': 'e1000-mmio', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x2810', 'size': '0x4', 'value': '0x0'}
+    ]
+})
+add_head('rtl81390', {
+    'head_struct': ['rtl8139_rx_ring_desc'], 'head_name': 'rtl8139_rx_ring_desc',
+    'instrumentation': 'hw/net/rtl8139.c:rtl8139_do_receive:int descriptor = s->',
+    'io_events': [
+        {'name': 'rtl8139', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x37', 'size': '0x1', 'value': '0x8'},
+        {'name': 'rtl8139', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0xE4', 'size': '0x4'},
+        {'name': 'rtl8139', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0xE8', 'size': '0x4', 'value': '0x0'},
+    ]
+})
+add_head('rtl81391', {
+    'head_struct': ['rtl8139_tx_ring_desc'], 'head_name': 'rtl8139_tx_ring_desc',
+    'instrumentation': 'hw/net/rtl8139.c:rtl8139_cplus_transmit_one:int descriptor = s->',
+    'io_events': [
+        {'name': 'rtl8139', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x37', 'size': '0x1', 'value': '0x4'},
+        {'name': 'rtl8139', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x20', 'size': '0x4'},
+        {'name': 'rtl8139', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x24', 'size': '0x4', 'value': '0x0'},
+    ]
+})
+add_head('rtl81392', {
+    'head_struct': ['rtl8139_buffer'], 'head_name': 'rtl8139_buffer',
+    'instrumentation': 'hw/net/rtl8139.c:rtl8139_transmit_one:pci_dma_read(',
+    'io_events': [
+        {'name': 'rtl8139', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x20', 'size': '0x4'},
+        {'name': 'rtl8139', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x24', 'size': '0x4'},
+        {'name': 'rtl8139', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x28', 'size': '0x4'},
+        {'name': 'rtl8139', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x2C', 'size': '0x4'},
+    ]
+})
+add_head('pcnet0', {
+    'head_struct': ['pcnet_initblk32'], 'head_name': 'pcnet_initblk32',
+    'instrumentation': 'hw/net/pcnet.c:pcnet_init:s->phys_mem_read',
+    'io_events': [
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x12', 'size': '0x2', 'value': '0x10'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x2'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x12', 'size': '0x2', 'value': '0x11'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x2', 'value': '(pcnet_initblk32_0 >> 16)'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x14', 'size': '0x4', 'value': '0x10'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x14', 'size': '0x4', 'value': '0x11'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4', 'value': '(pcnet_initblk32_0 >> 16)'}
+    ]
+})
+add_head('pcnet1', {
+    'head_struct': ['pcnet_initblk16'], 'head_name': 'pcnet_initblk16',
+    'instrumentation': 'hw/net/pcnet.c:pcnet_init:s->phys_mem_read',
+    'io_events': [
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x12', 'size': '0x2', 'value': '0x10'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x2'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x12', 'size': '0x2', 'value': '0x11'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x2', 'value': '(pcnet_initblk16_0 >> 16)'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x14', 'size': '0x4', 'value': '0x10'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x14', 'size': '0x4', 'value': '0x11'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4', 'value': '(pcnet_initblk16_0 >> 16)'}
+    ]
+})
+add_head('pcnet2', {
+    'head_struct': ['pcnet_TMD'], 'head_name': 'pcnet_TMD',
+    'instrumentation': 'hw/net/pcnet.c:pcnet_transmit:TMDLOAD',
+    'io_events': [
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x12', 'size': '0x2', 'value': '0x22'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x2'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x12', 'size': '0x2', 'value': '0x23'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x2', 'value': '(pcnet_TMD_0 >> 16)'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x12', 'size': '0x4', 'value': '0x11'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4', 'value': '0x0'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x14', 'size': '0x4', 'value': '0x22'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x14', 'size': '0x4', 'value': '0x23'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4', 'value': '(pcnet_TMD_0 >> 16)'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x14', 'size': '0x4', 'value': '0x11'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4', 'value': '0x0'}
+    ]
+})
+add_head('pcnet3', {
+    'head_struct': ['pcnet_RMD'], 'head_name': 'pcnet_RMD0',
+    'instrumentation': 'hw/net/pcnet.c:pcnet_rdte_poll:if (CSR_CRDA(s)) {',
+    'io_events': [
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x12', 'size': '0x2', 'value': '0x1c'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x2'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x12', 'size': '0x2', 'value': '0x1d'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x2', 'value': '(pcnet_RMD0_0 >> 16)'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x12', 'size': '0x4', 'value': '0x11'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4', 'value': '0x0'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x14', 'size': '0x4', 'value': '0x1c'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x14', 'size': '0x4', 'value': '0x1d'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4', 'value': '(pcnet_RMD0_0 >> 16)'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x14', 'size': '0x4', 'value': '0x11'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4', 'value': '0x0'}
+    ]
+})
+add_head('pcnet4', {
+    'head_struct': ['pcnet_RMD'], 'head_name': 'pcnet_RMD1',
+    'instrumentation': 'hw/net/pcnet.c:pcnet_rdte_poll:if (CSR_NRDA(s)) {',
+    'io_events': [
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x12', 'size': '0x2', 'value': '0x1a'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x2'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x12', 'size': '0x2', 'value': '0x1b'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x2', 'value': '(pcnet_RMD1_0 >> 16)'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x12', 'size': '0x4', 'value': '0x11'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4', 'value': '0x0'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x14', 'size': '0x4', 'value': '0x1a'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x14', 'size': '0x4', 'value': '0x1b'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4', 'value': '(pcnet_RMD1_0 >> 16)'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x14', 'size': '0x4', 'value': '0x11'},
+        {'name': 'pcnet-io', 'type': 'EVENT_TYPE_PIO_WRITE', 'offset': '0x10', 'size': '0x4', 'value': '0x0'}
+    ]
+})
+add_head('megasas', {
+    'head_struct': ['mfi_frame0', 'mfi_frame1', 'mfi_frame2', 'mfi_frame3', 'mfi_frame4',
+        'mfi_frame5', 'mfi_frame6', 'mfi_frame7', 'mfi_frame8', 'mfi_frame9'],
+    'head_name': 'mfi_frame',
+    'instrumentation': 'hw/scsi/megasas.c:megasas_mmio_write:megasas_handle_frame:MFI_IQPH',
+    'io_events': [
+        {'name': 'megasas-mmio', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x40', 'size': '0x4'}
+    ]
+})
+# add_head('nvme', {
+#     'head_struct': ['NvmeCmd'], 'head_name': 'nvme_cmd',
+#     'instrumentation': 'hw/block/nvme.c:nvme_process_sq: while (!(nvme_sq_empty(sq) || QTAILQ_EMPTY(&sq->req_list))) {',
+#     'io_events': [
+#         {'name': '', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '', 'size': '0x4'}
+#     ]
+# })
+add_head('lsi53c895a', {
+    'head_struct': ['lsi_dsp'], 'head_name': 'lsi_dsp',
+    'instrumentation': 'hw/scsi/lsi53c895a:lsi_reg_writeb:CASE_SET_REG32(dsps, 0x30)',
+    'io_events': [
+        {'name': 'lsi-mmio', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x2c', 'size': '0x1', 'value': '(lsi_dsp_0 >> 0)'},
+        {'name': 'lsi-mmio', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x2d', 'size': '0x1', 'value': '(lsi_dsp_0 >> 8)'},
+        {'name': 'lsi-mmio', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x2e', 'size': '0x1', 'value': '(lsi_dsp_0 >> 16)'},
+        {'name': 'lsi-mmio', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x2f', 'size': '0x1', 'value': '(lsi_dsp_0 >> 24)'},
+    ]
+})
+add_head('ahci', {
+    'head_struct': ['ahci'], 'head_name': 'ahci',
+    'instrumentation': 'hw/ide/ahci.c:',
+    'io_events': [
+        {'name': 'ahci', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x100', 'size': '0x4'},
+        {'name': 'ahci', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x104', 'size': '0x4', 'value': '0x0'},
+        {'name': 'ahci', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x118', 'size': '0x4', 'value': '0x0'},
+    ]
+})
+add_head('xhci1', {
+    'head_struct': ['XHCIEvRingSeg'], 'head_name': 'xhci_ev_ring_seg',
+    'instrumentation': '',
+    'io_events': [
+        {'name': 'runtime', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x10', 'size': '0x4'},
+        {'name': 'runtime', 'type': 'EVENT_TYPE_MMIO_WRITE', 'offset': '0x14', 'size': '0x4', 'value': '0x0'},
+    ]
+})
+
+if __name__ == '__main__':
+    random.seed(0)
+    main_demo()
