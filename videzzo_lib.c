@@ -557,7 +557,7 @@ static uint32_t get_event_offset(Input *input, uint32_t index) {
     return event->offset;
 }
 
-static Event *get_event(Input *input, uint32_t index) {
+Event *get_event(Input *input, uint32_t index) {
     Event *event = input->events;
     for (int i = 0; i != index; i++)
         event = event->next;
@@ -584,7 +584,7 @@ static void append_event(Input *input, Event *event) {
     input->size += event->event_size; // DataSize
 }
 
-static void insert_event(Input *input, Event *event, uint32_t idx) {
+void insert_event(Input *input, Event *event, uint32_t idx) {
     if (input->n_events == 0) {
         append_event(input, event);
         return;
@@ -634,7 +634,7 @@ static Event *__delink_event(Input *input, uint32_t idx) {
     return target;
 }
 
-static void remove_event(Input *input, uint32_t idx) {
+void remove_event(Input *input, uint32_t idx) {
     // unlink
     Event *target = __delink_event(input, idx);
     // release
@@ -1244,32 +1244,6 @@ void gfctx_set_size(uint32_t MaxSize) {
 
 uint32_t gfctx_get_size() {
     return gfctx.MaxSize;
-}
-
-//
-// GroupMutator Feedback
-//
-bool DisableGroupMutator = 0;
-
-void GroupMutatorMiss(uint8_t id) {
-    static int visited = 0;
-    if (visited)
-        return;
-
-    if (DisableGroupMutator)
-        return;
-
-    // first, we meet a miss
-    // we know the current input and the index of the event just issued
-    // construct, mutate, and group
-    Input *new_input = group_mutator_handlers[id](
-            gfctx_get_current_input(), gfctx_get_current_event());
-    // reissue
-    visited = 1;
-    __videzzo_execute_one_input(new_input, gfctx_get_object());
-    visited = 0;
-    // save
-    serialize(new_input, gfctx_get_data(), gfctx_get_size());
 }
 
 //

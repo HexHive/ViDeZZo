@@ -90,12 +90,12 @@ enum Sizes {ViDeZZo_Empty, ViDeZZo_Byte=1, ViDeZZo_Word=2, ViDeZZo_Long=4, ViDeZ
 extern EventOps event_ops[N_EVENT_TYPES];
 void videzzo_dispatch_event(Event *event, void *object);
 
-// 
+//
 // Input
-// 
+//
 typedef struct {
-    size_t limit;                       /* input size   */ 
-    void *buf;                          /* input data   */ 
+    size_t limit;                       /* input size   */
+    void *buf;                          /* input data   */
     int index;                          /* input cursor */
 #define DEFAULT_INPUT_MAXSIZE           4096
 #define VIDEZZO_INPUT_MAXSIZE           4096
@@ -110,12 +110,15 @@ Input *init_input(const uint8_t *Data, size_t Size);
 void free_input(Input *input);
 uint32_t deserialize(Input *input);
 uint32_t serialize(Input *input, uint8_t *Data, uint32_t MaxSize);
+Event *get_event(Input *input, uint32_t index);
 Event *get_next_event(Event *event);
+void remove_event(Input *input, uint32_t idx);
+void insert_event(Input *input, Event *event, uint32_t idx);
 size_t reset_data(uint8_t *Data, size_t MaxSize);
 
-// 
+//
 // Interface
-// 
+//
 // predefined interfaces one-to-one mapped from
 // the transparent events, these interfaces are
 // also transparent to the fuzzer
@@ -183,19 +186,19 @@ void gfctx_set_size(uint32_t MaxSize);
 uint32_t gfctx_get_size(void);
 // a local handler of a feedback should take the current input and
 // the index of the event just issued as parameters and return a new input
-// Input *(* FeedbackHandler)(Input *current_input, uint32_t current_event);
-typedef Input *(* FeedbackHandler)(Input *current_input, uint32_t current_event);
+// void *(* FeedbackHandler)(Input *current_input, uint32_t current_event);
+typedef void *(* FeedbackHandler)(Input *current_input, uint32_t current_event);
 
 uint32_t videzzo_randint(void);
 
-void GroupMutatorMiss(uint8_t id);
+void GroupMutatorMiss(uint8_t id, uint64_t physaddr);
 extern FeedbackHandler group_mutator_handlers[0xff];
 
 //
 // Open APIs
 //
 void __videzzo_execute_one_input(Input *input, void *object);
-void videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object);
+size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object);
 size_t ViDeZZoCustomMutator(uint8_t *Data, size_t Size, size_t MaxSize, unsigned int Seed);
 
 //
