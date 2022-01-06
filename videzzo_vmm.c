@@ -177,7 +177,7 @@ static uint64_t dispatch_generic_read(Event *event) {
     }
 }
 
-static void dispatch_generic_write(Event *event) {
+static uint64_t dispatch_generic_write(Event *event) {
     switch (event->size) {
         case ViDeZZo_Byte: trap_write(event->addr, 1, event->valu); break;
         case ViDeZZo_Word: trap_write(event->addr, 2, event->valu); break;
@@ -187,11 +187,13 @@ static void dispatch_generic_write(Event *event) {
     }
 }
 
-void dispatch_mmio_read(Event *event, void *object) { dispatch_generic_read(event); }
-void dispatch_pio_read(Event *event, void *object) { dispatch_generic_read(event); }
-void dispatch_mmio_write(Event *event, void *object) { dispatch_generic_write(event); }
-void dispatch_pio_write(Event *event, void *object) { dispatch_generic_write(event); }
-void dispatch_mem_read(Event *event, void *object) { dispatch_generic_read(event); }
-void dispatch_mem_write(Event *event, void *object) { dispatch_generic_write(event); }
-void dispatch_clock_step(Event *event, void *object) { }
-void dispatch_socket_write(Event *event, void *object) { }
+uint64_t dispatch_mmio_read(Event *event, void *object) { dispatch_generic_read(event); }
+uint64_t dispatch_pio_read(Event *event, void *object) { dispatch_generic_read(event); }
+uint64_t dispatch_mmio_write(Event *event, void *object) { dispatch_generic_write(event); }
+uint64_t dispatch_pio_write(Event *event, void *object) { dispatch_generic_write(event); }
+uint64_t dispatch_mem_read(Event *event, void *object) { dispatch_generic_read(event); }
+uint64_t dispatch_mem_write(Event *event, void *object) { dispatch_generic_write(event); }
+uint64_t dispatch_mem_alloc(Event *event, void *object) { }
+uint64_t dispatch_mem_free(Event *event, void *object) { }
+uint64_t dispatch_clock_step(Event *event, void *object) { }
+uint64_t dispatch_socket_write(Event *event, void *object) { }

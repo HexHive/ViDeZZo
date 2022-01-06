@@ -6,8 +6,9 @@ FIELD_FLAG    = 2
 FIELD_CONSTANT= 3
 
 class Model(object):
-    def __init__(self, name):
+    def __init__(self, name, index):
         self.name = name
+        self.index = index
         self.structs = {}
         self.head_struct_types = None
         self.instrumentation = None
@@ -61,6 +62,21 @@ class Model(object):
     def add_head(self, head_struct_types, instrumentation):
         self.head_struct_types = head_struct_types
         self.instrumentation = instrumentation
+
+    def add_constant(self, key, value):
+        """
+        key: struct_type.field_name
+        value: field_value
+
+        ViDeZZo constant format:
+            self.structs[struct_type][field_name] = {
+                'field_name': {'field_size': field_size, 'field_type': field_type, 'field_value': field_value}
+            }
+        """
+        struct_type, field_name = key.split('.')
+        self.check_field(struct_type, field_name)
+        field_value = value
+        self.structs[struct_type][field_name]['field_value'] = field_value
 
     def add_flag(self, key, value):
         """
@@ -161,11 +177,14 @@ class Model(object):
             metadata['links'] = {}
             for idx, _ in metadata['types'].items():
                 self.structs[struct_type][field_name]['point_to']['links'][idx] = links[int(idx)]
+
+    def get_field_size(self, struct_type, field_name):
+        return self.structs[struct_type][field_name]['field_size']
 ###########################################################################################
 
     def __gen_event_memwrite(self, struct_name, field_name, value, value_size):
         struct_type = self.recover_struct_type_from_name(struct_name)
-        field_size = self.structs[struct_type][field_name]['field_size']
+        field_size = self.get_field_size(struct_type, field_name)
         self.append_code('EVENT_MEMWRITE({} + offsetof({}, {}), {}, {}, {}, {});'.format(
             struct_name, struct_type, field_name, field_size, value, value_size, self.get_uuid()))
 
@@ -176,7 +195,7 @@ class Model(object):
             length = length_and_initvalue['length']
             initvalue = length_and_initvalue['initvalue']
             if initvalue is None:
-                initvalue = 'videzzo_randint()'
+                initvalue = 'rand()'
             flags.append(('(({0} & ((1 << (0x{1:02x} + 1)) - 1)) << 0x{2:02x})'.format(initvalue, length, length_in_total)))
             length_in_total += int(length)
         sep = '\n    {} | '.format(' ' * self.indent * 4)
@@ -186,15 +205,26 @@ class Model(object):
 
     def gen_random(self, struct_name, field_name, metadata):
         # MAGIC
-        # self.append_code('{}->{} = {};'.format(struct_name, field_name, 'videzzo_randint()'))
-        self.__gen_event_memwrite(struct_name, field_name, 'videzzo_randint()', 4)
+        # self.append_code('{}->{} = {};'.format(struct_name, field_name, 'rand()'))
+        self.__gen_event_memwrite(struct_name, field_name, 'rand()', 4)
+
+    def gen_constant(self, struct_name, field_name, metadata):
+        field_value = metadata['field_value']
+        # MAGIC
+        # self.append_code('{}->{} = {};'.format(struct_name, field_name, field_value))
+        self.__gen_event_memwrite(struct_name, field_name, field_value, 4)
+
+    def gen_constant(self, struct_name, field_name, metadata):
+        # MAGIC
+        # self.append_code('{}->{} = {};'.format(struct_name, field_name, 'rand()'))
+        self.__gen_event_memwrite(struct_name, field_name, 'rand()', 4)
 
     def gen_linked_list(self, struct_type, field_name):
         self.append_code('// gen linked list for {}->{}'.format(struct_type, field_name))
         head_struct_name = self.construct_struct_name_from_type(struct_type)
         last_struct_name = 'last_struct_name_{}'.format(self.get_uuid())
         tail_struct_name = 'tail_struct_name_{}'.format(self.get_uuid())
-        self.append_code('GEN_LINKED_LIST({}, {}, {}, {}, {}, {})'.format(
+        self.append_code('GEN_LINKED_LIST({}, {}, {}, {}, {}, {});'.format(
             struct_type, field_name, head_struct_name, last_struct_name, tail_struct_name, self.get_uuid()))
         return head_struct_name, tail_struct_name
 
@@ -206,15 +236,29 @@ class Model(object):
         flags = metadata['flags']
         types = metadata['types']
 
-        def gen_conditional_point_to(__gen_func):
-            cond = ' | '.join(['get_bit({}->{}, {}, {})'.format(
-                struct_name, flag['field_name'], flag['bit'], flag['length']) for flag in flags])
+        def gen_conditional_point_to(__gen_func, __links):
+            # MAGIC
+            # cond = ' | '.join(['get_bit({}->{}, {}, {})'.format(
+            #     struct_name, flag['field_name'], flag['bit'], flag['length']) for flag in flags])
+            struct_type = self.recover_struct_type_from_name(struct_name)
+            field_size = self.get_field_size(struct_type, field_name)
+            conds = []
+            for flag in flags:
+                tmp_buf_name = 'tmp_buf_{}'.format(self.get_uuid())
+                self.append_code('uint32_t {};'.format(tmp_buf_name))
+                self.append_code('EVENT_MEMREAD({} + offsetof({}, {}), {}, &{}, {}, {});'.format(
+                    struct_name, struct_type, flag['field_name'], field_size, tmp_buf_name, 4, self.get_uuid()))
+                conds.append('get_bit({}, {}, {})'.format(tmp_buf_name, flag['bit'], flag['length']))
+            cond = ' | '.join(conds)
             self.append_code('switch ({}) {{'.format(cond))
             self.indent += 1
             for case, struct_type in types.items():
                 self.append_code('case {}: {{'.format(case))
                 self.indent += 1
-                __gen_func(struct_type, links[case])
+                if __links is None:
+                    __gen_func(struct_type)
+                else:
+                    __gen_func(struct_type, __links[case])
                 self.append_code('break; }')
                 self.indent -= 1
             self.indent -= 1
@@ -230,7 +274,7 @@ class Model(object):
                 # self.append_code('{}->{} = {};'.format(struct_name, metadata['tail']['field_name'], tail_struct_name))
                 self.__gen_event_memwrite(struct_name, metadata['tail']['field_name'], tail_struct_name, 4);
 
-        def gen_point_to(__struct_type, reserved):
+        def gen_point_to(__struct_type):
             sub_struct_name = self.gen_struct_point_to(__struct_type)
             # MAGIC
             # self.append_code('{}->{} = {};'.format(struct_name, field_name, sub_struct_name))
@@ -241,19 +285,19 @@ class Model(object):
             if flags is None:
                 gen_linked_list(types['0'], links['0'])
             else:
-                gen_conditional_point_to(gen_linked_list)
+                gen_conditional_point_to(gen_linked_list, links)
         else:
             if flags is None:
-                gen_point_to(types['0'], None)
+                gen_point_to(types['0'])
             else:
-                gen_conditional_point_to(gen_point_to)
+                gen_conditional_point_to(gen_point_to, None)
 
     def gen_struct_point_to(self, struct_type):
         """
         {struct_name}->{non_pointer_field_name} = {corresponding_value};
         """
         struct_name = self.construct_struct_name_from_type(struct_type)
-        self.append_code('uint32_t {} = get_{}(current_input, &current_event);'.format(struct_name, struct_type))
+        self.append_code('uint32_t {} = get_{}();'.format(struct_name, struct_type))
         self.callocations.append(struct_name)
         for field_name, metadata in self.get_struct(struct_type).items():
             field_type = metadata['field_type']
@@ -261,8 +305,9 @@ class Model(object):
                 self.gen_point_to(struct_name, field_name, metadata['point_to'])
         return struct_name
 
-    def free_struct(self):
-        pass
+    def free_structs(self):
+        for struct_name in self.callocations:
+            self.append_code('EVENT_MEMFREE({});'.format(struct_name))
 ###########################################################################################
 
     def gen_license(self):
@@ -277,43 +322,31 @@ class Model(object):
         self.append_code(license)
 
     def gen_headers(self):
-        self.append_code('#include <stddef.h>"')
-        self.append_code('#include "videzzo.h"\n')
+        self.append_code('#include <stdint.h>')
+        self.append_code('#include <stddef.h>\n')
 
     def gen_helpers(self):
-        helpers = """uint32_t get_bit(uint32_t data, uint32_t start, uint32_t length) {
-    return (data >> start) & (1 << (length + 1) - 1);
-}
-
-// very interesting and useful function
-static void fill(uint8_t *dst, size_t dst_size, uint64_t filler, size_t filler_size) {
-    uint8_t *filler_p = (uint8_t *)&filler;
-    for (int i = 0; i < dst_size; i++)
-        dst[i] = filler_p[i % filler_size];
-}
-
-#define EVENT_MEMALLOC(size, n) \\
-    videzzo_calloc(size, n)
+        helpers = """#define EVENT_MEMREAD(physaddr, size, data, data_size, uuid) \\
+    uint8_t *tmp_buf##uuid = (uint8_t *)calloc(size, 1); \\
+    __EVENT_MEMREAD(physaddr, size, tmp_buf##uuid); \\
+    refill(data, data_size, tmp_buf##uuid, size); \\
+    free(tmp_buf##uuid); \\
 
 #define EVENT_MEMWRITE(physaddr, size, data, data_size, uuid) \\
-    uint8_t *tmp_buf_##uuid = (uint8_t *)calloc(size, 1); \\
-    fill(tmp_buf_##uuid, size, data, data_size); \\
-    Event *event_##uuid = event_ops[EVENT_TYPE_MEM_WRITE].construct(EVENT_TYPE_MEM_WRITE, \\
-        INTERFACE_MEM_WRITE, physaddr, size, 0, tmp_buf_##uuid); \\
-    insert_event(current_input, event_##uuid, *current_event++ + 1); \\
-    free(tmp_buf_##uuid);
+    uint8_t *tmp_buf##uuid = (uint8_t *)calloc(size, 1); \\
+    fill(tmp_buf##uuid, size, data, data_size); \\
+    __EVENT_MEMWRITE(physaddr, size, tmp_buf##uuid); \\
+    free(tmp_buf##uuid);
 
 #define GEN_LINKED_LIST(type, field_name, head_name, last_name, tail_name, uuid) \\
-    do { \\
-        uint64_t head_name = get_##type(current_input, &current_event); \\
-        uint64_t last_name = head_name, tail_name = head_name; \\
-        for (int i = 0; i < (videzzo_randint() % 5 -1); i++) { \\
-            type *next_##type = get_##type(current_input, &current_event); \\
-            EVENT_MEMWRITE(last_name + offsetof(type, field_name), 4, next_##type, 4, uuid) \\
-            last_name = next_##type; \\
-            tail_name = next_##type; \\
-        } \\
-    } while(0)
+    uint64_t head_name = get_##type(); \\
+    uint64_t last_name = head_name, tail_name = head_name; \\
+    for (int i = 0; i < (rand() % 5 -1); i++) { \\
+        uint64_t next_##type = get_##type(); \\
+        EVENT_MEMWRITE(last_name + offsetof(type, field_name), 4, next_##type, 4, uuid) \\
+        last_name = next_##type; \\
+        tail_name = next_##type; \\
+    }
 """
         self.append_code(helpers)
 
@@ -342,7 +375,7 @@ static void fill(uint8_t *dst, size_t dst_size, uint64_t filler, size_t filler_s
         struct_name = self.construct_struct_name_from_type(struct_type)
         # MAGIC
         # self.append_code('{1} *{0} = ({1}*)videzzo_calloc(sizeof({1}), 1);'.format(struct_name, struct_type))
-        self.append_code('uint64_t {0} = (uint64_t)EVENT_MEMALLOC(sizeof({1}), 1);'.format(struct_name, struct_type))
+        self.append_code('uint64_t {0} = (uint64_t)EVENT_MEMALLOC(sizeof({1}));'.format(struct_name, struct_type))
         for field_name, metadata in self.get_struct(struct_type).items():
             field_type = metadata['field_type']
             if field_type == FIELD_FLAG:
@@ -350,7 +383,7 @@ static void fill(uint8_t *dst, size_t dst_size, uint64_t filler, size_t filler_s
             elif field_type == FIELD_RANDOM:
                 self.gen_random(struct_name, field_name, metadata)
             elif field_type == FIELD_CONSTANT:
-                self.gen_constant(struct_name, field_name, metdata)
+                self.gen_constant(struct_name, field_name, metadata)
             elif field_type == FIELD_POINTER:
                 pass
             else:
@@ -359,7 +392,7 @@ static void fill(uint8_t *dst, size_t dst_size, uint64_t filler, size_t filler_s
 
     def gen_struct_initialization_without_pointers(self):
         for struct_type, fields in self.structs.items():
-            self.append_code('static uint64_t get_{}(Input *current_input, uint32_t *current_event) {{'.format(struct_type))
+            self.append_code('static uint64_t get_{}(void) {{'.format(struct_type))
             self.indent += 1
             struct_name = self.gen_struct(struct_type)
             self.append_code('return {};'.format(struct_name))
@@ -377,12 +410,11 @@ static void fill(uint8_t *dst, size_t dst_size, uint64_t filler, size_t filler_s
         self.gen_struct_definition()
         self.gen_struct_initialization_without_pointers()
 
-        for index, head_struct_type in enumerate(self.head_struct_types):
-            self.append_code('void videzzo_group_miss_{}(Input *current_input, uint32_t current_event) {{'.format(index))
+        for _, head_struct_type in enumerate(self.head_struct_types):
+            self.append_code('void videzzo_group_mutator_miss_handler_{}(void) {{'.format(self.index))
             self.indent += 1
-            self.append_code('group_mutator_handler_prologue(current_input, &current_event);\n')
             struct_name = self.gen_struct_point_to(head_struct_type)
-            # self.free_structs()
+            self.free_structs()
             self.indent -= 1
             self.append_code('}')
 

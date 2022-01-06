@@ -6,46 +6,53 @@
 # This work is licensed under the terms of the GNU GPL, version 2 or later.
 #
 
-CFLAGS ?= "-fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-pie"
+CFLAGS ?= -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-pie
 
 videzzo-core:
-	clang -g -fsanitize=address,undefined -o videzzo.o -c videzzo.c
-	clang -g -fsanitize=address,undefined -o videzzo_lib.o -c videzzo_lib.c
+	python3 videzzo_gen_types.py ${HYPERVISOR}
+	clang ${CFLAGS} -o videzzo.o -c videzzo.c
+	clang ${CFLAGS} -o videzzo_types.i -E videzzo_types.c
+	clang ${CFLAGS} -o videzzo_types.o -c videzzo_types.c
+	ar rcs videzzo_core.a videzzo.o videzzo_types.o
 
 videzzo-vmm:
-	clang -g -fsanitize=fuzzer,address,undefined ${CFALGS} \
-		-o vmm videzzo_vmm.c videzzo.c videzzo_lib.c videzzo_types.c
+	HYPERVISOR=vmm make videzzo-core
+	clang -fsanitize=fuzzer ${CFLAGS} -o vmm videzzo_vmm.c videzzo_core.a
 
 videzzo-vmm-debug:
-	clang -g -fsanitize=fuzzer,address,undefined ${CFALGS} -DVIDEZZO_DEBUG \
-		-o vmm-debug videzzo_vmm.c videzzo.c videzzo_lib.c videzzo_types.c
+	HYPERVISOR=vmm make videzzo-core
+	clang -fsanitize=fuzzer ${CFALGS} -DVIDEZZO_DEBUG -o vmm-debug videzzo_vmm.c videzzo_core.a
 
 .PHONY: videzzo-qemu videzzo-virtualbox videzzo-bhyve
 
-videzzo-qemu: videzzo-core
-	ar rcs videzzo_core.a videzzo.o videzzo_lib.o
-	VIDEZZO_CORE=$PWD/videzz_core.a make -C videzzo_qemu
+videzzo-qemu:
+	HYPERVISOR=qemu make videzzo-core
+	make -C videzzo_qemu
 
 videzzo-qemu-debug: videzzo-core
+	HYPERVISOR=qemu make videzzo-core
 	CFLAGS="-DVIDEZZO_DEBUG" make -C videzzo_qemu
 
 videzzo-virtualbox: videzzo-core
+	HYPERVISOR=virtualbox make videzzo-core
 	make -C videzzo_virtualbox
 
 videzzo-virtualbox-debug: videzzo-core
+	HYPERVISOR=virtualbox make videzzo-core
 	CFLAGS="-DVIDEZZO_DEBUG" make -C videzzo_virtualbox
 
 videzzo-bhyve: videzzo-core
+	HYPERVISOR=bhyve make videzzo-core
 	make -C videzzo_bhyve
 
 videzzo-bhyve-debug: videzzo-core
+	HYPERVISOR=bhyve make videzzo-core
 	CFLAGS="-DVIDEZZO_DEBUG" make -C videzzo_bhyve
-
-distclean:
-	rm -rf *.o *.a
-	make -C videzzo_qemu clean
-	make -C videzzo_virtualbox clean
-	make -C videzzo_bhyve clean
 
 clean:
 	rm -rf *.o *.a
+
+distclean: clean
+	make -C videzzo_qemu clean
+	make -C videzzo_virtualbox clean
+	make -C videzzo_bhyve clean

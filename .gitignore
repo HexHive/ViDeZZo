@@ -3,12 +3,14 @@ crash-*
 # cache
 __pycache__
 # objects
-*.o
-*.a
+*.[aoi]
+*.py[cd]
 vmm
 vmm-debug
 # temp files
 videzzo_types.c
+videzzo_vmm-01.h
+videzzo_vmm-02.h
 videzzo_qemu/*.h
 videzzo_qemu/*.h
 videzzo_qemu/*.h

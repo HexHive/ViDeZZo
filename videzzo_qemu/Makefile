@@ -8,11 +8,7 @@
 #
 CFLAGS ?=
 
-meson-qemu: # since QEMU 5.2.0
-	# git clone qemu
+qemu:
+	# git clone git@github.com:qemu/qemu.git --depth=1 qemu
 	# patch
 	# compile
-	#
-make-qemu: # before QEMU 5.2.0
-	wget -nc https://download.qemu.org/qemu-5.1.0.tar.xz
-	tar xf qemu-5.1.0.tar.xz
