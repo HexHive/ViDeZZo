@@ -12,17 +12,13 @@ videzzo-core:
 	clang -g -fsanitize=address,undefined -o videzzo.o -c videzzo.c
 	clang -g -fsanitize=address,undefined -o videzzo_lib.o -c videzzo_lib.c
 
-videzzo-test:
-	clang -g -fsanitize=address,undefined ${CFALGS} \
-		-o test test.c videzzo_vmm.c videzzo.c videzzo_lib.c # videzzo_types.c
-
 videzzo-vmm:
 	clang -g -fsanitize=fuzzer,address,undefined ${CFALGS} \
-		-o vmm videzzo_vmm.c videzzo.c videzzo_lib.c # videzzo_types.c
+		-o vmm videzzo_vmm.c videzzo.c videzzo_lib.c videzzo_types.c
 
 videzzo-vmm-debug:
 	clang -g -fsanitize=fuzzer,address,undefined ${CFALGS} -DVIDEZZO_DEBUG \
-		-o vmm-debug videzzo_vmm.c videzzo.c videzzo_lib.c # videzzo_types.c
+		-o vmm-debug videzzo_vmm.c videzzo.c videzzo_lib.c videzzo_types.c
 
 .PHONY: videzzo-qemu videzzo-virtualbox videzzo-bhyve
 
@@ -45,5 +41,11 @@ videzzo-bhyve: videzzo-core
 videzzo-bhyve-debug: videzzo-core
 	CFLAGS="-DVIDEZZO_DEBUG" make -C videzzo_bhyve
 
+distclean:
+	rm -rf *.o *.a
+	make -C videzzo_qemu clean
+	make -C videzzo_virtualbox clean
+	make -C videzzo_bhyve clean
+
 clean:
-	rm test
+	rm -rf *.o *.a

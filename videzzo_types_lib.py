@@ -1,293 +1,389 @@
-import os
-import uuid
 import random
-from render import Template
 
-def dict_append(a, b):
-    for k, v in b.items():
-        a[k] = v
+FIELD_RANDOM  = 0
+FIELD_POINTER = 1
+FIELD_FLAG    = 2
+FIELD_CONSTANT= 3
 
-last_uuid = 0
+class Model(object):
+    def __init__(self, name):
+        self.name = name
+        self.structs = {}
+        self.head_struct_types = None
+        self.instrumentation = None
 
-def get_uuid():
-    global last_uuid
-    last_uuid = '{:010x}'.format(random.randint(0, 0xFFFFFFFFFFFFFFFF))[:10]
-    return 'v' + last_uuid
+        # some internal controls
+        self.last_uuid = None
+        self.code = []
+        self.indent = 0
+        self.callocations = []
 
-def get_last_uuid():
-    global last_uuid
-    return 'v' + last_uuid
+    def get_uuid(self):
+        self.last_uuid = '{:010x}'.format(random.randint(0, 0xFFFFFFFFFFFFFFFF))[:10]
+        return 'v' + self.last_uuid
 
-# topology: base -> target
-# base name   +-----+-----+-----+
-#             |<-size to spray->|
-#             + (&target) | tag +
-# target name +-----+-----+-----+
-#             |<-size to alloc->|
-def tag_value(value, tags):
-    # tags = [{'op': '&', 'tag': '0xfffffffe'}]
-    r = '{}{}'.format('(' * len(tags), value)
-    for tag in tags:
-        r += ' {} {})'.format(tag['op'], tag['tag'])
-    return r
+    def get_last_uuid(self):
+        return 'v' + self.last_uuid
 
-def alloc_base(type_name, name, size, chained='false'):
-    return [{'event': 'alloc', 'kwargs': {
-        'chained': chained, 'name': name, 'size': size, 'type': type_name}}]
+    def recover_struct_type_from_name(self, struct_name):
+        return '_'.join(struct_name.split('_')[:-1])
 
-def spray_addr(base_name, size_to_spray, target_name, target_addr_tag):
-    # legacy
-    # {'event': 'lock', 'kwargs': {'offset': base_name, 'size': size_to_spray}},
-    # {'event': 'require', 'kwargs': {'size': size_to_alloc, 'name': target_name}},
-    return [{'event': 'serialize', 'kwargs': {
-        'id': 'INTERFACE_MEM_WRITE', 'offset': base_name, 'size': size_to_spray,
-        'value': tag_value(target_name, target_addr_tag)}}]
+    def construct_struct_name_from_type(self, struct_type):
+        return '{}_{}'.format(struct_type, self.get_uuid())
+###########################################################################################
 
-def set_head_address(mmio_event, value, tag):
-    if 'value' in mmio_event:
-        value = mmio_event['value']
-    else:
-        value = tag_value(value, tag)
-    return [{'event': 'serialize', 'kwargs': {
-        'id': 'get_interface_id("{}", {})'.format(mmio_event['name'], mmio_event['type']),
-        'offset': mmio_event['offset'], 'size': mmio_event['size'],
-        'value': value}}]
+    def add_struct(self, struct_type, metadata):
+        """
+        struct_type: struct_type
+        metadata: {'field_name#size': field_type}
 
-def get_indicator(base_name, offset):
-    return '{} + {}'.format(base_name, offset)
+        ViDeZZo struct format:
+            self.structs[struct_type] = {
+                field_name: {'field_size': field_size, 'field_type': field_type}
+            }
+        """
+        if struct_type not in self.structs:
+            self.structs[struct_type] = {}
+        for k, field_type in metadata.items():
+            field_name, field_size = k.split('#')
+            field_size = str(int(field_size, 16))
+            self.structs[struct_type][field_name] = {'field_size': field_size, 'field_type': field_type}
 
-def write_pointer_field(base_name, offset, size, value, tag):
-    return [{'event': 'serialize', 'kwargs': {
-        'id': 'INTERFACE_MEM_WRITE', 'offset': get_indicator(base_name, offset),
-        'size': size, 'value': tag_value(value, tag)}}]
+    def get_struct(self, struct_type):
+        return self.structs[struct_type]
 
-def write_data_field(base_name, offset, size, value):
-    return [{'event': 'serialize', 'kwargs': {
-        'id': 'INTERFACE_MEM_WRITE', 'offset': get_indicator(base_name, offset),
-        'size': size, 'value': value}}]
+    def check_field(self, struct_type, field_name):
+        if struct_type not in self.structs:
+            raise KeyError('{} is not a valid struct'.format(struct_type))
+        if field_name not in self.structs[struct_type]:
+            raise KeyError('{} is not a valid field'.format(field_name))
 
-def get_random_data(size):
-    size = int(size, 16)
-    if size % 4 == 0:
-        return 'get_data_from_pool4()'
-    elif size % 2 == 0:
-        return 'get_data_from_pool2()'
-    else:
-        return 'get_data_from_pool1()'
+    def add_head(self, head_struct_types, instrumentation):
+        self.head_struct_types = head_struct_types
+        self.instrumentation = instrumentation
 
-## Let's define some context-ops
-POINTER_TAG      = 4
-FLAG_TO_POINTER  = 5
-POINTER_RING     = 6
+    def add_flag(self, key, value):
+        """
+        key: struct_type.field_name
+        value: {'length[@initvalue]'}
 
-PTR_ZERO = '0'
-PTR_SELF = '1'
-PTR_BUFFER = '2'
-PTR_FLAGS = '3'
-PTR_OBJECT = '4'
-PTR_CONSTANT = '5'
+        ViDeZZo flag format:
+            self.structs[struct_type][field_name]['flags'] = {
+                'start': {'length': length, 'value': initvalue}
+            }
+        """
+        struct_type, field_name = key.split('.')
+        self.check_field(struct_type, field_name)
+        flags = {}
+        for k, v in value.items():
+            start = str(k)
+            if isinstance(v, str):
+                length, initvalue = v.split('@')
+                initvalue = int(initvalue, 16)
+                length = int(length)
+            else:
+                initvalue = None
+                length = v
+            flags[start] = {'length': length, 'initvalue': initvalue}
+        self.structs[struct_type][field_name]['flags'] = flags
 
-## INTERNAL TABLES
-objects = {}
-def add_object(key, value):
-    global objects
-    objects[key] = value
+    def get_flag_length(self, struct_type, field_name, bit):
+        return self.structs[struct_type][field_name]['flags'][bit]['length']
 
-def get_object(key):
-    return objects[key]
+    def add_context_tail_pointer(self, pointer):
+        """
+        key: struct_type.field_name
 
-def get_object_size(key):
-    return hex(sum([int(field.split('#')[1], 16) for field in objects[key].keys()]))
+        ViDeZZo point_to format:
+            self.structs[struct][field_name]['point_to'] = {'tail': True}
+        """
+        struct_type, field_name = pointer.split('.')
+        self.check_field(struct_type, field_name)
+        self.structs[struct_type][field_name]['point_to'] = {'tail': True}
 
-point_tos = {}
-def add_point_to(key, value):
-    global point_tos
-    point_tos[key] = value
+    def add_context_flag_to_point_to(self, flags, pointer, types):
+        """
+        flags: [struct_type.field_name.bitwise] n
+        pointer: struct_type.field_name 1
+        types: [type0] 2^n
 
-def get_point_to(key):
-    return point_tos[key]
-
-tags = {}
-def add_tag(key, value):
-    global tags
-    tags[key] = value
-
-def get_tag(key):
-    return tags[key]
-
-flags = {}
-def add_flag(key, value):
-    global flags
-    flags[key] = value
-
-def get_flag(key):
-    return flags[key]
-
-def gen_flag(object_to_alloc, field_name):
-    flag = get_flag('{}.{}'.format(object_to_alloc, field_name))
-    segs = []
-    #TODO fix this get_data_from_pool4 to get_xxx
-    length_acc = 0
-    for start, length in flag.items():
-        value = 'get_data_from_pool4()'
-        if isinstance(length, str):
-            length, value = length.split('@')
-            length = int(length)
-        segs.append(('(({0} & ((1 << (0x{1:02x} + 1)) - 1)) << 0x{2:02x})'.format(value, length, length_acc)))
-        length_acc += length
-    return '({})'.format(' | '.join(segs))
-
-arrays = {}
-def add_array(key, value):
-    global arrays
-    arrays[key] = value
-
-def get_array(key):
-    return arrarys[key]
-
-constants = {}
-def add_constant(key, value):
-    global constants
-    constants[key] = value
-
-def get_constant(key):
-    return constants[key]
-
-heads = {}
-def add_head(key, value):
-    global heads
-    heads[key] = value
-
-def get_head(key):
-    return heads[key]
-
-def fill_object(base_name, object_to_alloc):
-    field_offset = '0x0'
-    dma_events = []
-    for field, field_type in get_object(object_to_alloc).items():
-        field_name, field_size = field.split('#')
-        if field_type == PTR_OBJECT:
-            # pointer field and objects
-            object_to_points = get_point_to('{}.{}'.format(object_to_alloc, field_name))
-            uuid = get_uuid()
-            dma_events += [{'event': 'switch', 'kwargs': {
-                'modulo': len(object_to_points), 'uuid': uuid}}]
-            for index, object_to_point in enumerate(object_to_points):
-                dma_events += [{'event': 'goto_label', 'kwargs': {'label': '{}_{}'.format(uuid, index)}}]
-                object_name_to_point = '{}_{}'.format(object_to_point, get_uuid())
-                dma_events += alloc_base(
-                    object_to_point, object_name_to_point, get_object_size(object_to_point))
-                dma_events += fill_object(
-                    object_name_to_point, object_to_point)
-                dma_events += write_pointer_field(
-                    base_name, field_offset, field_size, object_name_to_point, get_tag(object_to_point))
-                dma_events += [{'event': 'goto', 'kwargs': {'label': '{}_out'.format(uuid)}}]
-            dma_events += [{'event': 'goto_label', 'kwargs': {'label': '{}_out'.format(uuid)}}]
-        elif field_type == PTR_SELF:
-            # pointer field and itself
-            dma_events += write_pointer_field(
-                base_name, field_offset, field_size, base_name, get_tag(object_to_alloc))
-        elif field_type == PTR_BUFFER:
-            # pointer field and buffers
-            buffer_name_to_point = 'buffer_{}'.format(get_uuid())
-            dma_events += alloc_base('uint8_t', buffer_name_to_point, '0x100')
-            dma_events += write_data_field(
-                buffer_name_to_point, '0x0', '0x100', get_random_data('0x4'))
-            dma_events += write_pointer_field(
-                base_name, field_offset, field_size, buffer_name_to_point, [{'op': '|', 'tag': '0x0'}])
-        elif field_type == PTR_FLAGS:
-            # data field and flags
-            dma_events += write_data_field(
-                base_name, field_offset, field_size, gen_flag(object_to_alloc, field_name))
-        elif field_type == PTR_CONSTANT:
-            # data field and constant
-            dma_events += write_data_field(
-                base_name, field_offset, field_size, get_constant('{}.{}'.format(object_to_alloc, field_name)))
-        elif field_type == PTR_ZERO:
-            # data field and random values
-            dma_events += write_data_field(
-                base_name, field_offset, field_size, get_random_data(field_size))
+        ViDeZZo point_to format:
+            self.structs[struct_type][field_name]['point_to'] = {
+                'flags': [{'struct_type': struct_type, 'field_name': field_name, 'bit': bit, 'length': length}] or None,
+                'types': {'0': point_to_struct_type}
+            }
+        """
+        struct_type, field_name = pointer.split('.')
+        self.check_field(struct_type, field_name)
+        if flags is None:
+            assert len(types) == 1
+            self.structs[struct_type][field_name]['point_to'] = {'flags': None, 'types': {'0': types[0]}}
         else:
-            print('[-] wrong field_type, return []')
-            return []
-        field_offset = int(field_offset, 16)
-        field_offset += int(field_size, 16)
-        field_offset = hex(field_offset)
-    return dma_events
+            metadata = {'flags': [], 'types': {}}
+            for flag in flags:
+                flag_struct_type, flag_field_name, flag_bit = flag.split('.')
+                self.check_field(flag_struct_type, flag_field_name)
+                metadata['flags'].append({
+                    'struct_type': flag_struct_type, 'field_name': flag_field_name,
+                    'bit': flag_bit, 'length': self.get_flag_length(flag_struct_type, flag_field_name, flag_bit)})
+            for idx, point_to_struct_type in enumerate(types):
+                metadata['types'][str(idx)] = point_to_struct_type
+            self.structs[struct_type][field_name]['point_to'] = metadata
+        return struct_type, field_name
 
-def generate_events(head):
-    head_structs = head['head_struct']
-    head_name = head['head_name']
-    uuid = get_uuid()
-    dma_events = [{'event': 'switch', 'kwargs': {'modulo': len(head_structs), 'uuid': uuid}}]
-    for index, head_struct in enumerate(head_structs):
-        head_name = '{}_{}'.format(head_name, index)
-        dma_events += [{'event': 'goto_label', 'kwargs': {'label': '{}_{}'.format(uuid, index)}}]
-        dma_events += alloc_base(head_struct, head_name, get_object_size(head_struct))
-        dma_events += fill_object(head_name, head_struct)
-        target = head_name
-        target_tag = get_tag(head_struct)
-        if 'spray' in head:
-            # alloc a base buffer
-            target = '{}_base'.format(get_uuid())
-            target_tag = [{'op': '|', 'tag': '0x0'}]
-            spray_size = head['spray']['size']
-            dma_events += alloc_base('uint8_t', target, spray_size)
-            dma_events += spray_addr(target, spray_size, head_name, get_tag(head_struct))
-        for mmio_event in head['io_events']:
-            # print(target, target_tag)
-            dma_events += set_head_address(mmio_event, target, target_tag)
-        dma_events += [{'event': 'goto', 'kwargs': {'label': '{}_out'.format(uuid)}}]
-    dma_events += [{'event': 'goto_label', 'kwargs': {'label': '{}_out'.format(uuid)}}]
-    return dma_events
+    def add_context_flag_to_single_linked_list(self, flags, pointer, types, links, tail=None):
+        """
+        flags: [struct_type.field_name.bitwise] n
+        pointer: struct_type.field_name 1
+        types: [type0] 2^n
+        tail: struct_type.field_name 1
+        links: [link] 2^n
 
-def get_devisor(size):
-    # deprecated
-    size = int(size, 16)
-    if size % 4 == 0:
-        return '0x4'
-    elif size % 2 == 0:
-        return '0x2'
-    else:
-        return '0x1'
+        ViDeZZo point_to format:
+            self.structs[struct][field_name]['point_to'] = {
+                'flags': [{'struct_type': struct_type, 'field_name': field_name, 'bit': bit, 'length': length}] or None,
+                'types': {'0': point_to_struct_type},
+                'tail': {'struct_type': struct_type, 'field_name': field_name},
+                'links': {'0': link},
+                'linked_list': False
+            }
+        """
+        struct_type, field_name = self.add_context_flag_to_point_to(flags, pointer, types)
+        self.structs[struct_type][field_name]['point_to']['linked_list'] = True
+        if tail is not None:
+            tail_struct_type, tail_field_name = tail.split('.')
+            self.check_field(tail_struct_type, tail_field_name)
+            self.structs[struct_type][field_name]['point_to']['tail'] = {
+                'struct_type': tail_struct_type, 'field_name': tail_field_name}
+            self.structs[tail_struct_type][tail_field_name]['point_to'] = {'tail': True}
+        if links is not None:
+            metadata = self.structs[struct_type][field_name]['point_to']
+            metadata['links'] = {}
+            for idx, _ in metadata['types'].items():
+                self.structs[struct_type][field_name]['point_to']['links'][idx] = links[int(idx)]
+###########################################################################################
 
-def main_demo():
-    parameters = {'callbacks': [], 'arrays': []}
-    for key, value in arrays.items():
-        array = {'name': key, 'size': hex(len(value)), 'elements': value}
-        parameters['arrays'].append(array)
+    def __gen_event_memwrite(self, struct_name, field_name, value, value_size):
+        struct_type = self.recover_struct_type_from_name(struct_name)
+        field_size = self.structs[struct_type][field_name]['field_size']
+        self.append_code('EVENT_MEMWRITE({} + offsetof({}, {}), {}, {}, {}, {});'.format(
+            struct_name, struct_type, field_name, field_size, value, value_size, self.get_uuid()))
 
-    idx = 0
-    for name, head in heads.items():
-        dma_events = generate_events(head)
-        for dma_event in dma_events:
-            dma_event['kwargs']['eid'] = get_uuid()
-            # print(dma_event)
-        callback = {
-            'loc': head['instrumentation'],
-            'dma_events': dma_events, 'id': idx, 'name': name}
-        parameters['callbacks'].append(callback)
-        idx += 1
+    def gen_flag(self, struct_name, field_name, metadata):
+        flags = []
+        length_in_total = 0
+        for start, length_and_initvalue in metadata.items():
+            length = length_and_initvalue['length']
+            initvalue = length_and_initvalue['initvalue']
+            if initvalue is None:
+                initvalue = 'videzzo_randint()'
+            flags.append(('(({0} & ((1 << (0x{1:02x} + 1)) - 1)) << 0x{2:02x})'.format(initvalue, length, length_in_total)))
+            length_in_total += int(length)
+        sep = '\n    {} | '.format(' ' * self.indent * 4)
+        # MAGIC
+        # self.append_code('{}->{} = {};'.format(struct_name, field_name, sep.join(flags)))
+        self.__gen_event_memwrite(struct_name, field_name, sep.join(flags), 4)
 
-    with open('template3.h') as f:
-        lines = f.readlines()
-    line = ''.join(lines)
-    data = parameters
-    data['is_alloc'] = lambda x: x == 'alloc'
-    data['is_serialize'] = lambda x: x == 'serialize'
-    data['is_switch'] = lambda x: x == 'switch'
-    data['is_goto'] = lambda x: x == 'goto'
-    data['is_goto_label'] = lambda x: x == 'goto_label'
-    data['is_memory_write'] = lambda x: x in ['INTERFACE_MEM_WRITE']
-    data['is_io_command'] = lambda x: x.startswith('get_interface_id')
-    data['is_constant'] = lambda x: x.startswith('0x')
-    data['is_not_variable'] = lambda x: 'get_data_from' in x or 'flags' in x
-    data['to_hex'] = lambda x: hex(x)
-    data['len'] = lambda x: len(x)
-    data['not'] = lambda x: not x
-    data['to_range'] = lambda x: range(0, x)
-    data['get_divisor'] = get_devisor
-    r = Template(line).render(data)
-    with open('stateful_fuzz_callbacks.h', 'w') as f:
-        f.write(r)
-    print('[+] generate stateful_fuzz_callbacks.h')
+    def gen_random(self, struct_name, field_name, metadata):
+        # MAGIC
+        # self.append_code('{}->{} = {};'.format(struct_name, field_name, 'videzzo_randint()'))
+        self.__gen_event_memwrite(struct_name, field_name, 'videzzo_randint()', 4)
+
+    def gen_linked_list(self, struct_type, field_name):
+        self.append_code('// gen linked list for {}->{}'.format(struct_type, field_name))
+        head_struct_name = self.construct_struct_name_from_type(struct_type)
+        last_struct_name = 'last_struct_name_{}'.format(self.get_uuid())
+        tail_struct_name = 'tail_struct_name_{}'.format(self.get_uuid())
+        self.append_code('GEN_LINKED_LIST({}, {}, {}, {}, {}, {})'.format(
+            struct_type, field_name, head_struct_name, last_struct_name, tail_struct_name, self.get_uuid()))
+        return head_struct_name, tail_struct_name
+
+    def gen_point_to(self, struct_name, field_name, metadata):
+        if 'tail' in metadata and metadata['tail'] is True:
+            return
+
+        self.append_code('// gen point_to for {}->{}'.format(struct_name, field_name))
+        flags = metadata['flags']
+        types = metadata['types']
+
+        def gen_conditional_point_to(__gen_func):
+            cond = ' | '.join(['get_bit({}->{}, {}, {})'.format(
+                struct_name, flag['field_name'], flag['bit'], flag['length']) for flag in flags])
+            self.append_code('switch ({}) {{'.format(cond))
+            self.indent += 1
+            for case, struct_type in types.items():
+                self.append_code('case {}: {{'.format(case))
+                self.indent += 1
+                __gen_func(struct_type, links[case])
+                self.append_code('break; }')
+                self.indent -= 1
+            self.indent -= 1
+            self.append_code('}')
+
+        def gen_linked_list(__struct_type, __field_name):
+            head_struct_name, tail_struct_name = self.gen_linked_list(__struct_type, __field_name)
+            # MAGIC
+            # self.append_code('{}->{} = {};'.format(struct_name, field_name, head_struct_name))
+            self.__gen_event_memwrite(struct_name, field_name, head_struct_name, 4);
+            if 'tail' in metadata and isinstance(metadata['tail'], dict):
+                # MAGIC
+                # self.append_code('{}->{} = {};'.format(struct_name, metadata['tail']['field_name'], tail_struct_name))
+                self.__gen_event_memwrite(struct_name, metadata['tail']['field_name'], tail_struct_name, 4);
+
+        def gen_point_to(__struct_type, reserved):
+            sub_struct_name = self.gen_struct_point_to(__struct_type)
+            # MAGIC
+            # self.append_code('{}->{} = {};'.format(struct_name, field_name, sub_struct_name))
+            self.__gen_event_memwrite(struct_name, field_name, sub_struct_name, 4);
+
+        if 'linked_list' in metadata and metadata['linked_list'] is True:
+            links = metadata['links']
+            if flags is None:
+                gen_linked_list(types['0'], links['0'])
+            else:
+                gen_conditional_point_to(gen_linked_list)
+        else:
+            if flags is None:
+                gen_point_to(types['0'], None)
+            else:
+                gen_conditional_point_to(gen_point_to)
+
+    def gen_struct_point_to(self, struct_type):
+        """
+        {struct_name}->{non_pointer_field_name} = {corresponding_value};
+        """
+        struct_name = self.construct_struct_name_from_type(struct_type)
+        self.append_code('uint32_t {} = get_{}(current_input, &current_event);'.format(struct_name, struct_type))
+        self.callocations.append(struct_name)
+        for field_name, metadata in self.get_struct(struct_type).items():
+            field_type = metadata['field_type']
+            if field_type == FIELD_POINTER:
+                self.gen_point_to(struct_name, field_name, metadata['point_to'])
+        return struct_name
+
+    def free_struct(self):
+        pass
+###########################################################################################
+
+    def gen_license(self):
+        license = """/*
+ * Type-Aware Virtual-Device Fuzzing
+ *
+ * Copyright Qiang Liu <cyruscyliu@gmail.com>
+ *
+ * This work is licensed under the terms of the GNU GPL, version 2 or later.
+ */
+"""
+        self.append_code(license)
+
+    def gen_headers(self):
+        self.append_code('#include <stddef.h>"')
+        self.append_code('#include "videzzo.h"\n')
+
+    def gen_helpers(self):
+        helpers = """uint32_t get_bit(uint32_t data, uint32_t start, uint32_t length) {
+    return (data >> start) & (1 << (length + 1) - 1);
+}
+
+// very interesting and useful function
+static void fill(uint8_t *dst, size_t dst_size, uint64_t filler, size_t filler_size) {
+    uint8_t *filler_p = (uint8_t *)&filler;
+    for (int i = 0; i < dst_size; i++)
+        dst[i] = filler_p[i % filler_size];
+}
+
+#define EVENT_MEMALLOC(size, n) \\
+    videzzo_calloc(size, n)
+
+#define EVENT_MEMWRITE(physaddr, size, data, data_size, uuid) \\
+    uint8_t *tmp_buf_##uuid = (uint8_t *)calloc(size, 1); \\
+    fill(tmp_buf_##uuid, size, data, data_size); \\
+    Event *event_##uuid = event_ops[EVENT_TYPE_MEM_WRITE].construct(EVENT_TYPE_MEM_WRITE, \\
+        INTERFACE_MEM_WRITE, physaddr, size, 0, tmp_buf_##uuid); \\
+    insert_event(current_input, event_##uuid, *current_event++ + 1); \\
+    free(tmp_buf_##uuid);
+
+#define GEN_LINKED_LIST(type, field_name, head_name, last_name, tail_name, uuid) \\
+    do { \\
+        uint64_t head_name = get_##type(current_input, &current_event); \\
+        uint64_t last_name = head_name, tail_name = head_name; \\
+        for (int i = 0; i < (videzzo_randint() % 5 -1); i++) { \\
+            type *next_##type = get_##type(current_input, &current_event); \\
+            EVENT_MEMWRITE(last_name + offsetof(type, field_name), 4, next_##type, 4, uuid) \\
+            last_name = next_##type; \\
+            tail_name = next_##type; \\
+        } \\
+    } while(0)
+"""
+        self.append_code(helpers)
+
+    def gen_struct_definition(self):
+        for struct_type, fields in self.structs.items():
+            self.append_code('typedef struct {')
+            for field_name, metadata in fields.items():
+                field_size = metadata['field_size']
+                if field_size == '1':
+                    self.append_code('    uint8_t {};'.format(field_name))
+                elif field_size == '2':
+                    self.append_code('    uint16_t {};'.format(field_name))
+                elif field_size == '4':
+                    self.append_code('    uint32_t {};'.format(field_name))
+                elif field_size == '8':
+                    self.append_code('    uint64_t {};'.format(field_name))
+                else:
+                    self.append_code('    uint8_t {}[{}];'.format(field_name, field_size))
+            self.append_code('}} {};\n'.format(struct_type))
+
+    def gen_struct(self, struct_type):
+        """
+        uint32_t get_{struct}();
+        """
+        self.append_code('// generating {}'.format(struct_type))
+        struct_name = self.construct_struct_name_from_type(struct_type)
+        # MAGIC
+        # self.append_code('{1} *{0} = ({1}*)videzzo_calloc(sizeof({1}), 1);'.format(struct_name, struct_type))
+        self.append_code('uint64_t {0} = (uint64_t)EVENT_MEMALLOC(sizeof({1}), 1);'.format(struct_name, struct_type))
+        for field_name, metadata in self.get_struct(struct_type).items():
+            field_type = metadata['field_type']
+            if field_type == FIELD_FLAG:
+                self.gen_flag(struct_name, field_name, metadata['flags'])
+            elif field_type == FIELD_RANDOM:
+                self.gen_random(struct_name, field_name, metadata)
+            elif field_type == FIELD_CONSTANT:
+                self.gen_constant(struct_name, field_name, metdata)
+            elif field_type == FIELD_POINTER:
+                pass
+            else:
+                raise ValueError('unsupported FIELD_TYPE: {}'.format(field_type))
+        return struct_name
+
+    def gen_struct_initialization_without_pointers(self):
+        for struct_type, fields in self.structs.items():
+            self.append_code('static uint64_t get_{}(Input *current_input, uint32_t *current_event) {{'.format(struct_type))
+            self.indent += 1
+            struct_name = self.gen_struct(struct_type)
+            self.append_code('return {};'.format(struct_name))
+            self.indent -= 1
+            self.append_code('}\n')
+###########################################################################################
+
+    def append_code(self, code):
+        self.code.append(' ' * self.indent * 4 + code)
+
+    def get_code(self):
+        self.gen_license()
+        self.gen_headers();
+        self.gen_helpers();
+        self.gen_struct_definition()
+        self.gen_struct_initialization_without_pointers()
+
+        for index, head_struct_type in enumerate(self.head_struct_types):
+            self.append_code('void videzzo_group_miss_{}(Input *current_input, uint32_t current_event) {{'.format(index))
+            self.indent += 1
+            self.append_code('group_mutator_handler_prologue(current_input, &current_event);\n')
+            struct_name = self.gen_struct_point_to(head_struct_type)
+            # self.free_structs()
+            self.indent -= 1
+            self.append_code('}')
+
+        return '\n'.join(self.code)

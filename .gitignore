@@ -1,7 +1,14 @@
-test
-vmm
-vmm-debug
+# testcases
 crash-*
+# cache
 __pycache__
+# objects
 *.o
 *.a
+vmm
+vmm-debug
+# temp files
+videzzo_types.c
+videzzo_qemu/*.h
+videzzo_qemu/*.h
+videzzo_qemu/*.h

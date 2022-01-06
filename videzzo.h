@@ -187,12 +187,13 @@ uint32_t gfctx_get_size(void);
 // a local handler of a feedback should take the current input and
 // the index of the event just issued as parameters and return a new input
 // void *(* FeedbackHandler)(Input *current_input, uint32_t current_event);
-typedef void *(* FeedbackHandler)(Input *current_input, uint32_t current_event);
+typedef void (* FeedbackHandler)(Input *current_input, uint32_t current_event);
 
 uint32_t videzzo_randint(void);
 
 void GroupMutatorMiss(uint8_t id, uint64_t physaddr);
 extern FeedbackHandler group_mutator_handlers[0xff];
+void group_mutator_handler_prologue(Input *current_input, uint32_t *current_event);
 
 //
 // Open APIs
@@ -200,6 +201,8 @@ extern FeedbackHandler group_mutator_handlers[0xff];
 void __videzzo_execute_one_input(Input *input, void *object);
 size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object);
 size_t ViDeZZoCustomMutator(uint8_t *Data, size_t Size, size_t MaxSize, unsigned int Seed);
+void *videzzo_calloc(size_t size, int n);
+void videzzo_free(void *addr);
 
 //
 // libFuzzer

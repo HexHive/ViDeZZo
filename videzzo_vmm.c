@@ -8,7 +8,7 @@
  */
 #include "videzzo.h"
 
-// 
+//
 // VMM for testing
 // This small VM has one main memory, one robot virtual device with one PIO
 // region and two MMIO regions.
@@ -16,7 +16,7 @@
 
 //
 // Memory
-// 
+//
 enum MemoryRegionType {PIO, MMIO, MEM};
 
 typedef struct MemoryRegion {
@@ -41,7 +41,6 @@ static uint64_t generic_mmio_read(uint64_t addr, uint32_t size) {
 }
 
 static void generic_mmio_write(uint64_t addr, uint32_t size, uint64_t valu) {
-    GroupMutatorMiss(2);
 
 }
 
@@ -139,11 +138,11 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp) {
                 add_interface(EVENT_TYPE_PIO_READ, mr->base, mr->size, mr->devname, 0x1, 0x4, true);
                 add_interface(EVENT_TYPE_PIO_WRITE, mr->base, mr->size, mr->devname, 0x1, 0x4, true);
                 break;
-            case MMIO: 
+            case MMIO:
                 add_interface(EVENT_TYPE_MMIO_READ, mr->base, mr->size, mr->devname, 0x1, 0x4, true);
                 add_interface(EVENT_TYPE_MMIO_WRITE, mr->base, mr->size, mr->devname, 0x1, 0x4, true);
                 break;
-            default: 
+            default:
                 break;
         }
     }
@@ -170,7 +169,7 @@ size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size,
 //
 static uint64_t dispatch_generic_read(Event *event) {
     switch (event->size) {
-        case ViDeZZo_Byte: return trap_read(event->addr, 1); 
+        case ViDeZZo_Byte: return trap_read(event->addr, 1);
         case ViDeZZo_Word: return trap_read(event->addr, 2);
         case ViDeZZo_Long: return trap_read(event->addr, 4);
         case ViDeZZo_Quad: return trap_read(event->addr, 8);

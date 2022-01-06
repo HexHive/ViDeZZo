@@ -58,19 +58,6 @@ add_object('rtl8139_rx_ring_desc', {
 add_object('rtl8139_tx_ring_desc', {
     'txdw0#0x4': PTR_FLAGS, 'txdw1#0x4': PTR_FLAGS, 'txbufL0#0x4': PTR_BUFFER, 'txbufHI#0x4': PTR_CONSTANT})
 add_object('rtl8139_buffer', {'buffer#0x2000': PTR_ZERO})
-add_object('pcnet_initblk32', {
-    'mode#0x2': PTR_ZERO, 'rlen#0x1': PTR_ZERO, 'tlen#0x1': PTR_ZERO, 'padr0#0x2': PTR_ZERO,
-    'padr1#0x2': PTR_ZERO, 'padr2#0x2': PTR_ZERO, '_res#0x2': PTR_ZERO, 'ladrf0#0x2': PTR_ZERO,
-    'ladrf1#0x2': PTR_ZERO, 'ladrf2#0x2': PTR_ZERO, 'ladrf3#0x2': PTR_ZERO, 'rdra#0x4': PTR_ZERO,
-    'tdra#0x4': PTR_ZERO})
-add_object('pcnet_initblk16', {
-    'mode#0x2': PTR_ZERO, 'padr0#0x2': PTR_ZERO, 'padr1#0x2': PTR_ZERO, 'padr2#0x2': PTR_ZERO,
-    'ladrf0#0x2': PTR_ZERO, 'ladrf1#0x2': PTR_ZERO, 'ladrf2#0x2': PTR_ZERO, 'ladrf3#0x2': PTR_ZERO,
-    'rdra#0x4': PTR_ZERO, 'tdra#0x4': PTR_ZERO})
-add_object('pcnet_xda', {'tbadr#0x4': PTR_BUFFER, 'length#0x2': PTR_ZERO, 'status#0x2': PTR_ZERO})
-add_object('pcnet_TMD', {'tbadr#0x4': PTR_BUFFER, 'length#0x2': PTR_ZERO, 'status#0x2': PTR_FLAGS, 'misc#0x4': PTR_FLAGS, 'res#0x4': PTR_ZERO})
-add_object('pcnet_rda', {'rbadr#0x4': PTR_BUFFER, 'buf_length#0x2': PTR_ZERO, 'msg_length#0x2': PTR_ZERO})
-add_object('pcnet_RMD', {'rbadr#0x4': PTR_BUFFER, 'buf_length#0x2': PTR_ZERO, 'status#0x2': PTR_FLAGS, 'msg_length#0x4': PTR_ZERO, 'res#0x4': PTR_ZERO})
 add_object('Vmxnet3_TxDesc', {'addr.0#0x4': PTR_BUFFER, 'addr.1#0x4': PTR_CONSTANT, 'val1#0x4': PTR_ZERO, 'val2#0x4': PTR_ZERO})
 add_object('Vmxnet3_TxCompDesc', {'val1#0x4': PTR_ZERO, 'ext2#0x4': PTR_ZERO, 'ext3#0x4': PTR_ZERO, 'val2#0x4': PTR_ZERO})
 Vmxnet3_TxQueueDesc = {}
@@ -258,10 +245,6 @@ add_flag('e1000_tx_desc.cmd', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1})
 add_flag('rtl8139_rx_ring_desc.rxdw0', {0: 13, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 4, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
 add_flag('rtl8139_tx_ring_desc.txdw0', {0: 16, 16: 1, 17: 1, 18: 9, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
 add_flag('rtl8139_tx_ring_desc.txdw1', {0: 16, 16: 1, 17: 1, 18: 14})
-add_flag('pcnet_TMD.status', {0: 7, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 16})
-add_flag('pcnet_TMD.misc', {0: 4, 4: 12, 16: 10, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
-add_flag('pcnet_RMD.status', {0: 4, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 16})
-add_flag('pcnet_RMD.msg_length', {0: 12, 12: 4, 16: 8, 24: 8})
 add_flag('mfi_frame0.flags', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 10})
 add_flag('mfi_frame1.flags', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 10})
 add_flag('mfi_frame2.flags', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 10})
