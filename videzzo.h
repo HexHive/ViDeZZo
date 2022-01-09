@@ -114,12 +114,14 @@ typedef struct {
 
 Input *init_input(const uint8_t *Data, size_t Size);
 void free_input(Input *input);
+size_t get_input_size(Input *input);
 uint32_t deserialize(Input *input);
 uint32_t serialize(Input *input, uint8_t *Data, uint32_t MaxSize);
 Event *get_event(Input *input, uint32_t index);
 Event *get_next_event(Event *event);
 void remove_event(Input *input, uint32_t idx);
 void insert_event(Input *input, Event *event, uint32_t idx);
+void append_event(Input *input, Event *event);
 size_t reset_data(uint8_t *Data, size_t MaxSize);
 
 //

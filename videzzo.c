@@ -23,9 +23,43 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
     if (DisableGroupMutator)
         return;
 
+    // save context
+    Input *old_input = gfctx_get_current_input();
+    int old_current_event = gfctx_get_current_event();
+
+    // create new context
+    // so all injected events will go into here
+    Input *input = init_input(NULL, DEFAULT_INPUT_MAXSIZE);
+    int current_event = 0;
+
+    gfctx_set_current_input(input);
+    gfctx_set_current_event(current_event);
+
     // In this handler, the current input will be changed
     // Don't delete any events from the current event to the end
     group_mutator_miss_handlers[id](physaddr);
+
+    // nice, all events go into our new input
+    // we inject the trigger event into this input
+    Event *trigger_event = get_event(old_input, old_current_event);
+    Event *trigger_event_copy = (Event *)calloc(sizeof(Event), 1);
+    event_ops[trigger_event->type].deep_copy(trigger_event, trigger_event_copy);
+    append_event(input, trigger_event_copy);
+
+    // we are going to construct a group event
+    Event *group_event = event_ops[EVENT_TYPE_GROUP_EVENT].construct(
+        EVENT_TYPE_GROUP_EVENT, INTERFACE_GROUP_EVENT, 0, get_input_size(input), 0, (uint8_t *)input);
+
+    // recover
+    gfctx_set_current_input(old_input);
+    gfctx_set_current_event(old_current_event);
+
+    // we inject this group event into the old input
+    insert_event(old_input, group_event, old_current_event);
+    old_input->n_groups++;
+#ifdef VIDEZZO_DEBUG
+    fprintf(stderr, "- GroupMutatorMiss Done\n");
+#endif
 }
 
 //
@@ -362,6 +396,13 @@ static void print_event_socket_write(Event *event) {
     print_end();
 }
 
+static void print_event_group_event(Event *event) {
+    print_event_prologue(event);
+    fprintf(stderr, ", 0x%x", event->size);
+    fprintf(stderr, ", 0x%d events", ((Input *)event->data)->n_events);
+    print_end();
+}
+
 static void print_event_pio_write(Event *event) {
     print_event_prologue(event);
     print_event_io_addr_size(event);
@@ -463,8 +504,8 @@ static Event *construct_group_event(uint8_t type, uint8_t interface,
     event->size = around_event_size(interface, size);
     assert(data != NULL);
     // assume we are in charge of free this data for performance
-    event->data = data;
-    event->event_size = event->size + 3;
+    /*(Input *)*/event->data = /*(Input *)*/data;
+    event->event_size = event->size + 6;
     return event;
 }
 
@@ -535,12 +576,14 @@ static uint32_t serialize_clock_step(Event *event, uint8_t *Data, size_t Offset,
 
 static uint32_t serialize_group_event(Event *event, uint8_t *Data, size_t Offset, size_t MaxSize) {
     uint32_t size = event->size;
-    if (Offset + 3 + size >= MaxSize)
+    if (Offset + 6 + size >= MaxSize)
         return 0;
     Data[Offset] = event->type;
     Data[Offset + 1] = event->interface;
+    memcpy(Data + Offset + 2, (uint8_t *)&size, 4);
     Input *input = (Input *)event->data;
-    return 3 + size;
+    serialize(input, Data + Offset + 6, MaxSize - Offset - 6);
+    return 6 + size;
 }
 
 static void release_nothing(Event *event) {
@@ -613,7 +656,7 @@ EventOps event_ops[] = {
     }, [EVENT_TYPE_GROUP_EVENT] = { // ?
         .change_addr = NULL,                .change_size = NULL,
         .change_valu = NULL,                .change_data = NULL,
-        .dispatch    = NULL,                .print_event = NULL,
+        .dispatch    = NULL,                .print_event = print_event_group_event,
         .serialize   = serialize_group_event,
         .construct   = construct_group_event,
                                             .release     = release_group_event,
@@ -662,7 +705,7 @@ void videzzo_dispatch_event(Event *event, void *object) {
 //
 // Input Helpers
 //
-static size_t get_input_size(Input *input) {
+size_t get_input_size(Input *input) {
     return input->size;
 }
 
@@ -699,7 +742,7 @@ Event *get_next_event(Event *event) {
     return event->next;
 }
 
-static void append_event(Input *input, Event *event) {
+void append_event(Input *input, Event *event) {
     Event *last_event = input->events;
     if (!last_event) {
         input->events = event;
@@ -849,9 +892,11 @@ Input *init_input(const uint8_t *Data, size_t Size) {
     if (Size < 13)
         return NULL;
     Input *input = (Input *)calloc(sizeof(Input), 1);
-    input->limit = Size;
-    input->buf = (void *)calloc(Size, 1);
-    memcpy(input->buf, Data, Size);
+    if (Data != NULL) { /* this is only for deserialization */
+        input->limit = Size;
+        input->buf = (void *)calloc(Size, 1);
+        memcpy(input->buf, Data, Size);
+    }
     input->index = 0;
     input->size = 0;
     input->events = NULL;
@@ -1018,19 +1063,20 @@ uint32_t deserialize(Input *input) {
                 append_event(input, event);
                 break;
             case EVENT_TYPE_GROUP_EVENT:
-                //  1B   1B   1B
+                //  1B   1B   4B
                 //+TYPE+ ID +SIZE+
-                if (!input_check_index(input, 1)) {
+                if (!input_check_index(input, 4)) {
                     input->index -= 2;
                     return get_input_size(input);
                 }
                 // basically, we want to unflatten sub events
+                size = input_next_32(input);
                 uint8_t *sub_events = (uint8_t *)calloc(size, 1);
                 input_next(input, sub_events, size); // get their data
                 Input *input = init_input(sub_events, size); // make it an input
                 deserialize(input); // nice!
                 free(sub_events);
-                event = event_ops[type].construct(type, interface, 0, input_next_8(input), 0, (uint8_t *)input);
+                event = event_ops[type].construct(type, interface, 0, size, 0, (uint8_t *)input);
 #ifdef VIDEZZO_DEBUG
                 event_ops[event->type].print_event(event);
 #endif
