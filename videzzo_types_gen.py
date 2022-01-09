@@ -13,7 +13,7 @@ def __gen_code(models, hypervisor_dir):
 
 #include "videzzo.h"
 
-static uint32_t get_bit(uint32_t data, uint32_t start, uint32_t length) {{
+static uint64_t get_bit(uint64_t data, uint32_t start, uint32_t length) {{
     return (data >> start) & ((1 << (length + 1)) - 1);
 }}
 
@@ -25,40 +25,93 @@ static void fill(uint8_t *dst, size_t dst_size, uint64_t filler, size_t filler_s
 }}
 
 static void refill(uint64_t *dst, size_t dst_size, uint8_t* filler_p, size_t filler_size) {{
-    uint8_t *dst_p = (uint8_t *)dst;
-    for (int i = 0; i < dst_size; i++)
-        dst_p[i] = filler_p[i % filler_size];
+    memcpy((uint8_t *)dst, filler_p, dst_size);
 }}
-
 
 static uint64_t EVENT_MEMALLOC(size_t size) {{
     Event *event = event_ops[EVENT_TYPE_MEM_ALLOC].construct(EVENT_TYPE_MEM_ALLOC,
          INTERFACE_MEM_ALLOC, 0, 0, size, NULL);
-    uint64_t phyaddr = event_ops[EVENT_TYPE_MEM_WRITE].dispatch(event, gfctx_get_object());
+#ifdef VIDEZZO_DEBUG
+    event_ops[event->type].print_event(event);
+#endif
+    uint64_t phyaddr = event_ops[EVENT_TYPE_MEM_ALLOC].dispatch(event, gfctx_get_object());
+    event_ops[event->type].release(event);
+    free(event);
     return phyaddr;
 }}
 
 static void EVENT_MEMFREE(uint64_t physaddr) {{
     Event *event = event_ops[EVENT_TYPE_MEM_FREE].construct(EVENT_TYPE_MEM_FREE,
          INTERFACE_MEM_FREE, 0, 0, physaddr, NULL);
+#ifdef VIDEZZO_DEBUG
+    event_ops[event->type].print_event(event);
+#endif
+    event_ops[event->type].release(event);
+    free(event);
     event_ops[EVENT_TYPE_MEM_FREE].dispatch(event, gfctx_get_object());
 }}
 
 static void __EVENT_MEMREAD(uint64_t physaddr, size_t size, uint8_t *data) {{
     Event *event = event_ops[EVENT_TYPE_MEM_READ].construct(EVENT_TYPE_MEM_READ,
         INTERFACE_MEM_READ, physaddr, size, 0, data);
+#ifdef VIDEZZO_DEBUG
+    event_ops[event->type].print_event(event);
+#endif
     event_ops[EVENT_TYPE_MEM_READ].dispatch(event, gfctx_get_object());
+
+    int current_event = gfctx_get_current_event();
+    insert_event(gfctx_get_current_input(), event, current_event);
+    current_event++;
+    gfctx_set_current_event(current_event);
 }}
 
 static void __EVENT_MEMWRITE(uint64_t physaddr, size_t size, uint8_t *data) {{
     Event *event = event_ops[EVENT_TYPE_MEM_WRITE].construct(EVENT_TYPE_MEM_WRITE,
         INTERFACE_MEM_WRITE, physaddr, size, 0, data);
+#ifdef VIDEZZO_DEBUG
+    event_ops[event->type].print_event(event);
+#endif
     event_ops[EVENT_TYPE_MEM_WRITE].dispatch(event, gfctx_get_object());
 
     int current_event = gfctx_get_current_event();
     insert_event(gfctx_get_current_input(), event, current_event);
     current_event++;
     gfctx_set_current_event(current_event);
+}}
+
+typedef struct GuestMemoryBlock {{
+    uint64_t address;
+    struct GuestMemoryBlock *next;
+}} GuestMemoryBlock;
+
+GuestMemoryBlock *guest_memory_blocks = NULL;
+
+static void append_address(uint64_t address) {{
+    GuestMemoryBlock *gmb = (GuestMemoryBlock *)calloc(sizeof(GuestMemoryBlock), 1);
+    gmb->address = address;
+    gmb->next = NULL;
+
+    GuestMemoryBlock *tmp = guest_memory_blocks;
+    if (tmp == NULL) {{
+        guest_memory_blocks = gmb;
+        return;
+    }}
+    for (; tmp->next != NULL; tmp = tmp->next) {{  }}
+    tmp->next = gmb;
+}}
+
+static void free_memory_blocks() {{
+    GuestMemoryBlock *tmp = guest_memory_blocks, *last = NULL;
+
+    if (tmp == NULL) return;
+    do {{
+        EVENT_MEMFREE(tmp->address);
+        last = tmp;
+        tmp = tmp->next;
+        free(last);
+        last = NULL;
+    }} while (tmp != NULL);
+    guest_memory_blocks = NULL;
 }}
 
 {}

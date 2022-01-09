@@ -17,12 +17,15 @@
 bool DisableGroupMutator = 0;
 
 void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
+#ifdef VIDEZZO_DEBUG
+    fprintf(stderr, "- GroupMutatorMiss\n");
+#endif
     if (DisableGroupMutator)
         return;
 
     // In this handler, the current input will be changed
     // Don't delete any events from the current event to the end
-    group_mutator_miss_handlers[id]();
+    group_mutator_miss_handlers[id](physaddr);
 }
 
 //
@@ -78,7 +81,8 @@ void __videzzo_execute_one_input(Input *input, void *object) {
 #ifdef VIDEZZO_DEBUG
     fprintf(stderr, "- dispatching events\n");
 #endif
-    for (int i = 0; event != NULL; i++) {
+    int i;
+    for (i = 0; event != NULL; i++) {
 #ifdef VIDEZZO_DEBUG
         event_ops[event->type].print_event(event);
 #endif
@@ -88,6 +92,9 @@ void __videzzo_execute_one_input(Input *input, void *object) {
         event = get_next_event(event);
     }
     gfctx_set_current_event(0);
+#ifdef VIDEZZO_DEBUG
+    fprintf(stderr, "- dispatching events done\n");
+#endif
 }
 
 size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object) {
@@ -416,6 +423,7 @@ static Event *construct_mem_read_write(uint8_t type, uint8_t interface,
     event->size = around_event_size(interface, size);
     if (data == NULL)
         data = __get_buffer(event->size);
+    // assume we are in charge of free this data for performance
     event->data = data;
     event->event_size = event->size + 14;
     return event;
@@ -435,6 +443,7 @@ static Event *construct_socket_write(uint8_t type, uint8_t interface,
     event->size = around_event_size(interface, size);
     if (data == NULL)
         data = __get_buffer(event->size);
+    // assume we are in charge of free this data for performance
     event->data = data;
     event->event_size = event->size + 6;
     return event;
@@ -453,6 +462,7 @@ static Event *construct_group_event(uint8_t type, uint8_t interface,
     Event *event = __alloc_an_event(type, interface);
     event->size = around_event_size(interface, size);
     assert(data != NULL);
+    // assume we are in charge of free this data for performance
     event->data = data;
     event->event_size = event->size + 3;
     return event;
@@ -1030,6 +1040,9 @@ uint32_t deserialize(Input *input) {
                 fprintf(stderr, "Unsupport Event Type (deserialize)\n");
         }
     }
+#ifdef VIDEZZO_DEBUG
+    fprintf(stderr, "- deserialize done (%zu)\n", get_input_size(input));
+#endif
     return get_input_size(input);
 }
 

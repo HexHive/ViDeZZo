@@ -30,26 +30,34 @@ typedef struct MemoryRegion {
 } MemoryRegion;
 
 static uint64_t generic_pio_read(uint64_t addr, uint32_t size) {
+    return 0xabababab;
 }
 
 static void generic_pio_write(uint64_t addr, uint32_t size, uint64_t valu) {
-
+    if (addr == 0x30) {
+        // suppose we are going to read some here
+        GroupMutatorMiss(2, 0x10000);
+        // some dma memory read in the following
+    }
 }
 
 static uint64_t generic_mmio_read(uint64_t addr, uint32_t size) {
-
+    return 0x41414141;
 }
 
 static void generic_mmio_write(uint64_t addr, uint32_t size, uint64_t valu) {
-
+    if (addr == 0x20) {
+        // suppose we are going to read some here
+        GroupMutatorMiss(1, 0x10000);
+        // some dma memory read in the following
+    }
 }
 
 static uint64_t generic_mem_read(uint64_t addr, uint32_t size) {
-
+    return rand() % 2 ? 0xffffffff : 0x0;
 }
 
-static void generic_mem_write(uint64_t addr, uint32_t size, uint64_t valu) {
-
+static void generic_mem_write(uint64_t addr, uint32_t size, uint8_t *valu) {
 }
 
 MemoryRegion memory[4] = {
@@ -79,8 +87,6 @@ MemoryRegion memory[4] = {
         .devname = "memory",
         .base = 0x10000,
         .size = 0xfffff,
-        .read = generic_mem_read,
-        .write= generic_mem_write,
     }
 };
 
@@ -146,6 +152,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp) {
                 break;
         }
     }
+    return 0;
 }
 
 //
@@ -185,15 +192,37 @@ static uint64_t dispatch_generic_write(Event *event) {
         case ViDeZZo_Quad: trap_write(event->addr, 8, event->valu); break;
         default: fprintf(stderr, "[-] wrong size of dispatch_generic_write %d\n", event->size); break;
     }
+    return 0;
 }
 
-uint64_t dispatch_mmio_read(Event *event, void *object) { dispatch_generic_read(event); }
-uint64_t dispatch_pio_read(Event *event, void *object) { dispatch_generic_read(event); }
-uint64_t dispatch_mmio_write(Event *event, void *object) { dispatch_generic_write(event); }
-uint64_t dispatch_pio_write(Event *event, void *object) { dispatch_generic_write(event); }
-uint64_t dispatch_mem_read(Event *event, void *object) { dispatch_generic_read(event); }
-uint64_t dispatch_mem_write(Event *event, void *object) { dispatch_generic_write(event); }
-uint64_t dispatch_mem_alloc(Event *event, void *object) { }
-uint64_t dispatch_mem_free(Event *event, void *object) { }
-uint64_t dispatch_clock_step(Event *event, void *object) { }
-uint64_t dispatch_socket_write(Event *event, void *object) { }
+uint64_t dispatch_mmio_read(Event *event, void *object) { return dispatch_generic_read(event); }
+uint64_t dispatch_pio_read(Event *event, void *object) { return dispatch_generic_read(event); }
+uint64_t dispatch_mmio_write(Event *event, void *object) { dispatch_generic_write(event); return 0; }
+uint64_t dispatch_pio_write(Event *event, void *object) { dispatch_generic_write(event); return 0; }
+
+uint64_t dispatch_mem_read(Event *event, void *object) {
+    uint64_t ret = generic_mem_read(event->addr, event->size);
+    memcpy(event->data, (uint8_t *)&ret, event->size);
+    return 0;
+}
+
+uint64_t dispatch_mem_write(Event *event, void *object) {
+    generic_mem_write(event->addr, event->size, event->data);
+    return 0;
+}
+
+static int mem_index = 0;
+uint64_t dispatch_mem_alloc(Event *event, void *object) {
+    // a small allocator
+    mem_index += 1;
+    return 0x10000 + 0x100 * mem_index;
+}
+
+uint64_t dispatch_mem_free(Event *event, void *object) {
+    // a small allocator
+    mem_index -= 1;
+    return 0;
+}
+
+uint64_t dispatch_clock_step(Event *event, void *object) { return 0; }
+uint64_t dispatch_socket_write(Event *event, void *object) { return 0; }

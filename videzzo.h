@@ -195,7 +195,7 @@ uint32_t gfctx_get_size(void);
 // a local handler of a feedback should take the current input and
 // the index of the event just issued as parameters and udpate the current input
 // void *(* FeedbackHandler)(Input *current_input, uint32_t current_event, void *object);
-typedef void (* FeedbackHandler)(void);
+typedef void (* FeedbackHandler)(uint64_t physaddr);
 
 void GroupMutatorMiss(uint8_t id, uint64_t physaddr);
 extern FeedbackHandler group_mutator_miss_handlers[0xff];

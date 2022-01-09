@@ -9,7 +9,7 @@
 CFLAGS ?= -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-pie
 
 videzzo-core:
-	python3 videzzo_gen_types.py ${HYPERVISOR}
+	python3 videzzo_types_gen.py ${HYPERVISOR}
 	clang ${CFLAGS} -o videzzo.o -c videzzo.c
 	clang ${CFLAGS} -o videzzo_types.i -E videzzo_types.c
 	clang ${CFLAGS} -o videzzo_types.o -c videzzo_types.c
@@ -17,11 +17,13 @@ videzzo-core:
 
 videzzo-vmm:
 	HYPERVISOR=vmm make videzzo-core
-	clang -fsanitize=fuzzer ${CFLAGS} -o vmm videzzo_vmm.c videzzo_core.a
+	clang -fsanitize=fuzzer ${CFLAGS} -o vmm       videzzo_vmm.c videzzo_core.a
 
 videzzo-vmm-debug:
-	HYPERVISOR=vmm make videzzo-core
-	clang -fsanitize=fuzzer ${CFALGS} -DVIDEZZO_DEBUG -o vmm-debug videzzo_vmm.c videzzo_core.a
+	CFLAGS="${CFLAGS} -DVIDEZZO_DEBUG" HYPERVISOR=vmm make videzzo-core
+	clang -fsanitize=fuzzer ${CFLAGS} -o vmm-debug videzzo_vmm.c videzzo_core.a
+
+vmm: videzzo-vmm videzzo-vmm-debug
 
 .PHONY: videzzo-qemu videzzo-virtualbox videzzo-bhyve
 

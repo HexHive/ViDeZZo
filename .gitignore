@@ -1,5 +1,7 @@
 # testcases
 crash-*
+slow-unit-*
+leak-*
 # cache
 __pycache__
 # objects
