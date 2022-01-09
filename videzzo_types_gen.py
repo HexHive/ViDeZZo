@@ -142,7 +142,7 @@ def gen_types(hypervisor):
         3. define some commonly used code in videzzo_types.c
     """
     hypervisor_dir = 'videzzo_{}'.format(hypervisor)
-    module_name = '{}.videzzo_gen_types'.format(hypervisor_dir)
+    module_name = '{}.videzzo_types_gen'.format(hypervisor_dir)
     module = importlib.import_module(module_name)
 
     models = {}

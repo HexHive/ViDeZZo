@@ -31,28 +31,34 @@ videzzo-qemu:
 	HYPERVISOR=qemu make videzzo-core
 	make -C videzzo_qemu
 
-videzzo-qemu-debug: videzzo-core
+videzzo-qemu-debug:
 	HYPERVISOR=qemu make videzzo-core
 	CFLAGS="-DVIDEZZO_DEBUG" make -C videzzo_qemu
 
-videzzo-virtualbox: videzzo-core
+qemu: videzzo-qemu
+
+videzzo-virtualbox:
 	HYPERVISOR=virtualbox make videzzo-core
 	make -C videzzo_virtualbox
 
-videzzo-virtualbox-debug: videzzo-core
+videzzo-virtualbox-debug:
 	HYPERVISOR=virtualbox make videzzo-core
 	CFLAGS="-DVIDEZZO_DEBUG" make -C videzzo_virtualbox
 
-videzzo-bhyve: videzzo-core
+virtualbox: videzzo-virtualbox
+
+videzzo-bhyve:
 	HYPERVISOR=bhyve make videzzo-core
 	make -C videzzo_bhyve
 
-videzzo-bhyve-debug: videzzo-core
+videzzo-bhyve-debug:
 	HYPERVISOR=bhyve make videzzo-core
 	CFLAGS="-DVIDEZZO_DEBUG" make -C videzzo_bhyve
 
+bhyve: videzzo-bhyve
+
 clean:
-	rm -rf *.o *.a
+	rm -rf *.o *.a *.i
 
 distclean: clean
 	make -C videzzo_qemu clean

@@ -9,6 +9,4 @@
 CFLAGS ?=
 
 qemu:
-	# git clone git@github.com:qemu/qemu.git --depth=1 qemu
-	# patch
-	# compile
+	echo "Currently not support the latest QEMU! Please wait!"

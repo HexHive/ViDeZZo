@@ -534,7 +534,7 @@ static const videzzo_qemu_config predefined_configs[] = {
         .args = "-machine q35 -nodefaults "
         "-device cs4231,audiodev=snd0 -audiodev none,id=snd0 -nodefaults",
         .objects = "cs4231a* i8257*",
-        .mrnames = "*cs4231*",
+        .mrnames = "*cs4231*,*dma-chan*,*dma-page*,*dma-pageh*,*dma-cont*",
         .file = "hw/audio/cs4231.c",
         .socket = false,
     },{
