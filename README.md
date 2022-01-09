@@ -3,7 +3,7 @@
 ViDeZZo is a virtual device fuzzing framwork. Now, it supports QEMU, VirtualBox,
 and BHyve.
 
-## Usage
+## Install
 
 1. Download our customized LLVM toolchains.
 ```
@@ -20,6 +20,10 @@ export PATH=$PWD/llvm-project/build-custom/bin:$PATH
 wget https://ftp.gnu.org/gnu/binutils/binutils-2.35.tar.gz
 tar xzvf binutils-2.35.tar.gz; cd binutils-2.35; ./configure; make -j8; sudo make install;
 sudo rm /usr/bin/objcopy; sudo ln -s /usr/local/bin/objcopy /usr/bin/objcopy
+```
+4. clone this project
+```
+git clone git@github.com:cyruscyliu/videzzo.git
 ```
 
 ## Contribution
