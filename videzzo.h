@@ -162,7 +162,7 @@ void print_interfaces(void);
 //
 // mutators
 //
-#define N_MUTATORS 17
+#define N_MUTATORS 16
 int select_mutators(int rand);
 extern size_t (*CustomMutators[N_MUTATORS])(Input *input);
 extern const char *CustomMutatorNames[N_MUTATORS];
