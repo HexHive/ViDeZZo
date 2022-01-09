@@ -16,33 +16,34 @@
 //
 // QEMU Dispatcher
 //
-void dispatch_mmio_read(Event *event, void *object) {
+uint64_t dispatch_mmio_read(Event *event, void *object) {
     QTestState *s = (QTestState *)object;
     switch (event->size) {
-        case ViDeZZo_Byte: qtest_readb(s, event->addr); break;
-        case ViDeZZo_Word: qtest_readw(s, event->addr); break;
-        case ViDeZZo_Long: qtest_readl(s, event->addr); break;
-        case ViDeZZo_Quad: qtest_readq(s, event->addr); break;
-        default: fprintf(stderr, "wrong size of dispatch_mmio_read %d\n", event->size); break;
+        case ViDeZZo_Byte: return qtest_readb(s, event->addr);
+        case ViDeZZo_Word: return qtest_readw(s, event->addr);
+        case ViDeZZo_Long: return qtest_readl(s, event->addr);
+        case ViDeZZo_Quad: return qtest_readq(s, event->addr);
+        default: fprintf(stderr, "wrong size of dispatch_mmio_read %d\n", event->size); return 0xffffffffffffffff;
     }
 }
 
-void dispatch_pio_read(Event *event, void *object) {
+uint64_t dispatch_pio_read(Event *event, void *object) {
     QTestState *s = (QTestState *)object;
     switch (event->size) {
-        case ViDeZZo_Byte: qtest_inb(s, event->addr); break;
-        case ViDeZZo_Word: qtest_inw(s, event->addr); break;
-        case ViDeZZo_Long: qtest_inl(s, event->addr); break;
-        default: fprintf(stderr, "wrong size of dispatch_pio_read %d\n", event->size); break;
+        case ViDeZZo_Byte: return qtest_inb(s, event->addr);
+        case ViDeZZo_Word: return qtest_inw(s, event->addr);
+        case ViDeZZo_Long: return qtest_inl(s, event->addr);
+        default: fprintf(stderr, "wrong size of dispatch_pio_read %d\n", event->size); return 0xffffffffffffffff;
     }
 }
 
-void dispatch_mem_read(Event *event, void *object) {
+uint64_t dispatch_mem_read(Event *event, void *object) {
     QTestState *s = (QTestState *)object;
     qtest_memread(s, event->addr, event->data, event->size);
+    return 0;
 }
 
-void dispatch_mmio_write(Event *event, void *object) {
+uint64_t dispatch_mmio_write(Event *event, void *object) {
     QTestState *s = (QTestState *)object;
     switch (event->size) {
         case ViDeZZo_Byte: qtest_writeb(s, event->addr, event->valu & 0xFF); break;
@@ -51,9 +52,10 @@ void dispatch_mmio_write(Event *event, void *object) {
         case ViDeZZo_Quad: qtest_writeq(s, event->addr, event->valu); break;
         default: fprintf(stderr, "wrong size of dispatch_mmio_write %d\n", event->size); break;
     }
+    return 0;
 }
 
-void dispatch_pio_write(Event *event, void *object) {
+uint64_t dispatch_pio_write(Event *event, void *object) {
     QTestState *s = (QTestState *)object;
     switch (event->size) {
         case ViDeZZo_Byte: qtest_outb(s, event->addr, event->valu & 0xFF); break;
@@ -61,16 +63,19 @@ void dispatch_pio_write(Event *event, void *object) {
         case ViDeZZo_Long: qtest_outl(s, event->addr, event->valu & 0xFFFFFFFF); break;
         default: fprintf(stderr, "wrong size of dispatch_pio_write %d\n", event->size); break;
     }
+    return 0;
 }
 
-void dispatch_mem_write(Event *event, void *object) {
+uint64_t dispatch_mem_write(Event *event, void *object) {
     QTestState *s = (QTestState *)object;
     qtest_memwrite(s, event->addr, event->data, event->size);
+    return 0;
 }
 
-void dispatch_clock_step(Event *event, void *object) {
+uint64_t dispatch_clock_step(Event *event, void *object) {
     QTestState *s = (QTestState *)object;
     qtest_clock_step(s, event->valu);
+    return 0;
 }
 
 #define fmt_timeval "%ld.%06ld"
@@ -83,17 +88,17 @@ static void printf_qtest_prefix()
             (long) tv.tv_sec, (long) tv.tv_usec);
 }
 
-void dispatch_socket_write(Event *event, void *object) {
+uint64_t dispatch_socket_write(Event *event, void *object) {
     QTestState *s = (QTestState *)object;
     uint8_t D[SOCKET_WRITE_MAX_SIZE + 4];
     uint8_t *ptr = &D;
     char *enc;
     uint32_t i;
     if (!sockfds_initialized)
-        return;
+        return 0;
     size_t size = event->size;
     if (size > SOCKET_WRITE_MAX_SIZE)
-        return;
+        return 0;
     // first four bytes are lenght
     uint32_t S = htonl(size);
     memcpy(D, (uint8_t *)&S, 4);
@@ -110,8 +115,19 @@ void dispatch_socket_write(Event *event, void *object) {
         printf("sock %d 0x%zx 0x%s\n", sockfds[0], size, enc);
     }
     (void) ignore;
-    return;
+    return 0;
 }
+
+uint64_t dispatch_mem_alloc(Event *event, void *object) {
+    QTestState *s = (QTestState *)object;
+    return videzzo_malloc(event->valu);
+}
+
+uint64_t dispatch_mem_free(Event *event, void *object) {
+    QTestState *s = (QTestState *)object;
+    return videzzo_free(event->valu);
+}
+
 
 //
 // QEMU specific initialization - Set up interfaces
@@ -182,6 +198,7 @@ static void locate_fuzzable_objects(Object *obj, char *mrname) {
 
     uint64_t addr;
     uint8_t mr_type, max, min;
+    uint8_t event_type1, event_type2;
     if (object_dynamic_cast(OBJECT(obj), TYPE_MEMORY_REGION)) {
         if (g_pattern_match_simple(mrname, name)) {
             mr = MEMORY_REGION(obj);
@@ -199,8 +216,8 @@ static void locate_fuzzable_objects(Object *obj, char *mrname) {
                     min = MAX(mr->ops->valid.min_access_size, mr->ops->impl.min_access_size);
                     max = MAX(mr->ops->valid.max_access_size, mr->ops->impl.max_access_size);
                 }
-                Id_Description[n_interfaces].type = EVENT_TYPE_MMIO_READ;
-                Id_Description[n_interfaces + 1].type = EVENT_TYPE_MMIO_WRITE;
+                event_type1 = EVENT_TYPE_MMIO_READ;
+                event_type2 = EVENT_TYPE_MMIO_WRITE;
             } else if (mr_type == PIO_ADDRESS) {
                 MemoryRegionPortioList *mrpl = (MemoryRegionPortioList *)mr->opaque;
                 if (mr->ops->valid.min_access_size == 0 &&
@@ -214,26 +231,13 @@ static void locate_fuzzable_objects(Object *obj, char *mrname) {
                     min = MAX(mr->ops->valid.min_access_size, mr->ops->impl.min_access_size);
                     max = MAX(mr->ops->valid.max_access_size, mr->ops->impl.max_access_size);
                 }
-                Id_Description[n_interfaces].type = EVENT_TYPE_PIO_READ;
-                Id_Description[n_interfaces + 1].type = EVENT_TYPE_PIO_WRITE;
+                event_type1 = EVENT_TYPE_PIO_READ;
+                event_type2 = EVENT_TYPE_PIO_WRITE;
             }
             // TODO: Deduplicate MemoryRegions in the future
             if (mr_type != INVLID_ADDRESS) {
-                Id_Description[n_interfaces].emb.addr = addr;
-                Id_Description[n_interfaces].emb.size = mr->size;
-                Id_Description[n_interfaces].min_access_size = min;
-                Id_Description[n_interfaces].max_access_size = max;
-                Id_Description[n_interfaces].dynamic = true;
-                memcpy(Id_Description[n_interfaces].name, mr->name,
-                       strlen(mr->name) <= 32 ? strlen(mr->name) : 32);
-                Id_Description[n_interfaces + 1].emb.addr = addr;
-                Id_Description[n_interfaces + 1].emb.size = mr->size;
-                Id_Description[n_interfaces + 1].min_access_size = min;
-                Id_Description[n_interfaces + 1].max_access_size = max;
-                Id_Description[n_interfaces + 1].dynamic = true;
-                memcpy(Id_Description[n_interfaces + 1].name, mr->name,
-                       strlen(mr->name) <= 32 ? strlen(mr->name) : 32);
-                n_interfaces += 2;
+                add_interface(event_type1, addr, mr->size, mr->name, min, max, true);
+                add_interface(event_type2, addr, mr->size, mr->name, min, max, true);
             }
          }
      } else if(object_dynamic_cast(OBJECT(obj), TYPE_PCI_DEVICE)) {
@@ -302,7 +306,7 @@ static void videzzo_qemu_pre(QTestState *s) {
     }
 
     fprintf(stderr, "This process will fuzz through the following interfaces:\n");
-    if (!n_interfaces) {
+    if (get_number_of_interfaces() == 0) {
         printf("No fuzzable interfaces found ...\n");
         exit(2);
     } else {

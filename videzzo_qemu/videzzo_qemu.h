@@ -78,7 +78,7 @@ static void __wrap_guest_free(uint64_t addr) {
         guest_free(videzzo_alloc, addr);
 }
 
-static uint64_t videzzo_malloc(size_t size, bool chained) {
+static uint64_t videzzo_malloc(size_t size) {
     return __wrap_guest_alloc(size);
 }
 

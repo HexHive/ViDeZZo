@@ -196,7 +196,11 @@ InterfaceDescription Id_Description[INTERFACE_END] = {
     }
 };
 
-uint32_t n_interfaces = INTERFACE_DYNAMIC;
+static int n_interfaces = INTERFACE_DYNAMIC;
+
+int get_number_of_interfaces(void) {
+    return n_interfaces;
+}
 
 void add_interface(EventType type, uint64_t addr, uint32_t size,
         char *name, uint8_t min_access_size, uint8_t max_access_size, bool dynamic) {
