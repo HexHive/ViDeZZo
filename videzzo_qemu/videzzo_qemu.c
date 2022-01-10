@@ -16,8 +16,8 @@
 //
 // QEMU Dispatcher
 //
-uint64_t dispatch_mmio_read(Event *event, void *object) {
-    QTestState *s = (QTestState *)object;
+uint64_t dispatch_mmio_read(Event *event) {
+    QTestState *s = (QTestState *)gfctx_get_object();
     switch (event->size) {
         case ViDeZZo_Byte: return qtest_readb(s, event->addr);
         case ViDeZZo_Word: return qtest_readw(s, event->addr);
@@ -27,8 +27,8 @@ uint64_t dispatch_mmio_read(Event *event, void *object) {
     }
 }
 
-uint64_t dispatch_pio_read(Event *event, void *object) {
-    QTestState *s = (QTestState *)object;
+uint64_t dispatch_pio_read(Event *event) {
+    QTestState *s = (QTestState *)gfctx_get_object();
     switch (event->size) {
         case ViDeZZo_Byte: return qtest_inb(s, event->addr);
         case ViDeZZo_Word: return qtest_inw(s, event->addr);
@@ -37,14 +37,14 @@ uint64_t dispatch_pio_read(Event *event, void *object) {
     }
 }
 
-uint64_t dispatch_mem_read(Event *event, void *object) {
-    QTestState *s = (QTestState *)object;
+uint64_t dispatch_mem_read(Event *event) {
+    QTestState *s = (QTestState *)gfctx_get_object();
     qtest_memread(s, event->addr, event->data, event->size);
     return 0;
 }
 
-uint64_t dispatch_mmio_write(Event *event, void *object) {
-    QTestState *s = (QTestState *)object;
+uint64_t dispatch_mmio_write(Event *event) {
+    QTestState *s = (QTestState *)gfctx_get_object();
     switch (event->size) {
         case ViDeZZo_Byte: qtest_writeb(s, event->addr, event->valu & 0xFF); break;
         case ViDeZZo_Word: qtest_writew(s, event->addr, event->valu & 0xFFFF); break;
@@ -55,8 +55,8 @@ uint64_t dispatch_mmio_write(Event *event, void *object) {
     return 0;
 }
 
-uint64_t dispatch_pio_write(Event *event, void *object) {
-    QTestState *s = (QTestState *)object;
+uint64_t dispatch_pio_write(Event *event) {
+    QTestState *s = (QTestState *)gfctx_get_object();
     switch (event->size) {
         case ViDeZZo_Byte: qtest_outb(s, event->addr, event->valu & 0xFF); break;
         case ViDeZZo_Word: qtest_outw(s, event->addr, event->valu & 0xFFFF); break;
@@ -66,14 +66,14 @@ uint64_t dispatch_pio_write(Event *event, void *object) {
     return 0;
 }
 
-uint64_t dispatch_mem_write(Event *event, void *object) {
-    QTestState *s = (QTestState *)object;
+uint64_t dispatch_mem_write(Event *event) {
+    QTestState *s = (QTestState *)gfctx_get_object();
     qtest_memwrite(s, event->addr, event->data, event->size);
     return 0;
 }
 
-uint64_t dispatch_clock_step(Event *event, void *object) {
-    QTestState *s = (QTestState *)object;
+uint64_t dispatch_clock_step(Event *event) {
+    QTestState *s = (QTestState *)gfctx_get_object();
     qtest_clock_step(s, event->valu);
     return 0;
 }
@@ -88,8 +88,8 @@ static void printf_qtest_prefix()
             (long) tv.tv_sec, (long) tv.tv_usec);
 }
 
-uint64_t dispatch_socket_write(Event *event, void *object) {
-    QTestState *s = (QTestState *)object;
+uint64_t dispatch_socket_write(Event *event) {
+    QTestState *s = (QTestState *)gfctx_get_object();
     uint8_t D[SOCKET_WRITE_MAX_SIZE + 4];
     uint8_t *ptr = &D;
     char *enc;
@@ -118,13 +118,13 @@ uint64_t dispatch_socket_write(Event *event, void *object) {
     return 0;
 }
 
-uint64_t dispatch_mem_alloc(Event *event, void *object) {
-    QTestState *s = (QTestState *)object;
+uint64_t dispatch_mem_alloc(Event *event) {
+    QTestState *s = (QTestState *)gfctx_get_object();
     return videzzo_malloc(event->valu);
 }
 
-uint64_t dispatch_mem_free(Event *event, void *object) {
-    QTestState *s = (QTestState *)object;
+uint64_t dispatch_mem_free(Event *event) {
+    QTestState *s = (QTestState *)gfctx_get_object();
     return videzzo_free(event->valu);
 }
 
@@ -341,8 +341,7 @@ static void videzzo_qemu(QTestState *s, uint8_t *Data, size_t Size) {
     if (vnc_client_needed && !vnc_client_initialized) {
         init_vnc_client(s);
     }
-    videzzo_execute_one_input(Data, Size, s);
-    flush_events(s);
+    videzzo_execute_one_input(Data, Size, s, &flush_events);
 }
 
 //

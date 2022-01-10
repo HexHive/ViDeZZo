@@ -220,7 +220,7 @@ static inline GString *videzzo_qemu_predefined_config_cmdline(FuzzTarget *t)
         port = vnc_port - SERVER_PORT_OFFSET;
     }
     if (config->byte_address) {
-        setenv("QEMU_BYTE_ADDRESS", "1", 1);
+        setenv("VIDEZZO_BYTE_ALIGNED_ADDRESS", "1", 1);
     }
     setenv("QEMU_AVOID_DOUBLE_FETCH", "1", 1);
     if (config->argfunc) {
@@ -437,6 +437,7 @@ static const videzzo_qemu_config predefined_configs[] = {
         .mrnames = "*eepro100-mmio*,*eepro100-io*,*eepro100-flash*",
         .file = "hw/net/eepro100.c",
         .socket = true,
+        .byte_address = true,
     },{
         .arch = "i386",
         .name = "e1000",
@@ -517,6 +518,7 @@ static const videzzo_qemu_config predefined_configs[] = {
         .mrnames = "*ac97-nam*,*ac97-nabm*",
         .file = "hw/audio/ac97.c",
         .socket = false,
+        .byte_address = true,
     },{
         .arch = "i386",
         .name = "cs4231a",
@@ -527,7 +529,6 @@ static const videzzo_qemu_config predefined_configs[] = {
         .file = "hw/audio/cs4231a.c",
         .socket = false,
         .byte_address = true,
-
     },{
         .arch = "i386",
         .name = "cs4231",
@@ -555,6 +556,7 @@ static const videzzo_qemu_config predefined_configs[] = {
         .mrnames = "*sb16*,*dma-chan*,*dma-page*,*dma-pageh*,*dma-cont*",
         .file = "hw/audio/sb16.c hw/dma/i8257.c",
         .socket = false,
+        .byte_address = true,
     },{
         .arch = "i386",
         .name = "intel-hda",
@@ -565,6 +567,7 @@ static const videzzo_qemu_config predefined_configs[] = {
         .mrnames = "*intel-hda*",
         .file = "hw/audio/intel-hda.c",
         .socket = false,
+        .byte_address = true,
     },{
         .arch = "i386",
         .name = "parallel",
@@ -660,9 +663,10 @@ static const videzzo_qemu_config predefined_configs[] = {
         "-drive id=disk0,file=null-co://,file.read-zeroes=on,if=none,format=raw "
         "-device floppy,unit=0,drive=disk0",
         .objects = "fd* floppy* i8257",
-        .mrnames = "*fdc*",
+        .mrnames = "*fdc*,*dma-chan*,*dma-page*,*dma-pageh*,*dma-cont*",
         .file = "hw/block/fdc.c",
         .socket = false,
+        .byte_address = true,
     },{
         .arch = "i386",
         .name = "nvme",

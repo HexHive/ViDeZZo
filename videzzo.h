@@ -71,7 +71,7 @@ typedef struct EventOps {
     uint32_t (*change_size)(Event *event, uint32_t new_size); // return real size
     void (*change_valu)(Event *event, uint64_t new_valu);
     void (*change_data)(Event *event, uint8_t *new_data);
-    uint64_t (*dispatch)(Event *event, void *object);
+    uint64_t (*dispatch)(Event *event);
     void (*print_event)(Event *event);
     Event *(*construct)(uint8_t type, uint8_t interface,
             uint64_t addr, uint32_t size, uint64_t valu, uint8_t *data);
@@ -81,20 +81,20 @@ typedef struct EventOps {
 } EventOps;
 
 // VM specific
-uint64_t dispatch_mmio_read(Event *event, void *object);
-uint64_t dispatch_mmio_write(Event *event, void *object);
-uint64_t dispatch_pio_read(Event *event, void *object);
-uint64_t dispatch_pio_write(Event *event, void *object);
-uint64_t dispatch_mem_read(Event *event, void *object);
-uint64_t dispatch_mem_write(Event *event, void *object);
-uint64_t dispatch_clock_step(Event *event, void *object);
-uint64_t dispatch_socket_write(Event *event, void *object);
-uint64_t dispatch_mem_alloc(Event *event, void *object);
-uint64_t dispatch_mem_free(Event *event, void *object);
+uint64_t dispatch_mmio_read(Event *event);
+uint64_t dispatch_mmio_write(Event *event);
+uint64_t dispatch_pio_read(Event *event);
+uint64_t dispatch_pio_write(Event *event);
+uint64_t dispatch_mem_read(Event *event);
+uint64_t dispatch_mem_write(Event *event);
+uint64_t dispatch_clock_step(Event *event);
+uint64_t dispatch_socket_write(Event *event);
+uint64_t dispatch_mem_alloc(Event *event);
+uint64_t dispatch_mem_free(Event *event);
 
 enum Sizes {ViDeZZo_Empty, ViDeZZo_Byte=1, ViDeZZo_Word=2, ViDeZZo_Long=4, ViDeZZo_Quad=8};
 extern EventOps event_ops[N_EVENT_TYPES];
-void videzzo_dispatch_event(Event *event, void *object);
+void videzzo_dispatch_event(Event *event);
 
 //
 // Input
@@ -184,7 +184,6 @@ typedef struct GenericFeedbackContext {
     void *object;
 } GenericFeedbackContext;
 
-extern GenericFeedbackContext gfctx;
 void gfctx_set_current_input(Input *input);
 Input *gfctx_get_current_input(void);
 void gfctx_set_current_event(int idx);
@@ -195,9 +194,12 @@ void gfctx_set_data(uint8_t *Data);
 uint8_t *gfctx_get_data(void);
 void gfctx_set_size(uint32_t MaxSize);
 uint32_t gfctx_get_size(void);
+typedef void (*__flush)(void *object);
+void gfctx_set_flush(__flush);
+__flush gfctx_get_flush(void);
+
 // a local handler of a feedback should take the current input and
 // the index of the event just issued as parameters and udpate the current input
-// void *(* FeedbackHandler)(Input *current_input, uint32_t current_event, void *object);
 typedef void (* FeedbackHandler)(uint64_t physaddr);
 
 void GroupMutatorMiss(uint8_t id, uint64_t physaddr);
@@ -206,8 +208,8 @@ extern FeedbackHandler group_mutator_miss_handlers[0xff];
 //
 // Open APIs
 //
-void __videzzo_execute_one_input(Input *input, void *object);
-size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object);
+void __videzzo_execute_one_input(Input *input);
+size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush flush);
 size_t ViDeZZoCustomMutator(uint8_t *Data, size_t Size, size_t MaxSize, unsigned int Seed);
 
 //

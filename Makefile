@@ -6,7 +6,8 @@
 # This work is licensed under the terms of the GNU GPL, version 2 or later.
 #
 
-CFLAGS ?= -g -fsanitize=address,undefined -fPIE -fno-omit-frame-pointer -fno-optimize-sibling-calls
+SANITIZERS = -fsanitize=address,undefined
+CFLAGS ?= -g -fPIE -fno-omit-frame-pointer -fno-optimize-sibling-calls
 
 videzzo-core:
 	python3 videzzo_types_gen.py ${HYPERVISOR}
@@ -16,12 +17,12 @@ videzzo-core:
 	ar rcs libvidezzo.a videzzo.o videzzo_types.o
 
 videzzo-vmm:
-	HYPERVISOR=vmm make videzzo-core
-	clang -fsanitize=fuzzer ${CFLAGS} -o vmm       videzzo_vmm.c libvidezzo.a
+	CFLAGS="${CFLAGS} ${SANITIZERS}" 					 HYPERVISOR=vmm make videzzo-core
+	clang -fsanitize=fuzzer ${CFLAGS} ${SANITIZERS} 			     -o vmm       videzzo_vmm.c libvidezzo.a
 
 videzzo-vmm-debug:
-	CFLAGS="${CFLAGS} -DVIDEZZO_DEBUG" HYPERVISOR=vmm make videzzo-core
-	clang -fsanitize=fuzzer ${CFLAGS} -o vmm-debug videzzo_vmm.c libvidezzo.a
+	CFLAGS="${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG" HYPERVISOR=vmm make videzzo-core
+	clang -fsanitize=fuzzer ${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG  -o vmm-debug videzzo_vmm.c libvidezzo.a
 
 vmm: videzzo-vmm videzzo-vmm-debug
 

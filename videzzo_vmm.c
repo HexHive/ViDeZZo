@@ -159,7 +159,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp) {
 // Call into videzzo from QEMU
 //
 int __LLVMFuzzerTestOneInput(uint8_t *Data, size_t Size) {
-    videzzo_execute_one_input(Data, Size, NULL);
+    videzzo_execute_one_input(Data, Size, NULL, NULL);
     return 0;
 }
 
@@ -195,34 +195,34 @@ static uint64_t dispatch_generic_write(Event *event) {
     return 0;
 }
 
-uint64_t dispatch_mmio_read(Event *event, void *object) { return dispatch_generic_read(event); }
-uint64_t dispatch_pio_read(Event *event, void *object) { return dispatch_generic_read(event); }
-uint64_t dispatch_mmio_write(Event *event, void *object) { dispatch_generic_write(event); return 0; }
-uint64_t dispatch_pio_write(Event *event, void *object) { dispatch_generic_write(event); return 0; }
+uint64_t dispatch_mmio_read(Event *event) { return dispatch_generic_read(event); }
+uint64_t dispatch_pio_read(Event *event) { return dispatch_generic_read(event); }
+uint64_t dispatch_mmio_write(Event *event) { dispatch_generic_write(event); return 0; }
+uint64_t dispatch_pio_write(Event *event) { dispatch_generic_write(event); return 0; }
 
-uint64_t dispatch_mem_read(Event *event, void *object) {
+uint64_t dispatch_mem_read(Event *event) {
     uint64_t ret = generic_mem_read(event->addr, event->size);
     memcpy(event->data, (uint8_t *)&ret, event->size);
     return 0;
 }
 
-uint64_t dispatch_mem_write(Event *event, void *object) {
+uint64_t dispatch_mem_write(Event *event) {
     generic_mem_write(event->addr, event->size, event->data);
     return 0;
 }
 
 static int mem_index = 0;
-uint64_t dispatch_mem_alloc(Event *event, void *object) {
+uint64_t dispatch_mem_alloc(Event *event) {
     // a small allocator
     mem_index += 1;
     return 0x10000 + 0x100 * mem_index;
 }
 
-uint64_t dispatch_mem_free(Event *event, void *object) {
+uint64_t dispatch_mem_free(Event *event) {
     // a small allocator
     mem_index -= 1;
     return 0;
 }
 
-uint64_t dispatch_clock_step(Event *event, void *object) { return 0; }
-uint64_t dispatch_socket_write(Event *event, void *object) { return 0; }
+uint64_t dispatch_clock_step(Event *event) { return 0; }
+uint64_t dispatch_socket_write(Event *event) { return 0; }

@@ -27,6 +27,11 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
     Input *old_input = gfctx_get_current_input();
     int old_current_event = gfctx_get_current_event();
 
+    // we dislike a group event to trigger this Miss
+    Event *trigger_event = get_event(old_input, old_current_event);
+    if (trigger_event->type == EVENT_TYPE_GROUP_EVENT)
+        return;
+
     // create new context
     // so all injected events will go into here
     Input *input = init_input(NULL, DEFAULT_INPUT_MAXSIZE);
@@ -41,14 +46,13 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
 
     // nice, all events go into our new input
     // we inject the trigger event into this input
-    Event *trigger_event = get_event(old_input, old_current_event);
     Event *trigger_event_copy = (Event *)calloc(sizeof(Event), 1);
     event_ops[trigger_event->type].deep_copy(trigger_event, trigger_event_copy);
     append_event(input, trigger_event_copy);
 
     // we are going to construct a group event
     Event *group_event = event_ops[EVENT_TYPE_GROUP_EVENT].construct(
-        EVENT_TYPE_GROUP_EVENT, INTERFACE_GROUP_EVENT, 0, get_input_size(input), 0, (uint8_t *)input);
+        EVENT_TYPE_GROUP_EVENT, INTERFACE_GROUP_EVENT, 0, sizeof(Input), 0, (uint8_t *)input);
 
     // recover
     gfctx_set_current_input(old_input);
@@ -110,7 +114,7 @@ size_t ViDeZZoCustomMutator(uint8_t *Data, size_t Size,
     return reset_data(Data, MaxSize); // Fallback, should not happen frequently.
 }
 
-void __videzzo_execute_one_input(Input *input, void *object) {
+void __videzzo_execute_one_input(Input *input) {
     Event *event = input->events;
 #ifdef VIDEZZO_DEBUG
     fprintf(stderr, "- dispatching events\n");
@@ -122,7 +126,7 @@ void __videzzo_execute_one_input(Input *input, void *object) {
 #endif
         // set up feedback context
         gfctx_set_current_event(i);
-        videzzo_dispatch_event(event, object);
+        videzzo_dispatch_event(event);
         event = get_next_event(event);
     }
     gfctx_set_current_event(0);
@@ -131,7 +135,7 @@ void __videzzo_execute_one_input(Input *input, void *object) {
 #endif
 }
 
-size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object) {
+size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush flush) {
     // read Data to Input
     Input *input = init_input(Data, Size);
     if (!input)
@@ -141,15 +145,17 @@ size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object) {
     // set up feedback context
     gfctx_set_current_input(input);
     gfctx_set_object(object);
+    gfctx_set_flush(flush);
     // if (fork() == 0) {
-        __videzzo_execute_one_input(input, object);
+        __videzzo_execute_one_input(input);
     //    _Exit(0);
     // } else {
     //     wait(0);
     // }
-    size_t SerializationSize = serialize(input, Data, DEFAULT_INPUT_MAXSIZE);
+    size_t SerializationSize = serialize(input, Data, Size);
     gfctx_set_current_input(NULL);
     gfctx_set_object(NULL);
+    gfctx_set_flush(NULL);
     free_input(input);
     return SerializationSize;
 }
@@ -204,6 +210,10 @@ int get_number_of_interfaces(void) {
 
 void add_interface(EventType type, uint64_t addr, uint32_t size,
         char *name, uint8_t min_access_size, uint8_t max_access_size, bool dynamic) {
+    if (min_access_size == 0 && max_access_size == 0) {
+        fprintf(stderr, "\n- %s has zero size!!! Won\'t add this\n", name);
+        return;
+    }
     Id_Description[n_interfaces].type = type;
     Id_Description[n_interfaces].emb.addr = addr;
     Id_Description[n_interfaces].emb.size = size;
@@ -545,7 +555,7 @@ static uint32_t serialize_mem_read_or_write(Event *event, uint8_t *Data, size_t 
     if (event->type == EVENT_TYPE_MEM_READ)
         memset(Data + Offset + 14, 0, size);
     else
-        memcpy(Data + Offset + 14, (uint8_t *)&(event->valu), size);
+        memcpy(Data + Offset + 14, (uint8_t *)&(event->data), size);
     return 14 + event->size;
 }
 
@@ -700,10 +710,11 @@ EventOps event_ops[] = {
     },
 };
 
-void videzzo_dispatch_event(Event *event, void *object) {
-    uint64_t addr = event->addr;
-    uint32_t size = event->size;
-    event_ops[event->type].dispatch(event, object);
+void videzzo_dispatch_event(Event *event) {
+    event_ops[event->type].dispatch(event);
+    __flush flush = gfctx_get_flush();
+    if (flush != NULL)
+        flush(gfctx_get_object());
 }
 
 //
@@ -1388,7 +1399,7 @@ int select_weighted_mutators(int rand) {
 //
 // Generic Feedback Context
 //
-GenericFeedbackContext gfctx;
+static GenericFeedbackContext gfctx;
 
 void gfctx_set_current_input(Input *input) {
     gfctx.current_input = input;
@@ -1428,6 +1439,16 @@ void gfctx_set_size(uint32_t MaxSize) {
 
 uint32_t gfctx_get_size() {
     return gfctx.MaxSize;
+}
+
+static __flush vmm_flush;
+
+void gfctx_set_flush(__flush flush) {
+    vmm_flush = flush;
+}
+
+__flush gfctx_get_flush(void) {
+    return vmm_flush;
 }
 
 //
