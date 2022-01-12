@@ -555,7 +555,7 @@ static uint32_t serialize_mem_read_or_write(Event *event, uint8_t *Data, size_t 
     if (event->type == EVENT_TYPE_MEM_READ)
         memset(Data + Offset + 14, 0, size);
     else
-        memcpy(Data + Offset + 14, (uint8_t *)&(event->data), size);
+        memcpy(Data + Offset + 14, (uint8_t *)(event->data), size);
     return 14 + event->size;
 }
 
