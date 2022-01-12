@@ -5,6 +5,14 @@ FIELD_POINTER = 1
 FIELD_FLAG    = 2
 FIELD_CONSTANT= 3
 
+def dict_append(a, b):
+    for k, v in b.items():
+        if k in a:
+            print('Error: {} is in {}'.format(k, a))
+            exit(0)
+        else:
+            a[k] = v
+
 class Model(object):
     def __init__(self, name, index):
         self.name = name
@@ -195,7 +203,7 @@ class Model(object):
             initvalue = length_and_initvalue['initvalue']
             if initvalue is None:
                 initvalue = 'rand()'
-            flags.append(('(({0} & ((1 << (0x{1:02x} + 1)) - 1)) << 0x{2:02x})'.format(initvalue, length, length_in_total)))
+            flags.append(('(({0} & ((1 << 0x{1:02x}) - 1)) << 0x{2:02x})'.format(initvalue, length, length_in_total)))
             length_in_total += int(length)
         sep = '\n    {} | '.format(' ' * self.indent * 4)
         # MAGIC
@@ -210,13 +218,8 @@ class Model(object):
     def gen_constant(self, struct_name, field_name, metadata):
         field_value = metadata['field_value']
         # MAGIC
-        # self.append_code('{}->{} = {};'.format(struct_name, field_name, field_value))
-        self.__gen_event_memwrite(struct_name, field_name, field_value, 4)
-
-    def gen_constant(self, struct_name, field_name, metadata):
-        # MAGIC
         # self.append_code('{}->{} = {};'.format(struct_name, field_name, 'rand()'))
-        self.__gen_event_memwrite(struct_name, field_name, 'rand()', 4)
+        self.__gen_event_memwrite(struct_name, field_name, field_value, 4)
 
     def gen_linked_list(self, struct_type, field_name):
         self.append_code('// gen linked list for {}->{}'.format(struct_type, field_name))
@@ -254,6 +257,9 @@ class Model(object):
             for case, struct_type in types.items():
                 self.append_code('case {}: {{'.format(case))
                 self.indent += 1
+                if struct_type is None:
+                    self.append_code('break; }')
+                    continue
                 if __links is None:
                     __gen_func(struct_type)
                 else:

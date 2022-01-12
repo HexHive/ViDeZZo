@@ -1,5 +1,6 @@
 from videzzo_types_lib import Model
 from videzzo_types_lib import FIELD_RANDOM, FIELD_FLAG, FIELD_POINTER, FIELD_CONSTANT
+from videzzo_types_lib import dict_append
 
 ac97_00 = Model('ac97', 0)
 ac97_00.add_struct('BD', {'addr#0x4': FIELD_POINTER, 'ctl_len#0x4': FIELD_RANDOM})
@@ -15,10 +16,9 @@ es1370_02.add_struct('ES1370_TEMP_BUF', {'temp#0x1000': FIELD_RANDOM})
 es1370_02.add_head(['ES1370_TEMP_BUF'], ['es1370_transfer_audio', 'pci_dma_read'])
 ###################################################################################################################
 intel_hda_03 = Model('intel_hda', 3)
-intel_hda_03.add_struct('INTEL_HDA_BUF', {'addr#0x8': FIELD_POINTER, 'len#0x4': FIELD_CONSTANT, 'flags#0x4': FIELD_FLAG})
+intel_hda_03.add_struct('INTEL_HDA_BUF', {'addr#0x8': FIELD_POINTER, 'len#0x4': FIELD_RANDOM, 'flags#0x4': FIELD_FLAG})
 intel_hda_03.add_struct('TMP', {'tmp#0x1000': FIELD_RANDOM})
 intel_hda_03.add_context_flag_to_point_to(None, 'INTEL_HDA_BUF.addr', ['TMP'])
-intel_hda_03.add_constant('INTEL_HDA_BUF.len', 4096)
 intel_hda_03.add_flag('INTEL_HDA_BUF.flags', {0: 1, 1: 31})
 intel_hda_03.add_head(['INTEL_HDA_BUF'], ['ntel_hda_parse_bdl', 'pci_dma_read'])
 intel_hda_04 = Model('intel_hda', 4)
@@ -146,6 +146,227 @@ pcnet_17.add_struct('PCNET_INITBLK16', {
     'rdra#0x4': FIELD_RANDOM, 'tdra#0x4': FIELD_RANDOM})
 pcnet_17.add_head(['PCNET_INITBLK16'], ['pcnet_init', 's->phys_mem_read.1'])
 ###################################################################################################################
+rtl8139_18 = Model('rtl8139', 18)
+rtl8139_18.add_struct('RTL8139_RX_RING_DESC', {
+    'rxdw0#0x4': FIELD_FLAG, 'rxdw1#0x4': FIELD_RANDOM, 'rxbuf#0x8': FIELD_POINTER})
+rtl8139_18.add_flag('RTL8139_RX_RING_DESC.rxdw0', {0: 13, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 4, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
+rtl8139_18.add_struct('RTL8139_RX_RING_DESC_BUF', {'buf#0x1000': FIELD_RANDOM})
+rtl8139_18.add_context_flag_to_point_to(None, 'RTL8139_RX_RING_DESC.rxbuf', ['RTL8139_RX_RING_DESC_BUF'])
+rtl8139_18.add_head(['RTL8139_RX_RING_DESC'], ['rtl8139_do_receive', 'pci_dma_read.0'])
+rtl8139_19 = Model('rtl8139', 19)
+rtl8139_19.add_struct('RTL8139_TX_RING_DESC', {
+    'txdw0#0x4': FIELD_FLAG, 'txdw1#0x4': FIELD_FLAG, 'txbuf#0x8': FIELD_POINTER})
+rtl8139_19.add_flag('RTL8139_TX_RING_DESC.txdw0', {0: 16, 16: 1, 17: 1, 18: 9, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
+rtl8139_19.add_flag('RTL8139_TX_RING_DESC.txdw1', {0: 16, 16: 1, 17: 1, 18: 14})
+rtl8139_19.add_struct('RTL8139_TX_RING_DESC_BUF', {'buf#0x1000': FIELD_RANDOM})
+rtl8139_19.add_context_flag_to_point_to(None, 'RTL8139_TX_RING_DESC.txbuf', ['RTL8139_TX_RING_DESC_BUF'])
+rtl8139_19.add_head(['RTL8139_TX_RING_DESC'], ['rtl8139_cplus_transmit_one', 'pci_dma_read.0'])
+rtl8139_20 = Model('rtl8139', 20)
+rtl8139_20.add_struct('RTL8139_BUF', {'buf#0x2000': FIELD_RANDOM})
+rtl8139_20.add_head(['RTL8139_BUF'], ['rtl8139_transmit_one', 'pci_dam_read.0'])
 ###################################################################################################################
-# floppy: implicit address in k->read_memory: keep its id 6: corner case
+vmxnet3_21 = Model('vmxnet3', 21)
+# union: corner case: big endian and little endian
+vmxnet3_21.add_struct('Vmxnet3_TxDesc', {'addr#0x8': FIELD_POINTER, 'val1#0x4': FIELD_FLAG, 'val2#0x4': FIELD_FLAG})
+vmxnet3_21.add_context_flag_to_point_to(None, 'Vmxnet3_TxDesc.addr', ['Vmxnet3_TxDesc'])
+vmxnet3_21.add_flag('Vmxnet3_TxDesc.val1', {0: 14, 14: 1, 15: 1, 16: 1, 17: 1, 18: 14})
+vmxnet3_21.add_flag('Vmxnet3_TxDesc.val2', {0: 10, 10: 2, 12: 1, 13: 1, 14: 1, 15: 1, 16: 16})
+vmxnet3_21.add_struct('Vmxnet3_TxCompDesc', {'val1#0x4': FIELD_FLAG, 'ext2#0x4': FIELD_RANDOM, 'ext3#0x4': FIELD_RANDOM, 'val2#0x4': FIELD_FLAG})
+vmxnet3_21.add_flag('Vmxnet3_TxCompDesc.val1', {0: 12, 12: 20})
+vmxnet3_21.add_flag('Vmxnet3_TxCompDesc.val2', {0: 24, 24: 7, 31: 1})
+
+Vmxnet3_TxQueueDesc = {}
+Vmxnet3_TxQueueCtrl = {'txNumDeferred#0x4': FIELD_RANDOM, 'txThreshold#0x4': FIELD_RANDOM, 'reserved_0#0x8': FIELD_RANDOM}
+dict_append(Vmxnet3_TxQueueDesc, Vmxnet3_TxQueueCtrl)
+Vmxnet3_TxQueueConf = {'txRingBasePA#0x8': FIELD_POINTER, 'dataRingBasePA#0x8': FIELD_RANDOM, # dataRingBasePA never used
+                       'compRingBasePA#0x8': FIELD_POINTER, 'ddPA#0x8': FIELD_RANDOM, 'reserved_1#0x8': FIELD_RANDOM,
+                       'txRingSize#0x4': FIELD_RANDOM, 'dataRingSize#0x4': FIELD_RANDOM, 'compRingSize#0x4': FIELD_RANDOM,
+                       'ddLen#0x4': FIELD_RANDOM, 'intrIdx#0x1': FIELD_RANDOM, '_pad_0#0x7': FIELD_RANDOM}
+dict_append(Vmxnet3_TxQueueDesc, Vmxnet3_TxQueueConf)
+Vmxnet3_QueueStatus = {'stopped#0x1': FIELD_RANDOM, '_pad_1#0x3': FIELD_RANDOM, 'reserved_2#0x8': FIELD_RANDOM}
+dict_append(Vmxnet3_TxQueueDesc, Vmxnet3_QueueStatus)
+UPT1_RxStats = {'LROPktsRxOK#0x8': FIELD_RANDOM, 'LROBytesRxOK#0x8': FIELD_RANDOM, 'ucastPktsRxOK#0x8': FIELD_RANDOM, 'ucastBytesRxOK#0x8': FIELD_RANDOM,
+                'mcastPktsRxOK#0x8': FIELD_RANDOM, 'mcastBytesRxOK#0x8': FIELD_RANDOM, 'bcastPktsRxOK#0x8': FIELD_RANDOM, 'bcastBytesRxOK#0x8': FIELD_RANDOM,
+                'pktsRxOutOfBuf#0x8': FIELD_RANDOM, 'pktsRxError#0x8': FIELD_RANDOM}
+dict_append(Vmxnet3_TxQueueDesc, UPT1_RxStats)
+dict_append(Vmxnet3_TxQueueDesc, {'_pad_2#0x88': FIELD_RANDOM})
+vmxnet3_21.add_struct('Vmxnet3_TxQueueDesc', Vmxnet3_TxQueueDesc)
+# not very clear if this a ring
+vmxnet3_21.add_context_flag_to_single_linked_list(None, 'Vmxnet3_TxQueueDesc.txRingBasePA', ['Vmxnet3_TxDesc'], ['addr'])
+# not very clear if this a ring
+vmxnet3_21.add_context_flag_to_point_to(None, 'Vmxnet3_TxQueueDesc.compRingBasePA', ['Vmxnet3_TxCompDesc'])
+
+vmxnet3_21.add_struct('Vmxnet3_MACADDR', {'addr0#0x1': FIELD_RANDOM, 'addr1#0x1': FIELD_RANDOM, 'addr2#0x1': FIELD_RANDOM,
+                                          'addr3#0x1': FIELD_RANDOM, 'addr4#0x1': FIELD_RANDOM, 'addr5#0x1': FIELD_RANDOM})
+Vmxnet3_DriverShared = {}
+Vmxnet3_DriverShared_p1 = {'magic#0x4': FIELD_CONSTANT, 'pad_3#0x4': FIELD_RANDOM}
+dict_append(Vmxnet3_DriverShared, Vmxnet3_DriverShared_p1)
+Vmxnet3_DSDevRead = {}
+Vmxnet3_MiscConf = {}
+Vmxnet3_DriverInfo = {'version#0x4': FIELD_RANDOM, 'gos#0x4': FIELD_FLAG, 'vmxnet3RevSpt#0x4': FIELD_RANDOM, 'uptVerSpt#0x4': FIELD_RANDOM}
+dict_append(Vmxnet3_MiscConf, Vmxnet3_DriverInfo)
+Vmxnet3_MiscConf_p1 = {'uptFeature#0x8': FIELD_RANDOM, 'ddPA#0x8': FIELD_RANDOM, 'queueDescPA#0x8': FIELD_POINTER, 'ddLen#0x4': FIELD_RANDOM,
+                       'queueDescLen#0x4': FIELD_RANDOM, 'mtu#0x4': FIELD_RANDOM, 'maxNumRxSG#0x2': FIELD_RANDOM, 'numTxQueues#0x1': FIELD_RANDOM,
+                       'numRxQueues#0x1': FIELD_RANDOM, 'reserved_3#0x10': FIELD_RANDOM}
+dict_append(Vmxnet3_MiscConf, Vmxnet3_MiscConf_p1)
+dict_append(Vmxnet3_DSDevRead, Vmxnet3_MiscConf)
+Vmxnet3_IntrConf = {'autoMask#0x1': FIELD_RANDOM, 'numIntrs#0x1': FIELD_RANDOM, 'eventIntrIdx#0x1': FIELD_RANDOM, 'modLevels#0x19': FIELD_RANDOM,
+                    'intrCtrl#0x4': FIELD_RANDOM, 'reserved_4#0x8': FIELD_RANDOM}
+dict_append(Vmxnet3_DSDevRead, Vmxnet3_IntrConf)
+Vmxnet3_RxFilterConf = {'rxMode#0x4': FIELD_RANDOM, 'mfTableLen#0x2': FIELD_RANDOM, '_pad_4#0x2': FIELD_RANDOM,
+                        'mfTablePA#0x8': FIELD_POINTER, 'vfTable#0x2000': FIELD_RANDOM}
+dict_append(Vmxnet3_DSDevRead, Vmxnet3_RxFilterConf)
+Vmxnet3_VariableLenConfDesc0 = {'confVer_0#0x4': FIELD_RANDOM, 'confLen_0#0x4': FIELD_RANDOM, 'confPA_0#0x8': FIELD_RANDOM} # confPA is never used
+Vmxnet3_VariableLenConfDesc1 = {'confVer_1#0x4': FIELD_RANDOM, 'confLen_1#0x4': FIELD_RANDOM, 'confPA_1#0x8': FIELD_RANDOM} # confPA is never used
+Vmxnet3_VariableLenConfDesc2 = {'confVer_2#0x4': FIELD_RANDOM, 'confLen_2#0x4': FIELD_RANDOM, 'confPA_2#0x8': FIELD_RANDOM} # confPA is never used
+dict_append(Vmxnet3_DSDevRead, Vmxnet3_VariableLenConfDesc0)
+dict_append(Vmxnet3_DSDevRead, Vmxnet3_VariableLenConfDesc1)
+dict_append(Vmxnet3_DSDevRead, Vmxnet3_VariableLenConfDesc2)
+dict_append(Vmxnet3_DriverShared, Vmxnet3_DSDevRead)
+Vmxnet3_DriverShared_p2 = {'ecr#0x4': FIELD_RANDOM, 'reserved_5#0x14': FIELD_RANDOM}
+dict_append(Vmxnet3_DriverShared, Vmxnet3_DriverShared_p2)
+vmxnet3_21.add_struct('Vmxnet3_DriverShared', Vmxnet3_DriverShared)
+vmxnet3_21.add_flag('Vmxnet3_DriverShared.gos', {0: 2, 2: 4, 6: 16, 22: 10})
+vmxnet3_21.add_constant('Vmxnet3_DriverShared.magic', 0xbabefee1)
+# this is an array list: need more implementation
+vmxnet3_21.add_context_flag_to_point_to(None, 'Vmxnet3_DriverShared.queueDescPA', ['Vmxnet3_TxQueueDesc'])
+# this is an array list: need more implementation
+vmxnet3_21.add_context_flag_to_point_to(None, 'Vmxnet3_DriverShared.mfTablePA', ['Vmxnet3_MACADDR'])
+vmxnet3_21.add_head(['Vmxnet3_DriverShared'], ['vmxnet3_activate_device', 'vmxnet3_verify_driver_magic'])
 ###################################################################################################################
+# floppy: implicit address in k->read_memory: keep its id: 22: corner case
+###################################################################################################################
+# ahci: sglist: keep its id: 23/24/25: corner case
+###################################################################################################################
+sdhci_26 = Model('sdhci', 26)
+sdhci_26.add_struct('adma2', {'attr#1': FIELD_RANDOM, 'reserved#1': FIELD_RANDOM, 'length#0x2': FIELD_RANDOM, 'addr#0x4': FIELD_POINTER})
+sdhci_26.add_struct('adma2_buf', {'buf#0x1000': FIELD_RANDOM})
+sdhci_26.add_context_flag_to_point_to(None, 'adma2.addr', ['adma2_buf'])
+sdhci_26.add_head(['adma2'], ['get_adma_description', 'dma_memory_read.0'])
+sdhci_27 = Model('sdhci', 27)
+# corner case: non-aligned address
+sdhci_27.add_struct('adma1', {'adma1#0x4': FIELD_POINTER})
+sdhci_27.add_flag('adma1.adma1', {0: 7, 8: 12, 12: 20})
+sdhci_27.add_struct('adma1_buf', {'buf#0x1000': FIELD_RANDOM})
+sdhci_27.add_context_flag_to_point_to(None, 'adma1.adma1', ['adma1_buf'])
+sdhci_27.add_head(['adma1'], ['get_adma_description', 'dma_memory_read.1'])
+sdhci_28 = Model('sdhci', 28)
+sdhci_28.add_struct('adma2_64', {'attr#1': FIELD_RANDOM, 'reserved#1': FIELD_RANDOM, 'length#0x2': FIELD_RANDOM, 'addr#0x8': FIELD_POINTER})
+sdhci_28.add_struct('adma2_64_buf', {'buf#0x1000': FIELD_RANDOM})
+sdhci_28.add_context_flag_to_point_to(None, 'adma2_64.addr', ['adma2_64_buf'])
+sdhci_28.add_head(['adma2_64'], ['get_adma_description', 'dma_memory_read.2'])
+sdhci_29 = Model('sdhci', 29)
+sdhci_29.add_struct('fifo_buffer_0', {'buf#0x1000': FIELD_RANDOM})
+sdhci_29.add_head(['fifo_buffer_0'], ['sdhci_sdma_transfer_single_block', 'dma_memory_read'])
+sdhci_30 = Model('sdhci', 30)
+sdhci_30.add_struct('fifo_buffer_1', {'buf#0x1000': FIELD_RANDOM})
+sdhci_30.add_head(['fifo_buffer_1'], ['sdhci_sdma_transfer_single_block', 'dma_memory_read'])
+###################################################################################################################
+#xhci_address_slot: 11
+xhci_31 = Model('xhci', 31)
+xhci_31.add_struct('ictrl_ctx11', {
+    'ictrl_ctx0#0x4': FIELD_CONSTANT, 'ictrl_ctx1#0x4': FIELD_CONSTANT, 'reserved#0x24': FIELD_RANDOM,
+    'slot_ctx0#0x4': FIELD_FLAG, 'slot_ctx1#0x4': FIELD_FLAG, 'slot_ctx2#0x4': FIELD_FLAG, 'slot_ctx3#0x4': FIELD_FLAG, 'reserved#0x10': FIELD_RANDOM,
+    'ep0_ctx0#0x4': FIELD_RANDOM, 'ep0_ctx1#0x4': FIELD_RANDOM, 'ep0_ctx2#0x4': FIELD_RANDOM, 'ep0_ctx3#0x4': FIELD_RANDOM, 'ep0_ctx4#0x4': FIELD_RANDOM})
+xhci_31.add_constant('ictrl_ctx11.ictrl_ctx0', 0)
+xhci_31.add_constant('ictrl_ctx11.ictrl_ctx1', 3)
+xhci_31.add_flag('ictrl_ctx11.slot_ctx0', {0: 4, 8: 4, 12: 4, 16: 4, 20: 4, 24: 8})
+xhci_31.add_flag('ictrl_ctx11.slot_ctx1', {0: 16, 16: 8, 24: 8})
+xhci_31.add_flag('ictrl_ctx11.slot_ctx2', {0: 22, 22: 10})
+xhci_31.add_flag('ictrl_ctx11.slot_ctx3', {0: 27, 27: 5})
+#xhci_configure_slot: 12
+xhci_31.add_struct('ictrl_ctx12', {
+    'ictrl_ctx0#0x4': FIELD_FLAG, 'ictrl_ctx1#0x4': FIELD_FLAG, 'reserved#0x24': FIELD_RANDOM,
+    'islot_ctx0#0x4': FIELD_RANDOM, 'islot_ctx1#0x4': FIELD_RANDOM, 'islot_ctx2#0x4': FIELD_RANDOM, 'islot_ctx3#0x4': FIELD_RANDOM, 'reserved#0x10': FIELD_RANDOM,
+    'ep_ctx0#0x20': FIELD_RANDOM, 'ep_ctx1#0x20': FIELD_RANDOM, 'ep_ctx2#0x20': FIELD_RANDOM, 'ep_ctx3#0x20': FIELD_RANDOM, 'ep_ctx4#0x20': FIELD_RANDOM,
+    'ep_ctx5#0x20': FIELD_RANDOM, 'ep_ctx6#0x20': FIELD_RANDOM, 'ep_ctx7#0x20': FIELD_RANDOM, 'ep_ctx8#0x20': FIELD_RANDOM, 'ep_ctx9#0x20': FIELD_RANDOM,
+    'ep_ctx10#0x20': FIELD_RANDOM, 'ep_ctx11#0x20': FIELD_RANDOM, 'ep_ctx12#0x20': FIELD_RANDOM, 'ep_ctx13#0x20': FIELD_RANDOM, 'ep_ctx14#0x20': FIELD_RANDOM,
+    'ep_ctx15#0x20': FIELD_RANDOM, 'ep_ctx16#0x20': FIELD_RANDOM, 'ep_ctx17#0x20': FIELD_RANDOM, 'ep_ctx18#0x20': FIELD_RANDOM, 'ep_ctx19#0x20': FIELD_RANDOM,
+    'ep_ctx20#0x20': FIELD_RANDOM, 'ep_ctx21#0x20': FIELD_RANDOM, 'ep_ctx22#0x20': FIELD_RANDOM, 'ep_ctx23#0x20': FIELD_RANDOM, 'ep_ctx24#0x20': FIELD_RANDOM,
+    'ep_ctx25#0x20': FIELD_RANDOM, 'ep_ctx26#0x20': FIELD_RANDOM, 'ep_ctx27#0x20': FIELD_RANDOM, 'ep_ctx28#0x20': FIELD_RANDOM, 'ep_ctx29#0x20': FIELD_RANDOM,
+})
+xhci_31.add_flag('ictrl_ctx12.ictrl_ctx0', {0: '2@3', 2: 30})
+xhci_31.add_flag('ictrl_ctx12.ictrl_ctx1', {0: '2@3', 2: 30})
+#xhci_evaluate_slot: 13
+xhci_31.add_struct('ictrl_ctx13', {
+    'ictrl_ctx0#0x4': FIELD_CONSTANT, 'ictrl_ctx1#0x4': FIELD_FLAG, 'reserved#0x24': FIELD_RANDOM,
+    'islot_ctx#0x20': FIELD_RANDOM, 'ep0_ctx#0x20': FIELD_RANDOM
+})
+xhci_31.add_constant('ictrl_ctx13.ictrl_ctx0', 0)
+xhci_31.add_flag('ictrl_ctx13.ictrl_ctx1', {0: 2, 2: '30@0'})
+xhci_31.add_struct('XHCITRB', {'parameter#0x8': FIELD_POINTER, 'status#0x4': FIELD_FLAG, 'control#0x4': FIELD_FLAG, 'addr#0x8': FIELD_RANDOM, 'ccs#0x1': FIELD_RANDOM})
+xhci_31.add_struct('XHCITRB1', {'parameter#0x8': FIELD_POINTER, 'status#0x4': FIELD_FLAG, 'control#0x4': FIELD_FLAG, 'addr#0x8': FIELD_RANDOM, 'ccs#0x1': FIELD_RANDOM})
+xhci_31.add_flag('XHCITRB.control', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 9: 1, 10: 6, 16: 5, 21: 3, 24: 8})
+xhci_31.add_flag('XHCITRB.status', {0: 16, 16: 6, 22: 10})
+xhci_31.add_flag('XHCITRB1.control', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 9: 1, 10: 6, 16: 5, 21: 3, 24: 8})
+xhci_31.add_flag('XHCITRB1.status', {0: 16, 16: 6, 22: 10})
+xhci_31.add_context_flag_to_point_to(['XHCITRB1.control.10'], 'XHCITRB1.parameter', [
+    None, None, None, None, None, None, None, None, None, None, None, 'ictrl_ctx11', 'ictrl_ctx12', 'ictrl_ctx13', None, None,
+    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+])
+xhci_31.add_context_flag_to_point_to(['XHCITRB.control.10'], 'XHCITRB.parameter', [
+    None, None, None, None, None, None, 'XHCITRB1', None, None, None, None, 'ictrl_ctx11', 'ictrl_ctx12', 'ictrl_ctx13', None, None,
+    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+])
+xhci_31.add_head(['XHCITRB'], ['xhci_ring_fetch', 'pci_dma_read'])
+xhci_32 = Model('xhci', 32)
+xhci_32.add_struct('XHCIEvRingSeg', {'addr#0x8': FIELD_POINTER, 'size#0x4': FIELD_RANDOM, 'rsvd#0x4': FIELD_RANDOM})
+xhci_32.add_struct('ictrl_ctx11_1', {
+    'ictrl_ctx0#0x4': FIELD_CONSTANT, 'ictrl_ctx1#0x4': FIELD_CONSTANT, 'reserved#0x24': FIELD_RANDOM,
+    'slot_ctx0#0x4': FIELD_FLAG, 'slot_ctx1#0x4': FIELD_FLAG, 'slot_ctx2#0x4': FIELD_FLAG, 'slot_ctx3#0x4': FIELD_FLAG, 'reserved#0x10': FIELD_RANDOM,
+    'ep0_ctx0#0x4': FIELD_RANDOM, 'ep0_ctx1#0x4': FIELD_RANDOM, 'ep0_ctx2#0x4': FIELD_RANDOM, 'ep0_ctx3#0x4': FIELD_RANDOM, 'ep0_ctx4#0x4': FIELD_RANDOM})
+xhci_32.add_constant('ictrl_ctx11_1.ictrl_ctx0', 0)
+xhci_32.add_constant('ictrl_ctx11_1.ictrl_ctx1', 3)
+xhci_32.add_flag('ictrl_ctx11_1.slot_ctx0', {0: 4, 8: 4, 12: 4, 16: 4, 20: 4, 24: 8})
+xhci_32.add_flag('ictrl_ctx11_1.slot_ctx1', {0: 16, 16: 8, 24: 8})
+xhci_32.add_flag('ictrl_ctx11_1.slot_ctx2', {0: 22, 22: 10})
+xhci_32.add_flag('ictrl_ctx11_1.slot_ctx3', {0: 27, 27: 5})
+#xhci_configure_slot: 12
+xhci_32.add_struct('ictrl_ctx12_1', {
+    'ictrl_ctx0#0x4': FIELD_FLAG, 'ictrl_ctx1#0x4': FIELD_FLAG, 'reserved#0x24': FIELD_RANDOM,
+    'islot_ctx0#0x4': FIELD_RANDOM, 'islot_ctx1#0x4': FIELD_RANDOM, 'islot_ctx2#0x4': FIELD_RANDOM, 'islot_ctx3#0x4': FIELD_RANDOM, 'reserved#0x10': FIELD_RANDOM,
+    'ep_ctx0#0x20': FIELD_RANDOM, 'ep_ctx1#0x20': FIELD_RANDOM, 'ep_ctx2#0x20': FIELD_RANDOM, 'ep_ctx3#0x20': FIELD_RANDOM, 'ep_ctx4#0x20': FIELD_RANDOM,
+    'ep_ctx5#0x20': FIELD_RANDOM, 'ep_ctx6#0x20': FIELD_RANDOM, 'ep_ctx7#0x20': FIELD_RANDOM, 'ep_ctx8#0x20': FIELD_RANDOM, 'ep_ctx9#0x20': FIELD_RANDOM,
+    'ep_ctx10#0x20': FIELD_RANDOM, 'ep_ctx11#0x20': FIELD_RANDOM, 'ep_ctx12#0x20': FIELD_RANDOM, 'ep_ctx13#0x20': FIELD_RANDOM, 'ep_ctx14#0x20': FIELD_RANDOM,
+    'ep_ctx15#0x20': FIELD_RANDOM, 'ep_ctx16#0x20': FIELD_RANDOM, 'ep_ctx17#0x20': FIELD_RANDOM, 'ep_ctx18#0x20': FIELD_RANDOM, 'ep_ctx19#0x20': FIELD_RANDOM,
+    'ep_ctx20#0x20': FIELD_RANDOM, 'ep_ctx21#0x20': FIELD_RANDOM, 'ep_ctx22#0x20': FIELD_RANDOM, 'ep_ctx23#0x20': FIELD_RANDOM, 'ep_ctx24#0x20': FIELD_RANDOM,
+    'ep_ctx25#0x20': FIELD_RANDOM, 'ep_ctx26#0x20': FIELD_RANDOM, 'ep_ctx27#0x20': FIELD_RANDOM, 'ep_ctx28#0x20': FIELD_RANDOM, 'ep_ctx29#0x20': FIELD_RANDOM,
+})
+xhci_32.add_flag('ictrl_ctx12_1.ictrl_ctx0', {0: '2@3', 2: 30})
+xhci_32.add_flag('ictrl_ctx12_1.ictrl_ctx1', {0: '2@3', 2: 30})
+#xhci_evaluate_slot: 13
+xhci_32.add_struct('ictrl_ctx13_1', {
+    'ictrl_ctx0#0x4': FIELD_CONSTANT, 'ictrl_ctx1#0x4': FIELD_FLAG, 'reserved#0x24': FIELD_RANDOM,
+    'islot_ctx#0x20': FIELD_RANDOM, 'ep0_ctx#0x20': FIELD_RANDOM
+})
+xhci_32.add_constant('ictrl_ctx13_1.ictrl_ctx0', 0)
+xhci_32.add_flag('ictrl_ctx13_1.ictrl_ctx1', {0: 2, 2: '30@0'})
+xhci_32.add_struct('XHCITRB_1', {'parameter#0x8': FIELD_POINTER, 'status#0x4': FIELD_FLAG, 'control#0x4': FIELD_FLAG, 'addr#0x8': FIELD_RANDOM, 'ccs#0x1': FIELD_RANDOM})
+xhci_32.add_struct('XHCITRB1_1', {'parameter#0x8': FIELD_POINTER, 'status#0x4': FIELD_FLAG, 'control#0x4': FIELD_FLAG, 'addr#0x8': FIELD_RANDOM, 'ccs#0x1': FIELD_RANDOM})
+xhci_32.add_flag('XHCITRB_1.control', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 9: 1, 10: 6, 16: 5, 21: 3, 24: 8})
+xhci_32.add_flag('XHCITRB_1.status', {0: 16, 16: 6, 22: 10})
+xhci_32.add_flag('XHCITRB1_1.control', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 9: 1, 10: 6, 16: 5, 21: 3, 24: 8})
+xhci_32.add_flag('XHCITRB1_1.status', {0: 16, 16: 6, 22: 10})
+xhci_32.add_context_flag_to_point_to(['XHCITRB1_1.control.10'], 'XHCITRB1_1.parameter', [
+    None, None, None, None, None, None, None, None, None, None, None, 'ictrl_ctx11_1', 'ictrl_ctx12_1', 'ictrl_ctx13_1', None, None,
+    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+])
+xhci_32.add_context_flag_to_point_to(['XHCITRB_1.control.10'], 'XHCITRB_1.parameter', [
+    None, None, None, None, None, None, 'XHCITRB1_1', None, None, None, None, 'ictrl_ctx11_1', 'ictrl_ctx12_1', 'ictrl_ctx13_1', None, None,
+    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+])
+# this is an array list: need more implementation
+xhci_32.add_context_flag_to_point_to(None, 'XHCIEvRingSeg.addr', ['XHCITRB_1'])
+xhci_32.add_head(['XHCIEvRingSeg'], ['xhci_er_reset', 'pci_dma_read'])
+xhci_33 = Model('xhci', 33)
+xhci_33.add_struct('poctx', {'poctx#0x8': FIELD_POINTER})
+xhci_33.add_struct('slot_ctx', {'slot_ctx#0x40': FIELD_RANDOM})
+xhci_33.add_context_flag_to_point_to(None, 'poctx.poctx', ['slot_ctx'])
+xhci_33.add_head(['poctx'], ['xhci_address_slot', 'ldq_le_pci_dma'])
+xhci_34 = Model('xhci', 34)
+xhci_34.add_struct('ctx0', {'ctx0#0x4': FIELD_FLAG, 'ctx1#0x4': FIELD_RANDOM})
+xhci_34.add_flag('ctx0.ctx0', {0: 1, 1: 3, 4: 28})
+xhci_34.add_head(['ctx0'], ['xhci_find_stream', 'xhci_dma_read_u32s'])
+xhci_35 = Model('xhci', 35)
+xhci_35.add_struct('ctx1', {'ctx#0x12': FIELD_RANDOM})
+xhci_35.add_head(['ctx1'], ['xhci_set_ep_state', 'xhci_dma_read_u32s'])
