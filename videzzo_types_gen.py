@@ -200,7 +200,7 @@ def main(argv):
     args = parser.parse_args()
 
     if args.summary:
-        print('name, id, #-of-structs', '#-of-flag-fields', '#-of-pointer-fields', '#-of-fields')
+        print('name, id, #-of-structs, #-of-flag-fields, #-of-pointer-fields, #-of-fields')
     if args.vmm == 'vmm':
         gen_vmm(summary=args.summary)
     else:
