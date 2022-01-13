@@ -1,5 +1,6 @@
 import sys
 import importlib
+import argparse
 from videzzo_types_lib import Model, FIELD_RANDOM, FIELD_POINTER, FIELD_FLAG, FIELD_CONSTANT
 
 def __gen_code(models, hypervisor_dir):
@@ -134,7 +135,7 @@ static void free_memory_blocks() {{
             f.write('    [{0}] = videzzo_group_mutator_miss_handler_{0},\n'.format(model.index))
         f.write('};')
 
-def gen_types(hypervisor):
+def gen_types(hypervisor, summary=True):
     """
     file orgranization
         1. generate a header for each callback
@@ -149,13 +150,13 @@ def gen_types(hypervisor):
     for k, v in module.__dict__.items():
         if isinstance(v, Model):
             models[k] = v
+    if summary:
+        for model in models.values():
+            model.get_stats()
+        return
     __gen_code(models, hypervisor_dir)
 
-def usage(argv):
-    print('usage: python3 {} [{{qemu, virtualbox, bhyve}}|-h]'.format(argv[0]))
-    exit(1)
-
-def gen_vmm():
+def gen_vmm(summary=False):
     vmm_01 = Model('vmm', 1)
     t = {}
     for i in range(0, 1):
@@ -186,20 +187,27 @@ def gen_vmm():
     vmm_02.add_head(['TEMP_BUF'], ['vmm_transfer_audio', 'pci_dma_read'])
 
     models = {'videzzo_vmm-01': vmm_01, 'videzzo_vmm-02': vmm_02}
+    if summary:
+        for model in models.values():
+            model.get_stats()
+        return
     __gen_code(models, '.')
 
 def main(argv):
-    if len(argv) == 2:
-        if argv[1] == '-h':
-            usage(argv)
-        hypervisor = argv[1]
-        if hypervisor == 'vmm':
-            gen_vmm()
-        else:
-            gen_types(hypervisor)
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('-s', '--summary', action='store_true', default=False, help='Print summary rather than build')
+    parser.add_argument('vmm', help='Hypervisors', choices=['vmm', 'qemu', 'byhve', 'virtualbox'])
+    args = parser.parse_args()
+
+    if args.summary:
+        print('name, id, #-of-structs', '#-of-flag-fields', '#-of-pointer-fields', '#-of-fields')
+    if args.vmm == 'vmm':
+        gen_vmm(summary=args.summary)
     else:
-        usage(argv)
-    print('Please check videzzo_types.c in the root directory of the current project.')
+        gen_types(args.vmm, summary=args.summary)
+
+    if not args.summary:
+        print('Please check videzzo_types.c in the root directory of the current project.')
 
 if __name__ == '__main__':
     main(sys.argv)
