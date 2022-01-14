@@ -869,7 +869,7 @@ static const videzzo_qemu_config predefined_configs[] = {
     },{
         .arch = "arm",
         .name = "xgmac",
-        .args = "-machine midway -netdev socket,fd=%d,id=net0",
+        .args = "-machine midway",
         .objects = "*xgmac*",
         .mrnames = "*xgmac*",
         .file = "hw/net/xgmac.c",
@@ -885,7 +885,7 @@ static const videzzo_qemu_config predefined_configs[] = {
     },{
         .arch = "arm",
         .name = "smc91c111",
-        .args = "-machine mainstone -netdev socket,fd=%d,id=net0",
+        .args = "-machine mainstone",
         .objects = "*smc91c111-mmio*",
         .mrnames = "*smc91c111-mmio*",
         .file = "hw/net/smc91c111.c",
