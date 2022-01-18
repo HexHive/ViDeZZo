@@ -18,3 +18,5 @@ videzzo_qemu/*.h
 videzzo_qemu/*.h
 # source code
 qemu
+*.tar.gz
+llvm-project

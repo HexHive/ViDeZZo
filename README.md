@@ -1,31 +1,34 @@
 # ViDeZZo: Virtual Device Fuzzing Framework
 
-ViDeZZo is a virtual device fuzzing framwork. Now, it supports QEMU, VirtualBox,
-and BHyve.
+ViDeZZo is a virtual device fuzzing framwork. Now, it supports the latest QEMU.
 
 ## Install
 
-1. Download our customized LLVM toolchains.
+We tested ViDeZZo on Ubuntu 18.04.
+
+1. Clone this project.
 ```
-git clone git@github.com:cyruscyliu/virtfuzz-llvm-project.git llvm-project --depth=1
-pushd llvm-project && mkdir build-custom && pushd build-custom
-cmake -G Ninja -DLLVM_USE_LINKER=gold -DLLVM_ENABLE_PROJECTS="clang;compiler-rt" -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_OPTIMIZED_TABLEGEN=ON ../llvm/
-ninja clang compiler-rt llvm-symbolizer llvm-profdata llvm-cov
-popd && popd
-export PATH=$PWD/llvm-project/build-custom/bin:$PATH
+git clone git@github.com:cyruscyliu/videzzo.git
 ```
-2. Make sure Python3 (any) is working well.
-3. Update binutils.
+2. Export our customized LLVM toolchains.
+```
+pip install gdown
+
+mkdir llvm-project
+pushd llvm-project
+gdown https://drive.google.com/uc?id=1n8eESb7lR27zINPOLmOLLrcUQoZTninr # will download our toolchain
+tar xf llvm-project-13.tar.gz
+popd
+export PATH=$PWD/llvm-project/bin:$PATH
+```
+3. Make sure Python3 (any) is working well.
+4. Update binutils.
 ```
 wget https://ftp.gnu.org/gnu/binutils/binutils-2.35.tar.gz
 tar xzvf binutils-2.35.tar.gz; cd binutils-2.35; ./configure; make -j8; sudo make install;
 sudo rm /usr/bin/objcopy; sudo ln -s /usr/local/bin/objcopy /usr/bin/objcopy
 ```
-4. clone this project
-```
-git clone git@github.com:cyruscyliu/videzzo.git
-```
 
 ## Contribution
 
-If any questions and ideas, please do not hesitate to raise an issse.
+If any questions and ideas, please do not hesitate to raise an issse or a pull request.
