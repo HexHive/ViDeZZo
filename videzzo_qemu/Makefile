@@ -29,5 +29,8 @@ update:
 	cd qemu && git pull && cd $(OLDPWD)
 	make compile
 
+clusterfuzz:
+	bash -x 0004-zip-qemu-targets.sh
+
 clean:
 	# do nothing

@@ -16,6 +16,8 @@ videzzo_vmm-02.h
 videzzo_qemu/*.h
 videzzo_qemu/*.h
 videzzo_qemu/*.h
+out
+*.zip
 # source code
 qemu
 *.tar.gz
