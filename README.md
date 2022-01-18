@@ -25,8 +25,12 @@ export PATH=$PWD/llvm-project/bin:$PATH
 4. Update binutils.
 ```
 wget https://ftp.gnu.org/gnu/binutils/binutils-2.35.tar.gz
-tar xzvf binutils-2.35.tar.gz; cd binutils-2.35; ./configure; make -j8; sudo make install;
+tar xzvf binutils-2.35.tar.gz; cd binutils-2.35; ./configure; make -j8; sudo make install; cd $OLDPWD
 sudo rm /usr/bin/objcopy; sudo ln -s /usr/local/bin/objcopy /usr/bin/objcopy
+```
+5. Compile QEMU
+```
+make qemu
 ```
 
 ## Contribution
