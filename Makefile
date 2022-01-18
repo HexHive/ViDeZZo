@@ -21,42 +21,24 @@ videzzo-vmm:
 	clang -fsanitize=fuzzer ${CFLAGS} ${SANITIZERS} 			     -o vmm       videzzo_vmm.c libvidezzo.a
 
 videzzo-vmm-debug:
-	CFLAGS="${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG" HYPERVISOR=vmm make videzzo-core
+	CFLAGS="${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG" 	 HYPERVISOR=vmm make videzzo-core
 	clang -fsanitize=fuzzer ${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG  -o vmm-debug videzzo_vmm.c libvidezzo.a
 
 vmm: videzzo-vmm videzzo-vmm-debug
 
-.PHONY: videzzo-qemu videzzo-virtualbox videzzo-bhyve
+.PHONY: videzzo-qemu
 
 videzzo-qemu:
-	HYPERVISOR=qemu make videzzo-core
-	make -C videzzo_qemu
+	CFLAGS="${CFLAGS} ${SANITIZERS}" 					 HYPERVISOR=qemu make videzzo-core
+	make -C videzzo_qemu qemu
 
 videzzo-qemu-debug:
-	HYPERVISOR=qemu make videzzo-core
-	CFLAGS="-DVIDEZZO_DEBUG" make -C videzzo_qemu
+	CFLAGS="${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG" 	 HYPERVISOR=qemu make videzzo-core
+	make -C videzzo_qemu qemu
 
 qemu: videzzo-qemu
 
-videzzo-virtualbox:
-	HYPERVISOR=virtualbox make videzzo-core
-	make -C videzzo_virtualbox
-
-videzzo-virtualbox-debug:
-	HYPERVISOR=virtualbox make videzzo-core
-	CFLAGS="-DVIDEZZO_DEBUG" make -C videzzo_virtualbox
-
-virtualbox: videzzo-virtualbox
-
-videzzo-bhyve:
-	HYPERVISOR=bhyve make videzzo-core
-	make -C videzzo_bhyve
-
-videzzo-bhyve-debug:
-	HYPERVISOR=bhyve make videzzo-core
-	CFLAGS="-DVIDEZZO_DEBUG" make -C videzzo_bhyve
-
-bhyve: videzzo-bhyve
+qemu-debug: videzzo-qemu-debug
 
 clean:
 	rm -rf *.o *.a *.i

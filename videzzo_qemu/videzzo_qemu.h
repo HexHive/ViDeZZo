@@ -16,7 +16,7 @@
 #include "qemu/osdep.h"
 #include <wordexp.h>
 #include "hw/core/cpu.h"
-#include "tests/qtest/libqtest.h"
+#include "tests/qtest/libqos/libqtest.h"
 #include "fuzz.h"
 #include "qos_fuzz.h"
 #include "fork_fuzz.h"

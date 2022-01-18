@@ -16,3 +16,5 @@ videzzo_vmm-02.h
 videzzo_qemu/*.h
 videzzo_qemu/*.h
 videzzo_qemu/*.h
+# source code
+qemu
