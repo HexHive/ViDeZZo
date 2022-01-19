@@ -326,7 +326,7 @@ class Model(object):
         if head:
             self.append_code('uint32_t {} = get_{}(physaddr);'.format(struct_name, struct_type))
         else:
-            self.append_code('uint32_t {} = get_{}(0);'.format(struct_name, struct_type))
+            self.append_code('uint32_t {} = get_{}(INVALID_ADDRESS);'.format(struct_name, struct_type))
             self.append_code('append_address({});'.format(struct_name))
         for field_name, metadata in self.get_struct(struct_type).items():
             field_type = metadata['field_type']
@@ -351,7 +351,8 @@ class Model(object):
         self.append_code('#include <stddef.h>\n')
 
     def gen_helpers(self):
-        helpers = """#define EVENT_MEMREAD(physaddr, size, data, data_size, uuid) \\
+        helpers = """#define INVALID_ADDRESS 0xFFFFFFFFFFFFFFFF
+#define EVENT_MEMREAD(physaddr, size, data, data_size, uuid) \\
     uint8_t *tmp_buf_##uuid = (uint8_t *)calloc(size, 1); \\
     __EVENT_MEMREAD(physaddr, size, tmp_buf_##uuid); \\
     refill(data, data_size, tmp_buf_##uuid, size); \\
@@ -364,11 +365,11 @@ class Model(object):
     // free(tmp_buf_##uuid);
 
 #define GEN_LINKED_LIST(type, field_name, head_name, last_name, tail_name, uuid) \\
-    uint64_t head_name = get_##type(0); \\
+    uint64_t head_name = get_##type(INVALID_ADDRESS); \\
     append_address(head_name); \\
     uint64_t last_name = head_name, tail_name = head_name; \\
     for (int i = 0; i < (rand() % 5 -1); i++) { \\
-        uint64_t next_##type = get_##type(0); \\
+        uint64_t next_##type = get_##type(INVALID_ADDRESS); \\
         append_address(next_##type); \\
         EVENT_MEMWRITE(last_name + offsetof(type, field_name), 4, next_##type, 4, uuid) \\
         last_name = next_##type; \\
@@ -403,7 +404,7 @@ class Model(object):
         # MAGIC
         # self.append_code('{1} *{0} = ({1}*)videzzo_calloc(sizeof({1}), 1);'.format(struct_name, struct_type))
         self.append_code('uint64_t {0};'.format(struct_name))
-        self.append_code('if (physaddr == 0) {{ {0} = (uint64_t)EVENT_MEMALLOC(sizeof({1})); }} else {{ {0} = physaddr; }}'.format(struct_name, struct_type))
+        self.append_code('if (physaddr == INVALID_ADDRESS) {{ {0} = (uint64_t)EVENT_MEMALLOC(sizeof({1})); }} else {{ {0} = physaddr; }}'.format(struct_name, struct_type))
         for field_name, metadata in self.get_struct(struct_type).items():
             field_type = metadata['field_type']
             if field_type == FIELD_FLAG:
