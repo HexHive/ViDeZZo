@@ -10,7 +10,11 @@ We tested ViDeZZo on Ubuntu 18.04.
 ```
 git clone git@github.com:cyruscyliu/videzzo.git
 ```
-2. Export our customized LLVM toolchains.
+2. Make sure gcc/g++ are both there
+```
+sudo apt-get install -y gcc g++ 
+```
+3. Export our customized LLVM toolchains.
 ```
 pip install gdown
 
@@ -20,15 +24,19 @@ gdown https://drive.google.com/uc?id=1n8eESb7lR27zINPOLmOLLrcUQoZTninr # will do
 tar xf llvm-project-13.tar.gz
 popd
 export PATH=$PWD/llvm-project/bin:$PATH
+
 ```
-3. Make sure Python3 (any) is working well.
-4. Update binutils.
+4. Make sure Python3 (any) is working well.
+```
+python3 -m pip install picire
+```
+5. Update binutils.
 ```
 wget https://ftp.gnu.org/gnu/binutils/binutils-2.35.tar.gz
 tar xzvf binutils-2.35.tar.gz; cd binutils-2.35; ./configure; make -j8; sudo make install; cd $OLDPWD
 sudo rm /usr/bin/objcopy; sudo ln -s /usr/local/bin/objcopy /usr/bin/objcopy
 ```
-5. Compile QEMU
+6. Compile QEMU
 ```
 make qemu
 ```
