@@ -9,6 +9,11 @@
 SANITIZERS = -fsanitize=address,undefined
 CFLAGS ?= -g -fPIE -fno-omit-frame-pointer -fno-optimize-sibling-calls
 
+videzzo-merge:
+	clang ${CFLAGS} -o videzzo-merge merge.c videzzo.c
+
+tools: videzzo-merge
+
 videzzo-core:
 	python3 videzzo_types_gen.py ${HYPERVISOR}
 	clang ${CFLAGS} -o videzzo.o -c videzzo.c
@@ -41,7 +46,7 @@ qemu: videzzo-qemu
 qemu-debug: videzzo-qemu-debug
 
 clean:
-	rm -rf *.o *.a *.i
+	rm -rf *.o *.a *.i videzzo-merge
 
 distclean: clean
 	make -C videzzo_qemu clean

@@ -9,6 +9,7 @@ __pycache__
 *.py[cd]
 vmm
 vmm-debug
+videzzo-merge
 # temp files
 videzzo_types.c
 videzzo_vmm-01.h
