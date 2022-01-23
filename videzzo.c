@@ -1270,7 +1270,13 @@ static size_t Mutate_InsertRepeatedEvent(Input *input) { // duplicate
     size_t Idx = rand() % input->n_events; // choose one event
     size_t N = (rand() - N_MIN_EVENTS_TO_INSERT) %
         (N_MAX_EVENTS_TO_INSERT - N_MIN_EVENTS_TO_INSERT) + N_MIN_EVENTS_TO_INSERT; // insert N events
-    __Mutate_InsertEvent(input, Idx, N);
+    Event *event = get_event(input, Idx); // get this event
+    Event *copy;
+    for (int i = 0; i < N; i++) {
+        copy = (Event *)calloc(sizeof(Event), 1);
+        event_ops[event->type].deep_copy(event, copy);
+        insert_event(input, copy, Idx);
+    }
     return get_input_size(input);
 }
 
