@@ -1,24 +1,28 @@
 #!/bin/bash
 import os
 import sys
+import multiprocessing
 
-out = sys.argv[1]
-targets = []
-for target in os.listdir(out):
-    if target == 'pc-bios':
-        continue
-    elif target.endswith('.log'):
-        continue
-    targets.append(target)
-    print('{} found ...'.format(target))
+def worker(out, target, index):
+    os.system('mkdir -p /media/hdd0/qiliu/videzzo-corpus/{}-{}'.format(target, index))
+    os.system('cd {0}; cpulimit -l 100 -- ./{1} -max_total_time=86400 /media/hdd0/qiliu/videzzo-corpus/{1}-{2} >{1}-{2}.log 2>&1; cd $OLDPWD'.format(out, target, index))
 
-cmds = []
-for target in targets:
-    cmd = 'bash -x 02-run.sh {0} {1}'.format(out, target)
-    cmds.append(cmd)
+if __name__ == '__main__':
+    out = sys.argv[1]
+    index = sys.argv[2]
+    targets = []
+    for target in os.listdir(out):
+        if target == 'pc-bios':
+            continue
+        elif target.endswith('.log'):
+            continue
+        elif target.startswith('crash') or target.startswith('slow') or target.startswith('leak') or target.startswith('oom') or target.endswith('sh'):
+            continue
+        targets.append(target)
 
-for i in range(0, len(cmds) // 3 + 1):
-    for j in range(0, 3):
-        os.system(cmds[i + j])
+    with multiprocessing.Pool(processes=30) as Pool:
+        for target in targets:
+            res = Pool.apply_async(worker, (out, target, index))
+            print(res.get())
 
-print('done')
+    print('done')
