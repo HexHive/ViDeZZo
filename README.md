@@ -41,6 +41,19 @@ sudo rm /usr/bin/objcopy; sudo ln -s /usr/local/bin/objcopy /usr/bin/objcopy
 make qemu
 ```
 
+## Reprocuder
+
+Fuzzing is fast in mining vulnerabilities. However, as ViDeZZo introduces
+types-aware mutators that inevitably introduces overhead, we avoid using fork()
+in ViDeZZo to make the fuzzer faster. Due to accumulated states, some crashes
+are not reproducible. We first solve this problem via delta debugging.
+
+1. Please assign the corpus when running a fuzzer
+2. Run `02-dd.sh -t ABS_PATH_TO_BINARY -c ABS_PATH_TO_CRASHING_SEED -s
+   ABS_PATH_TO_CORPUS`. Importantly, please add * after the curpus path because
+   there are actual two corpus directories.
+3. Wait and follow the instructions shown after the delta debugging.
+
 ## Contribution
 
 If any questions and ideas, please do not hesitate to raise an issse or a pull request.
