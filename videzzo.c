@@ -14,7 +14,18 @@
 //
 // GroupMutator Feedback
 //
-bool DisableGroupMutator = 0;
+bool DisableGroupMutator = false;
+
+void disable_group_mutator_miss(void) {
+    DisableGroupMutator = true;
+}
+
+void enable_group_mutator_miss(void) {
+    DisableGroupMutator = false;
+}
+
+// Weak definitations - to make videzz.c realy VMM-independent
+FeedbackHandler group_mutator_miss_handlers[0xff] = {};
 
 void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
 #ifdef VIDEZZO_DEBUG
@@ -224,7 +235,12 @@ void add_interface(EventType type, uint64_t addr, uint32_t size,
     n_interfaces++;
 }
 
+// Weak definitations - to make videzz.c realy VMM-independent
+int merge = 0;
+
 static uint64_t around_event_addr(uint8_t id, uint64_t raw_addr) {
+    if (merge)
+        return raw_addr; // do nothing
     if (id < INTERFACE_DYNAMIC)
         return raw_addr; // do nothing
     InterfaceDescription ed = Id_Description[id];
@@ -250,6 +266,8 @@ static inline uint64_t pow2floor(uint64_t value)
 }
 
 static uint32_t around_event_size(uint8_t id, uint32_t raw_size) {
+    if (merge)
+        return raw_size; // do nothing
     if (id != INTERFACE_SOCKET_WRITE && id < INTERFACE_DYNAMIC)
         return raw_size % 0x10000; // 1M to avoid oom
     if (id == INTERFACE_SOCKET_WRITE)
@@ -622,6 +640,18 @@ static void deep_copy_with_data(Event *orig, Event *copy) {
     copy->data = (uint8_t *)calloc(copy->size, 1);
     memcpy(copy->data, orig->data, copy->size);
 }
+
+// Weak definitations - to make videzz.c realy VMM-independent
+uint64_t dispatch_mmio_read(Event *event) { return 0; }
+uint64_t dispatch_mmio_write(Event *event) { return 0; }
+uint64_t dispatch_pio_read(Event *event) { return 0; }
+uint64_t dispatch_pio_write(Event *event) { return 0; }
+uint64_t dispatch_mem_read(Event *event) { return 0; }
+uint64_t dispatch_mem_write(Event *event) { return 0; }
+uint64_t dispatch_clock_step(Event *event) { return 0; }
+uint64_t dispatch_socket_write(Event *event) { return 0; }
+uint64_t dispatch_mem_alloc(Event *event) { return 0; }
+uint64_t dispatch_mem_free(Event *event) { return 0; }
 
 EventOps event_ops[] = {
     [EVENT_TYPE_MMIO_READ] = {

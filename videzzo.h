@@ -80,17 +80,17 @@ typedef struct EventOps {
     void (*deep_copy)(Event *orig, Event *copy);
 } EventOps;
 
-// VM specific
-uint64_t dispatch_mmio_read(Event *event);
-uint64_t dispatch_mmio_write(Event *event);
-uint64_t dispatch_pio_read(Event *event);
-uint64_t dispatch_pio_write(Event *event);
-uint64_t dispatch_mem_read(Event *event);
-uint64_t dispatch_mem_write(Event *event);
-uint64_t dispatch_clock_step(Event *event);
-uint64_t dispatch_socket_write(Event *event);
-uint64_t dispatch_mem_alloc(Event *event);
-uint64_t dispatch_mem_free(Event *event);
+// Weak VM specific
+uint64_t dispatch_mmio_read(Event *event) __attribute__((weak));
+uint64_t dispatch_mmio_write(Event *event) __attribute__((weak));
+uint64_t dispatch_pio_read(Event *event) __attribute__((weak));
+uint64_t dispatch_pio_write(Event *event) __attribute__((weak));
+uint64_t dispatch_mem_read(Event *event) __attribute__((weak));
+uint64_t dispatch_mem_write(Event *event) __attribute__((weak));
+uint64_t dispatch_clock_step(Event *event) __attribute__((weak));
+uint64_t dispatch_socket_write(Event *event) __attribute__((weak));
+uint64_t dispatch_mem_alloc(Event *event) __attribute__((weak));
+uint64_t dispatch_mem_free(Event *event) __attribute__((weak));
 
 enum Sizes {ViDeZZo_Empty, ViDeZZo_Byte=1, ViDeZZo_Word=2, ViDeZZo_Long=4, ViDeZZo_Quad=8};
 extern EventOps event_ops[N_EVENT_TYPES];
@@ -203,7 +203,7 @@ __flush gfctx_get_flush(void);
 typedef void (* FeedbackHandler)(uint64_t physaddr);
 
 void GroupMutatorMiss(uint8_t id, uint64_t physaddr);
-extern FeedbackHandler group_mutator_miss_handlers[0xff];
+extern FeedbackHandler group_mutator_miss_handlers[0xff] __attribute__((weak));
 
 //
 // Open APIs
@@ -218,5 +218,10 @@ size_t ViDeZZoCustomMutator(uint8_t *Data, size_t Size, size_t MaxSize, unsigned
 size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize);
 size_t LLVMFuzzerCustomMutator(
         uint8_t *Data, size_t Size, size_t MaxSize, unsigned int Seed);
+
+//
+// Reproduce
+//
+int merge __attribute__((weak));
 
 #endif /* VIDEZZO_H */

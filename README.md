@@ -12,7 +12,7 @@ git clone git@github.com:cyruscyliu/videzzo.git
 ```
 2. Make sure gcc/g++ are both there
 ```
-sudo apt-get install -y gcc g++ 
+sudo apt-get install -y gcc g++
 ```
 3. Export our customized LLVM toolchains.
 ```

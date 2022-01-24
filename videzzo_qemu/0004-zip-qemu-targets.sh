@@ -61,7 +61,6 @@ rm qemu-fuzz-arm-target-videzzo-fuzz-sysbus-ahci
 rm qemu-fuzz-arm-target-videzzo-fuzz-tc6393xb
 rm qemu-fuzz-arm-target-videzzo-fuzz-xgmac
 rm qemu-fuzz-i386-target-videzzo-fuzz-am53c974
-rm qemu-fuzz-i386-target-videzzo-fuzz-ati
 rm qemu-fuzz-i386-target-videzzo-fuzz-bochs-display
 rm qemu-fuzz-i386-target-videzzo-fuzz-cs4231
 rm qemu-fuzz-i386-target-videzzo-fuzz-ctu-can
@@ -85,5 +84,5 @@ rm qemu-fuzz-i386-target-videzzo-fuzz-vmw-pvscsi
 rm qemu-fuzz-i386-target-videzzo-fuzz-vmware-svga
 rm qemu-fuzz-i386-target-videzzo-fuzz-vmxnet3
 rm qemu-fuzz-i386-target-videzzo-fuzz-xhci
-zip -r ../qemu-address-$(date '+%Y%m%d%H%M%S').zip *
+# zip -r ../qemu-address-$(date '+%Y%m%d%H%M%S').zip *
 popd
