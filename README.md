@@ -20,7 +20,7 @@ pip install gdown
 
 mkdir llvm-project
 pushd llvm-project
-gdown https://drive.google.com/uc?id=1n8eESb7lR27zINPOLmOLLrcUQoZTninr # will download our toolchain
+gdown https://drive.google.com/uc?id=1raSsI4SaRYUfNqKT7JhM95wI6q6rzFNP # will download our toolchain
 tar xf llvm-project-13.tar.gz
 popd
 export PATH=$PWD/llvm-project/bin:$PATH
