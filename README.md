@@ -12,7 +12,7 @@ git clone git@github.com:cyruscyliu/videzzo.git
 ```
 2. Make sure gcc/g++ are both there
 ```
-sudo apt-get install -y gcc g++ 
+sudo apt-get install -y gcc g++
 ```
 3. Export our customized LLVM toolchains.
 ```
@@ -39,6 +39,14 @@ sudo rm /usr/bin/objcopy; sudo ln -s /usr/local/bin/objcopy /usr/bin/objcopy
 6. Compile QEMU
 ```
 make qemu
+```
+
+or if you don't want to recompile QEMU
+
+```
+HYPERVISOR=qemu make videzzo-core
+cd videzzo_qemu && make compile
+
 ```
 
 ## Contribution

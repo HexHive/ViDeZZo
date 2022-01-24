@@ -14,7 +14,15 @@
 //
 // GroupMutator Feedback
 //
-bool DisableGroupMutator = 0;
+bool DisableGroupMutator = false;
+
+void disable_group_mutator_miss(void) {
+    DisableGroupMutator = true;
+}
+
+void enable_group_mutator_miss(void) {
+    DisableGroupMutator = false;
+}
 
 // Weak definitations - to make videzz.c realy VMM-independent
 FeedbackHandler group_mutator_miss_handlers[0xff] = {};

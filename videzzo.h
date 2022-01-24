@@ -223,6 +223,5 @@ size_t LLVMFuzzerCustomMutator(
 // Reproduce
 //
 int merge __attribute__((weak));
-int reproduce __attribute__((weak));
 
 #endif /* VIDEZZO_H */
