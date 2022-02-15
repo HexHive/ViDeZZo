@@ -2,42 +2,19 @@
 
 ViDeZZo is a virtual device fuzzing framwork. Now, it supports the latest QEMU.
 
-## Install
+## Build
 
-We tested ViDeZZo on Ubuntu 18.04.
-
-1. Clone this project.
-```
-git clone git@github.com:HexHive/virtfuzz-src.git
-```
-2. Make sure gcc/g++ are both there
-```
-sudo apt-get install -y gcc g++
-```
-3. Export our customized LLVM toolchains.
-```
-python3 -m pip install gdown
-
-mkdir llvm-project
-pushd llvm-project
-gdown https://drive.google.com/uc?id=1raSsI4SaRYUfNqKT7JhM95wI6q6rzFNP # will download our toolchain
-tar xf llvm-project-13.tar.gz
-popd
-export PATH=$PWD/llvm-project/bin:$PATH
+Please build the docker image and run the container.
 
 ```
-4. Make sure Python3 (any) is working well.
+sudo docker build -t videzzo:latest .
+sudo docker run --rm -it -v $PWD:/root/videzzo videzzo:latest /bin/bash
 ```
-python3 -m pip install picire
+
+Build QEMU
+
 ```
-5. Update binutils.
-```
-wget https://ftp.gnu.org/gnu/binutils/binutils-2.35.tar.gz
-tar xzvf binutils-2.35.tar.gz; cd binutils-2.35; ./configure; make -j8; sudo make install; cd $OLDPWD
-sudo rm /usr/bin/objcopy; sudo ln -s /usr/local/bin/objcopy /usr/bin/objcopy
-```
-6. Compile QEMU
-```
+cd videzzo
 make qemu
 ```
 
