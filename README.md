@@ -8,7 +8,7 @@ We tested ViDeZZo on Ubuntu 18.04.
 
 1. Clone this project.
 ```
-git clone git@github.com:cyruscyliu/videzzo.git
+git clone git@github.com:HexHive/virtfuzz-src.git
 ```
 2. Make sure gcc/g++ are both there
 ```
