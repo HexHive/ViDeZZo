@@ -16,7 +16,7 @@ sudo apt-get install -y gcc g++
 ```
 3. Export our customized LLVM toolchains.
 ```
-pip install gdown
+python3 -m pip install gdown
 
 mkdir llvm-project
 pushd llvm-project
