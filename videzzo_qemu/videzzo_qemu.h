@@ -59,6 +59,10 @@ extern QTestState *get_qtest_state(void);
 // P.S. "videzzo" is only a mark here.
 static QGuestAllocator *videzzo_alloc;
 
+#define I386_MEM_LOW  0x00100000
+#define I386_MEM_HIGH 0x20000000
+uint64_t around_invalid_address(uint64_t physaddr);
+
 static uint64_t (*videzzo_guest_alloc)(size_t) = NULL;
 static void (*videzzo_guest_free)(size_t) = NULL;
 

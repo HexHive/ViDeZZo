@@ -33,10 +33,12 @@ static uint64_t generic_pio_read(uint64_t addr, uint32_t size) {
     return 0xabababab;
 }
 
+static void dma_memory_read(uint64_t addr) { }
+
 static void generic_pio_write(uint64_t addr, uint32_t size, uint64_t valu) {
     if (addr == 0x30) {
         // suppose we are going to read some here
-        GroupMutatorMiss(2, 0x10000);
+        dma_memory_read(0x10000);
         // some dma memory read in the following
     }
 }
@@ -48,8 +50,7 @@ static uint64_t generic_mmio_read(uint64_t addr, uint32_t size) {
 static void generic_mmio_write(uint64_t addr, uint32_t size, uint64_t valu) {
     if (addr == 0x20) {
         // suppose we are going to read some here
-        GroupMutatorMiss(1, 0x10000);
-        // some dma memory read in the following
+        dma_memory_read(0x10000);
     }
 }
 
@@ -215,7 +216,7 @@ static int mem_index = 0;
 uint64_t dispatch_mem_alloc(Event *event) {
     // a small allocator
     mem_index += 1;
-    return 0x10000 + 0x100 * mem_index;
+    return 0x10000 + 0x2000 * mem_index;
 }
 
 uint64_t dispatch_mem_free(Event *event) {

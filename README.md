@@ -2,21 +2,26 @@
 
 ViDeZZo is a virtual device fuzzing framwork. Now, it supports the latest QEMU.
 
-## Build
+## Build and Run
 
-Please build the docker image and run the container.
+[Optional] Please build the docker image and run the container.
 
 ```
 sudo docker build -t videzzo:latest .
 sudo docker run --rm -it -v $PWD:/root/videzzo videzzo:latest /bin/bash
 ```
 
-Build QEMU
++ VMM (a generic VMM for tests)
 
-```
-cd videzzo
-make qemu
-```
+VMM is a generic VMM with limited functionality to test ViDeZZo. To build it,
+`make vmm` is enough. To launch it, please run `./vmm` or `./vmm-debug` for more
+debug information.
+
++ QEMU
+
+To build it, please `cd videzzo && make qemu`. To run it, please go to
+`videzzo_qemu/out` and run binary there. If to check virtual device messages,
+please run `make qemu-debug`.
 
 ## Reprocuder
 

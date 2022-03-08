@@ -118,6 +118,17 @@ uint64_t dispatch_socket_write(Event *event) {
     return 0;
 }
 
+uint64_t around_invalid_address(uint64_t physaddr) {
+    // TARGET_NAME=i386 -> i386/pc
+    if (strncmp(TARGET_NAME, "i386", 4) == 0) {
+        if (physaddr < I386_MEM_HIGH - I386_MEM_LOW)
+            return physaddr + I386_MEM_LOW;
+        else
+            return (physaddr - I386_MEM_LOW) % (I386_MEM_HIGH - I386_MEM_LOW) + I386_MEM_LOW;
+    }
+    return physaddr;
+}
+
 uint64_t dispatch_mem_alloc(Event *event) {
     QTestState *s = (QTestState *)gfctx_get_object();
     return videzzo_malloc(event->valu);

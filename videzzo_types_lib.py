@@ -1,9 +1,9 @@
 import random
 
-FIELD_RANDOM  = 0
-FIELD_POINTER = 1
-FIELD_FLAG    = 2
-FIELD_CONSTANT= 3
+FIELD_RANDOM  = 1
+FIELD_POINTER = 2
+FIELD_FLAG    = 4 # TODO: pointer | flag
+FIELD_CONSTANT= 8
 
 def dict_append(a, b):
     for k, v in b.items():
@@ -18,8 +18,11 @@ class Model(object):
         self.name = name
         self.index = index
         self.structs = {}
+
+        # instrumentation information
         self.head_struct_types = None
-        self.instrumentation = None
+        self.instrumentation_points = []
+        self.n_instrumentation_points = 0
 
         # some internal controls
         self.last_uuid = None
@@ -33,13 +36,6 @@ class Model(object):
     def get_last_uuid(self):
         return 'v' + self.last_uuid
 
-    def recover_struct_type_from_name(self, struct_name):
-        return '_'.join(struct_name.split('_')[:-1])
-
-    def construct_struct_name_from_type(self, struct_type):
-        return '{}_{}'.format(struct_type, self.get_uuid())
-###########################################################################################
-
     def get_stats(self):
         # stats: name, idx, # of structs, # of flag fields, # of pointer fields, # of fields
         n_structs, n_fields, n_flag_fields, n_pointer_fields = 0, 0, 0, 0
@@ -48,19 +44,17 @@ class Model(object):
             for field_name, metadata in struct_metadata.items():
                 n_fields += 1
                 field_type = metadata['field_type']
-                if field_type == FIELD_FLAG:
+                if field_type & FIELD_FLAG:
                     n_flag_fields += 1
-                elif field_type == FIELD_RANDOM:
-                    pass
-                elif field_type == FIELD_CONSTANT:
-                    pass
-                elif field_type == FIELD_POINTER:
+                elif field_type & FIELD_POINTER:
                     n_pointer_fields += 1
                 else:
                     pass
         print('{}, {}, {}, {}, {}, {}'.format(self.name, self.index, n_structs, n_flag_fields, n_pointer_fields, n_fields))
-###########################################################################################
 
+###########################################################################################
+### Construct
+###########################################################################################
     def add_struct(self, struct_type, metadata):
         """
         struct_type: struct_type
@@ -75,11 +69,18 @@ class Model(object):
             self.structs[struct_type] = {}
         for k, field_type in metadata.items():
             field_name, field_size = k.split('#')
-            field_size = str(int(field_size, 16))
-            self.structs[struct_type][field_name] = {'field_size': field_size, 'field_type': field_type}
+            field_size = int(field_size, 16)
+            self.structs[struct_type][field_name] = {
+                'field_size': field_size, 'field_type': field_type}
 
     def get_struct(self, struct_type):
         return self.structs[struct_type]
+
+    def recover_struct_type_from_name(self, struct_name):
+        return '_'.join(struct_name.split('_')[:-1])
+
+    def construct_struct_name_from_type(self, struct_type):
+        return '{}_{}'.format(struct_type, self.get_uuid())
 
     def check_field(self, struct_type, field_name):
         if struct_type not in self.structs:
@@ -87,34 +88,53 @@ class Model(object):
         if field_name not in self.structs[struct_type]:
             raise KeyError('{} is not a valid field'.format(field_name))
 
-    def add_head(self, head_struct_types, instrumentation):
-        self.head_struct_types = head_struct_types
-        self.instrumentation = instrumentation
+    def get_field_size(self, struct_type, field_name):
+        return hex(self.structs[struct_type][field_name]['field_size'])
 
+    def add_head(self, head_struct_types):
+        """
+        head_struct_types: [struct_type0, struct_type1, ..., struct_typen]
+        """
+        self.head_struct_types = head_struct_types
+
+    def add_instrumentation_point(self, filename, callstack):
+        """
+        filename: basename.c
+        callstack: [function1, function2, function_index, argument_index]
+        """
+        self.instrumentation_points.append({
+            'filename': filename, 'callstack': callstack, 'id': self.index})
+        self.n_instrumentation_points = len(self.instrumentation_points)
+
+    def get_instrumentation_points(self):
+        return self.instrumentation_points
+
+    """
+    ViDeZZo constant format:
+        self.structs[struct_type][field_name] = {
+            'field_name': {'field_size': field_size, 'field_type': field_type, 'field_value': field_value}
+        }
+    """
     def add_constant(self, key, value):
         """
         key: struct_type.field_name
-        value: field_value
-
-        ViDeZZo constant format:
-            self.structs[struct_type][field_name] = {
-                'field_name': {'field_size': field_size, 'field_type': field_type, 'field_value': field_value}
-            }
+        value: field_value (list)
         """
         struct_type, field_name = key.split('.')
         self.check_field(struct_type, field_name)
         field_value = value
         self.structs[struct_type][field_name]['field_value'] = field_value
 
+    """
+    ViDeZZo flag format:
+        self.structs[struct_type][field_name]['flags'] = {
+            'start': {'length': length, 'value': initvalue}
+        }
+    """
     def add_flag(self, key, value):
         """
         key: struct_type.field_name
         value: {'length[@initvalue]'}
-
-        ViDeZZo flag format:
-            self.structs[struct_type][field_name]['flags'] = {
-                'start': {'length': length, 'value': initvalue}
-            }
         """
         struct_type, field_name = key.split('.')
         self.check_field(struct_type, field_name)
@@ -134,82 +154,77 @@ class Model(object):
     def get_flag_length(self, struct_type, field_name, bit):
         return self.structs[struct_type][field_name]['flags'][bit]['length']
 
-    def add_context_tail_pointer(self, pointer):
+    """
+    ViDeZZo point_to format:
+        self.structs[struct][field_name]['point_to'] = {
+            'types': {'0': point_to_struct_type},
+            'flags': [{'struct_type': struct_type, 'field_name': field_name,
+                     'bit': bit, 'length': length}] or None,
+            'alignment': 0,
+            'array': False or True,
+            'linked_list': 'single' or 'double' or None,
+            'tail': {'struct_type': struct_type, 'field_name': field_name},
+                    if linked_list is not None
+            'links': {'0': field_name},
+        }
+    """
+    def add_point_to(self, pointer, types, flags=None, alignment=0, array=False):
         """
-        key: struct_type.field_name
-
-        ViDeZZo point_to format:
-            self.structs[struct][field_name]['point_to'] = {'tail': True}
+        pointer: struct_type.field_name
+        types: [struct_type0, struct_type1, ..., struct_typen]
+        flags: [struct_type.field_name.bitwise] (if len(types)==1 then flags is None)
         """
         struct_type, field_name = pointer.split('.')
         self.check_field(struct_type, field_name)
-        self.structs[struct_type][field_name]['point_to'] = {'tail': True}
-
-    def add_context_flag_to_point_to(self, flags, pointer, types):
-        """
-        flags: [struct_type.field_name.bitwise] n
-        pointer: struct_type.field_name 1
-        types: [type0] 2^n
-
-        ViDeZZo point_to format:
+        if len(types) == 1:
             self.structs[struct_type][field_name]['point_to'] = {
-                'flags': [{'struct_type': struct_type, 'field_name': field_name, 'bit': bit, 'length': length}] or None,
-                'types': {'0': point_to_struct_type}
-            }
-        """
-        struct_type, field_name = pointer.split('.')
-        self.check_field(struct_type, field_name)
-        if flags is None:
-            assert len(types) == 1
-            self.structs[struct_type][field_name]['point_to'] = {'flags': None, 'types': {'0': types[0]}}
+                'flags': None, 'types': {'0': types[0]}, 'alignment': alignment, 'array': array}
+            return struct_type, field_name
         else:
-            metadata = {'flags': [], 'types': {}}
+            assert flags is not None
+            metadata = {'flags': [], 'types': {}, 'alignment': alignment, 'array': array}
             for flag in flags:
                 flag_struct_type, flag_field_name, flag_bit = flag.split('.')
                 self.check_field(flag_struct_type, flag_field_name)
                 metadata['flags'].append({
-                    'struct_type': flag_struct_type, 'field_name': flag_field_name,
-                    'bit': flag_bit, 'length': self.get_flag_length(flag_struct_type, flag_field_name, flag_bit)})
+                    'struct_type': flag_struct_type,
+                    'field_name': flag_field_name,
+                    'bit': flag_bit,
+                    'length': self.get_flag_length(flag_struct_type, flag_field_name, flag_bit)})
             for idx, point_to_struct_type in enumerate(types):
                 metadata['types'][str(idx)] = point_to_struct_type
             self.structs[struct_type][field_name]['point_to'] = metadata
-        return struct_type, field_name
+            return struct_type, field_name
 
-    def add_context_flag_to_single_linked_list(self, flags, pointer, types, links, tail=None):
+    def add_point_to_single_linked_list(
+            self, head, tail, types, links, flags=None, alignment=0, array=False):
         """
-        flags: [struct_type.field_name.bitwise] n
-        pointer: struct_type.field_name 1
-        types: [type0] 2^n
-        tail: struct_type.field_name 1
-        links: [link] 2^n
-
-        ViDeZZo point_to format:
-            self.structs[struct][field_name]['point_to'] = {
-                'flags': [{'struct_type': struct_type, 'field_name': field_name, 'bit': bit, 'length': length}] or None,
-                'types': {'0': point_to_struct_type},
-                'tail': {'struct_type': struct_type, 'field_name': field_name},
-                'links': {'0': link},
-                'linked_list': False
-            }
+        head: struct_type.field_name
+        tail: struct_type.field_name
+        types: [struct_type0, struct_type1, ..., struct_typen]
+        links: [link0, link1, ..., linkn]
+        flags: [struct_type.field_name.bitwise] (if len(types)==1 then flags is None)
         """
-        struct_type, field_name = self.add_context_flag_to_point_to(flags, pointer, types)
-        self.structs[struct_type][field_name]['point_to']['linked_list'] = True
+        # let's handle the head pointer first
+        struct_type, field_name = self.add_point_to(
+            head, types, flags=flags, alignment=alignment, array=array)
+        # let's handle the tail pointer then
+        self.structs[struct_type][field_name]['point_to']['linked_list'] = 'single'
         if tail is not None:
             tail_struct_type, tail_field_name = tail.split('.')
             self.check_field(tail_struct_type, tail_field_name)
             self.structs[struct_type][field_name]['point_to']['tail'] = {
                 'struct_type': tail_struct_type, 'field_name': tail_field_name}
             self.structs[tail_struct_type][tail_field_name]['point_to'] = {'tail': True}
-        if links is not None:
-            metadata = self.structs[struct_type][field_name]['point_to']
-            metadata['links'] = {}
-            for idx, _ in metadata['types'].items():
-                self.structs[struct_type][field_name]['point_to']['links'][idx] = links[int(idx)]
 
-    def get_field_size(self, struct_type, field_name):
-        return self.structs[struct_type][field_name]['field_size']
+        metadata = self.structs[struct_type][field_name]['point_to']
+        metadata['links'] = {}
+        for idx, _ in metadata['types'].items():
+            self.structs[struct_type][field_name]['point_to']['links'][idx] = links[int(idx)]
+
 ###########################################################################################
-
+### Generate
+###########################################################################################
     def __gen_event_memwrite(self, struct_name, field_name, value, value_size):
         struct_type = self.recover_struct_type_from_name(struct_name)
         field_size = self.get_field_size(struct_type, field_name)
@@ -223,7 +238,7 @@ class Model(object):
             length = length_and_initvalue['length']
             initvalue = length_and_initvalue['initvalue']
             if initvalue is None:
-                initvalue = 'rand()'
+                initvalue = 'urand32()'
             flags.append(('(({0} & ((1 << 0x{1:02x}) - 1)) << 0x{2:02x})'.format(initvalue, length, length_in_total)))
             length_in_total += int(length)
         sep = '\n    {} | '.format(' ' * self.indent * 4)
@@ -233,33 +248,88 @@ class Model(object):
 
     def gen_random(self, struct_name, field_name, metadata):
         # MAGIC
-        # self.append_code('{}->{} = {};'.format(struct_name, field_name, 'rand()'))
-        self.__gen_event_memwrite(struct_name, field_name, 'rand()', 4)
+        # self.append_code('{}->{} = {};'.format(struct_name, field_name, 'urand32()'))
+        self.__gen_event_memwrite(struct_name, field_name, 'urand32()', 4)
+
+    def gen_constant_declaration(self):
+        """
+        Declare these constants.
+        """
+        for struct_type, fields in self.structs.items():
+            for field_name, metadata in fields.items():
+                field_size = metadata['field_size']
+                field_type = metadata['field_type']
+                if (field_type & FIELD_CONSTANT) == 0:
+                    continue
+                assert field_size in [1, 2, 4, 8]
+                field_value = metadata['field_value']
+                assert isinstance(field_value, list)
+                self.append_code('uint{}_t {}_{}_constant[{}] = {{'.format(
+                    int(field_size) * 8, struct_type, field_name, len(field_value)))
+                self.indent += 1
+                for constant in field_value:
+                    self.append_code('{},'.format(hex(constant)))
+                self.indent -= 1
+                self.append_code('}};\n'.format(struct_type))
 
     def gen_constant(self, struct_name, field_name, metadata):
         field_value = metadata['field_value']
+        struct_type = self.recover_struct_type_from_name(struct_name)
         # MAGIC
-        # self.append_code('{}->{} = {};'.format(struct_name, field_name, 'rand()'))
-        self.__gen_event_memwrite(struct_name, field_name, field_value, 4)
+        # self.append_code('{}->{} = {};'.format(struct_name, field_name, 'urand32()'))
+        self.__gen_event_memwrite(
+            struct_name, field_name, '{}_{}_constant[urand32() % {}]'.format(struct_type, field_name, len(field_value)), 4)
 
-    def gen_linked_list(self, struct_type, field_name):
-        self.append_code('// gen linked list for {}->{}'.format(struct_type, field_name))
-        head_struct_name = self.construct_struct_name_from_type(struct_type)
-        last_struct_name = 'last_struct_name_{}'.format(self.get_uuid())
-        tail_struct_name = 'tail_struct_name_{}'.format(self.get_uuid())
-        self.append_code('GEN_LINKED_LIST({}, {}, {}, {}, {}, {});'.format(
-            struct_type, field_name, head_struct_name, last_struct_name, tail_struct_name, self.get_uuid()))
-        return head_struct_name, tail_struct_name
-
-    def gen_point_to(self, struct_name, field_name, metadata):
+    def __gen_point_to(self, struct_name, field_name, metadata):
+        """
+        Handle each pointer.
+        """
         if 'tail' in metadata and metadata['tail'] is True:
             return
 
         self.append_code('// gen point_to for {}->{}'.format(struct_name, field_name))
         flags = metadata['flags']
         types = metadata['types']
+        links = metadata['links'] if 'links' in metadata else None
 
-        def gen_conditional_point_to(__gen_func, __links):
+        def __gen_single_linked_list(__struct_type, __field_name):
+            self.append_code('// gen linked list for {}->{}'.format(__struct_type, __field_name))
+            head_struct_name = self.construct_struct_name_from_type(__struct_type)
+            last_struct_name = 'last_struct_name_{}'.format(self.get_uuid())
+            tail_struct_name = 'tail_struct_name_{}'.format(self.get_uuid())
+            self.append_code('GEN_LINKED_LIST({}, {}, {}, {}, {}, {});'.format(
+                __struct_type, __field_name, head_struct_name, last_struct_name, tail_struct_name, self.get_uuid()))
+            return head_struct_name, tail_struct_name
+
+        def gen_single_linked_list(__struct_type, __field_name):
+            head_struct_name, tail_struct_name = __gen_single_linked_list(__struct_type, __field_name)
+            # MAGIC
+            # self.append_code('{}->{} = {};'.format(struct_name, field_name, head_struct_name))
+            self.__gen_event_memwrite(struct_name, field_name, head_struct_name, 4);
+            if 'tail' in metadata and isinstance(metadata['tail'], dict):
+                # MAGIC
+                # self.append_code('{}->{} = {};'.format(struct_name, metadata['tail']['field_name'], tail_struct_name))
+                self.__gen_event_memwrite(struct_name, metadata['tail']['field_name'], tail_struct_name, 4);
+
+        def gen_single_object(__struct_type):
+            sub_struct_name = self.gen_struct_point_to(__struct_type)
+            # MAGIC
+            # self.append_code('{}->{} = {};'.format(struct_name, field_name, sub_struct_name))
+            self.__gen_event_memwrite(struct_name, field_name, sub_struct_name, 4);
+
+        def is_single_linked_list(__metadata):
+            return 'linked_list' in __metadata and __metadata['linked_list'] is 'single'
+
+        # we support pointing to a single object, or a single linked list
+        if flags is None:
+            if is_single_linked_list(metadata):
+                assert links is not None
+                gen_single_linked_list(types['0'], links['0'])
+            else:
+                gen_single_object(types['0'])
+        else:
+            #  gen_conditional_point_to(gen_single_linked_list, links)
+            #  gen_conditional_point_to(gen_single_object, None)
             # MAGIC
             # cond = ' | '.join(['get_bit({}->{}, {}, {})'.format(
             #     struct_name, flag['field_name'], flag['bit'], flag['length']) for flag in flags])
@@ -281,46 +351,19 @@ class Model(object):
                 if struct_type is None:
                     self.append_code('break; }')
                     continue
-                if __links is None:
-                    __gen_func(struct_type)
+                if is_single_linked_list(metadata):
+                    assert links is not None
+                    gen_single_linked_list(struct_type, links[case])
                 else:
-                    __gen_func(struct_type, __links[case])
+                    gen_single_object(struct_type)
                 self.append_code('break; }')
                 self.indent -= 1
             self.indent -= 1
             self.append_code('}')
 
-        def gen_linked_list(__struct_type, __field_name):
-            head_struct_name, tail_struct_name = self.gen_linked_list(__struct_type, __field_name)
-            # MAGIC
-            # self.append_code('{}->{} = {};'.format(struct_name, field_name, head_struct_name))
-            self.__gen_event_memwrite(struct_name, field_name, head_struct_name, 4);
-            if 'tail' in metadata and isinstance(metadata['tail'], dict):
-                # MAGIC
-                # self.append_code('{}->{} = {};'.format(struct_name, metadata['tail']['field_name'], tail_struct_name))
-                self.__gen_event_memwrite(struct_name, metadata['tail']['field_name'], tail_struct_name, 4);
-
-        def gen_point_to(__struct_type):
-            sub_struct_name = self.gen_struct_point_to(__struct_type)
-            # MAGIC
-            # self.append_code('{}->{} = {};'.format(struct_name, field_name, sub_struct_name))
-            self.__gen_event_memwrite(struct_name, field_name, sub_struct_name, 4);
-
-        if 'linked_list' in metadata and metadata['linked_list'] is True:
-            links = metadata['links']
-            if flags is None:
-                gen_linked_list(types['0'], links['0'])
-            else:
-                gen_conditional_point_to(gen_linked_list, links)
-        else:
-            if flags is None:
-                gen_point_to(types['0'])
-            else:
-                gen_conditional_point_to(gen_point_to, None)
-
     def gen_struct_point_to(self, struct_type, head=False):
         """
-        {struct_name}->{non_pointer_field_name} = {corresponding_value};
+        Initilize a struct's pointers and return the struct name.
         """
         struct_name = self.construct_struct_name_from_type(struct_type)
         if head:
@@ -330,12 +373,77 @@ class Model(object):
             self.append_code('append_address({});'.format(struct_name))
         for field_name, metadata in self.get_struct(struct_type).items():
             field_type = metadata['field_type']
-            if field_type == FIELD_POINTER:
-                self.gen_point_to(struct_name, field_name, metadata['point_to'])
+            if field_type & FIELD_POINTER:
+                self.__gen_point_to(struct_name, field_name, metadata['point_to'])
         return struct_name
-###########################################################################################
+
+    def gen_struct_declaration(self):
+        """
+        Declare these structs.
+        """
+        for struct_type, fields in self.structs.items():
+            self.append_code('typedef struct {')
+            for field_name, metadata in fields.items():
+                field_size = metadata['field_size']
+                if field_size == 1:
+                    self.append_code('    uint8_t {};'.format(field_name))
+                elif field_size == 2:
+                    self.append_code('    uint16_t {};'.format(field_name))
+                elif field_size == 4:
+                    self.append_code('    uint32_t {};'.format(field_name))
+                elif field_size == 8:
+                    self.append_code('    uint64_t {};'.format(field_name))
+                else:
+                    self.append_code('    uint8_t {}[{}];'.format(field_name, field_size))
+            self.append_code('}} {};\n'.format(struct_type))
+
+    def __gen_struct_without_pointers(self, struct_type):
+        """
+        Handle each non-pointer field.
+        """
+        self.append_code('// generating {}'.format(struct_type))
+        struct_name = self.construct_struct_name_from_type(struct_type)
+        # MAGIC
+        # self.append_code('{1} *{0} = ({1}*)videzzo_calloc(sizeof({1}), 1);'.format(struct_name, struct_type))
+        self.append_code('uint64_t {0};'.format(struct_name))
+        self.append_code('if (physaddr == INVALID_ADDRESS) {{ {0} = (uint64_t)EVENT_MEMALLOC(sizeof({1})); }} else {{ {0} = physaddr; }}'.format(struct_name, struct_type))
+        for field_name, metadata in self.get_struct(struct_type).items():
+            field_type = metadata['field_type']
+            if field_type & FIELD_FLAG:
+                assert 'flags' in metadata, 'flag {}.{} is not set up'.format(struct_type, field_name)
+                self.gen_flag(struct_name, field_name, metadata['flags'])
+            elif field_type & FIELD_RANDOM:
+                self.gen_random(struct_name, field_name, metadata)
+            elif field_type & FIELD_CONSTANT:
+                self.gen_constant(struct_name, field_name, metadata)
+            elif field_type & FIELD_POINTER:
+                pass
+            else:
+                raise ValueError('unsupported FIELD_TYPE: {}'.format(field_type))
+        return struct_name
+
+    def gen_struct_initialization_without_pointers(self):
+        """
+        Create a function to define a struct and its non-pointer fields.
+        """
+        for struct_type, fields in self.structs.items():
+            self.append_code('static uint64_t get_{}(uint64_t physaddr) {{'.format(struct_type))
+            self.indent += 1
+            struct_name = self.__gen_struct_without_pointers(struct_type)
+            self.append_code('return {};'.format(struct_name))
+            self.indent -= 1
+            self.append_code('}\n')
+
+    def gen_free_structs(self):
+        """
+        Create a function to free allocated memory.
+        """
+        self.append_code('free_memory_blocks();')
 
     def gen_license(self):
+        """
+        Generate license.
+        """
         license = """/*
  * Type-Aware Virtual-Device Fuzzing
  *
@@ -347,10 +455,16 @@ class Model(object):
         self.append_code(license)
 
     def gen_headers(self):
+        """
+        Generate headers required.
+        """
         self.append_code('#include <stdint.h>')
         self.append_code('#include <stddef.h>\n')
 
     def gen_helpers(self):
+        """
+        Generate common functions as helpers.
+        """
         helpers = """#define INVALID_ADDRESS 0xFFFFFFFFFFFFFFFF
 #define EVENT_MEMREAD(physaddr, size, data, data_size, uuid) \\
     uint8_t *tmp_buf_##uuid = (uint8_t *)calloc(size, 1); \\
@@ -368,7 +482,7 @@ class Model(object):
     uint64_t head_name = get_##type(INVALID_ADDRESS); \\
     append_address(head_name); \\
     uint64_t last_name = head_name, tail_name = head_name; \\
-    for (int i = 0; i < (rand() % 5 -1); i++) { \\
+    for (int i = 0; i < (urand32() % 5 -1); i++) { \\
         uint64_t next_##type = get_##type(INVALID_ADDRESS); \\
         append_address(next_##type); \\
         EVENT_MEMWRITE(last_name + offsetof(type, field_name), 4, next_##type, 4, uuid) \\
@@ -378,60 +492,6 @@ class Model(object):
 """
         self.append_code(helpers)
 
-    def gen_struct_definition(self):
-        for struct_type, fields in self.structs.items():
-            self.append_code('typedef struct {')
-            for field_name, metadata in fields.items():
-                field_size = metadata['field_size']
-                if field_size == '1':
-                    self.append_code('    uint8_t {};'.format(field_name))
-                elif field_size == '2':
-                    self.append_code('    uint16_t {};'.format(field_name))
-                elif field_size == '4':
-                    self.append_code('    uint32_t {};'.format(field_name))
-                elif field_size == '8':
-                    self.append_code('    uint64_t {};'.format(field_name))
-                else:
-                    self.append_code('    uint8_t {}[{}];'.format(field_name, field_size))
-            self.append_code('}} {};\n'.format(struct_type))
-
-    def gen_struct(self, struct_type):
-        """
-        uint32_t get_{struct}(uint64_t physaddr);
-        """
-        self.append_code('// generating {}'.format(struct_type))
-        struct_name = self.construct_struct_name_from_type(struct_type)
-        # MAGIC
-        # self.append_code('{1} *{0} = ({1}*)videzzo_calloc(sizeof({1}), 1);'.format(struct_name, struct_type))
-        self.append_code('uint64_t {0};'.format(struct_name))
-        self.append_code('if (physaddr == INVALID_ADDRESS) {{ {0} = (uint64_t)EVENT_MEMALLOC(sizeof({1})); }} else {{ {0} = physaddr; }}'.format(struct_name, struct_type))
-        for field_name, metadata in self.get_struct(struct_type).items():
-            field_type = metadata['field_type']
-            if field_type == FIELD_FLAG:
-                self.gen_flag(struct_name, field_name, metadata['flags'])
-            elif field_type == FIELD_RANDOM:
-                self.gen_random(struct_name, field_name, metadata)
-            elif field_type == FIELD_CONSTANT:
-                self.gen_constant(struct_name, field_name, metadata)
-            elif field_type == FIELD_POINTER:
-                pass
-            else:
-                raise ValueError('unsupported FIELD_TYPE: {}'.format(field_type))
-        return struct_name
-
-    def gen_struct_initialization_without_pointers(self):
-        for struct_type, fields in self.structs.items():
-            self.append_code('static uint64_t get_{}(uint64_t physaddr) {{'.format(struct_type))
-            self.indent += 1
-            struct_name = self.gen_struct(struct_type)
-            self.append_code('return {};'.format(struct_name))
-            self.indent -= 1
-            self.append_code('}\n')
-
-    def gen_free_structs(self):
-        self.append_code('free_memory_blocks();')
-###########################################################################################
-
     def append_code(self, code):
         self.code.append(' ' * self.indent * 4 + code)
 
@@ -439,15 +499,24 @@ class Model(object):
         self.gen_license()
         self.gen_headers();
         self.gen_helpers();
-        self.gen_struct_definition()
+        self.gen_struct_declaration()
+        self.gen_constant_declaration()
         self.gen_struct_initialization_without_pointers()
 
-        for _, head_struct_type in enumerate(self.head_struct_types):
-            self.append_code('void videzzo_group_mutator_miss_handler_{}(uint64_t physaddr) {{'.format(self.index))
+        self.append_code('void videzzo_group_mutator_miss_handler_{}(uint64_t physaddr) {{'.format(self.index))
+        self.indent += 1
+        self.append_code('switch (urand32() % {}) {{'.format(len(self.head_struct_types)))
+        self.indent += 1
+        for idx, head_struct_type in enumerate(self.head_struct_types):
+            self.append_code('case {} : {{'.format(idx))
             self.indent += 1
             struct_name = self.gen_struct_point_to(head_struct_type, head=True)
-            self.gen_free_structs()
+            self.append_code('break; }')
             self.indent -= 1
-            self.append_code('}')
+        self.indent -= 1
+        self.append_code('}')
+        self.gen_free_structs()
+        self.indent -= 1
+        self.append_code('}')
 
         return '\n'.join(self.code)

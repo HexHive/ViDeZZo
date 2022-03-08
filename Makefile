@@ -22,24 +22,26 @@ videzzo-core:
 	ar rcs libvidezzo.a videzzo.o videzzo_types.o
 
 videzzo-vmm:
-	CFLAGS="${CFLAGS} ${SANITIZERS}" 					 HYPERVISOR=vmm make videzzo-core
-	clang -fsanitize=fuzzer ${CFLAGS} ${SANITIZERS} 			     -o vmm       videzzo_vmm.c libvidezzo.a
+	CFLAGS="${CFLAGS} ${SANITIZERS}"                 HYPERVISOR=vmm make videzzo-core
+	clang -fsanitize=fuzzer ${CFLAGS} ${SANITIZERS} \
+		-videzzo-instrumentation=./videzzo_vmm_types.yaml -flegacy-pass-manager \
+		-o vmm       videzzo_vmm.c libvidezzo.a
 
 videzzo-vmm-debug:
-	CFLAGS="${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG" 	 HYPERVISOR=vmm make videzzo-core
-	clang -fsanitize=fuzzer ${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG  -o vmm-debug videzzo_vmm.c libvidezzo.a
+	CFLAGS="${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG" HYPERVISOR=vmm make videzzo-core
+	clang -fsanitize=fuzzer ${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG  \
+		-videzzo-instrumentation=./videzzo_vmm_types.yaml -flegacy-pass-manager \
+		-o vmm-debug videzzo_vmm.c libvidezzo.a
 
 vmm: videzzo-vmm videzzo-vmm-debug
 
-.PHONY: videzzo-qemu
-
 videzzo-qemu:
-	CFLAGS="${CFLAGS} ${SANITIZERS}" 					 HYPERVISOR=qemu make videzzo-core
-	make -C videzzo_qemu qemu
+	CFLAGS="${CFLAGS} ${SANITIZERS}"                 HYPERVISOR=qemu make videzzo-core
+	make -C videzzo_qemu qemu clusterfuzz
 
 videzzo-qemu-debug:
-	CFLAGS="${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG" 	 HYPERVISOR=qemu make videzzo-core
-	make -C videzzo_qemu qemu
+	CFLAGS="${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG" HYPERVISOR=qemu make videzzo-core
+	make -C videzzo_qemu qemu clusterfuzz
 
 qemu: videzzo-qemu
 

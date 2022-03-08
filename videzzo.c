@@ -12,6 +12,19 @@
 #include <sys/wait.h>
 
 //
+// Reproducer
+//
+int merge = 0;
+
+void videzzo_set_merge() {
+    merge = 1;
+}
+
+void videzzo_clear_merge() {
+    merge = 0;
+}
+
+//
 // GroupMutator Feedback
 //
 bool DisableGroupMutator = false;
@@ -24,8 +37,7 @@ void enable_group_mutator_miss(void) {
     DisableGroupMutator = false;
 }
 
-// Weak definitations - to make videzz.c realy VMM-independent
-FeedbackHandler group_mutator_miss_handlers[0xff] = {};
+uint64_t around_invalid_address(uint64_t physaddr) { return physaddr; }
 
 void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
 #ifdef VIDEZZO_DEBUG
@@ -53,6 +65,7 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
 
     // In this handler, the current input will be changed
     // Don't delete any events from the current event to the end
+    physaddr = around_invalid_address(physaddr);
     group_mutator_miss_handlers[id](physaddr);
 
     // nice, all events go into our new input
@@ -235,9 +248,6 @@ void add_interface(EventType type, uint64_t addr, uint32_t size,
     n_interfaces++;
 }
 
-// Weak definitations - to make videzz.c realy VMM-independent
-int merge = 0;
-
 static uint64_t around_event_addr(uint8_t id, uint64_t raw_addr) {
     if (merge)
         return raw_addr; // do nothing
@@ -251,13 +261,11 @@ static uint64_t around_event_addr(uint8_t id, uint64_t raw_addr) {
     }
 }
 
-static inline int clz64(uint64_t val)
-{
+static inline int clz64(uint64_t val) {
     return val ? __builtin_clzll(val) : 64;
 }
 
-static inline uint64_t pow2floor(uint64_t value)
-{
+static inline uint64_t pow2floor(uint64_t value) {
     if (!value) {
         /* Avoid undefined shift by 64 */
         return 0;
@@ -373,9 +381,9 @@ static void print_event_data(Event *event) {
     }
     if (2 * size + 1 > 80) {
         enc[80] = '\0';
-        fprintf(stderr, ", 0x%s...", enc);
+        fprintf(stderr, ", %s...", enc);
     } else
-        fprintf(stderr, ", 0x%s", enc);
+        fprintf(stderr, ", %s", enc);
     free(enc);
 }
 

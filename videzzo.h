@@ -91,6 +91,7 @@ uint64_t dispatch_clock_step(Event *event) __attribute__((weak));
 uint64_t dispatch_socket_write(Event *event) __attribute__((weak));
 uint64_t dispatch_mem_alloc(Event *event) __attribute__((weak));
 uint64_t dispatch_mem_free(Event *event) __attribute__((weak));
+uint64_t around_invalid_address(uint64_t physaddr) __attribute__((weak));
 
 enum Sizes {ViDeZZo_Empty, ViDeZZo_Byte=1, ViDeZZo_Word=2, ViDeZZo_Long=4, ViDeZZo_Quad=8};
 extern EventOps event_ops[N_EVENT_TYPES];
@@ -203,7 +204,7 @@ __flush gfctx_get_flush(void);
 typedef void (* FeedbackHandler)(uint64_t physaddr);
 
 void GroupMutatorMiss(uint8_t id, uint64_t physaddr);
-extern FeedbackHandler group_mutator_miss_handlers[0xff] __attribute__((weak));
+extern FeedbackHandler group_mutator_miss_handlers[0xff];
 
 //
 // Open APIs
@@ -222,6 +223,7 @@ size_t LLVMFuzzerCustomMutator(
 //
 // Reproduce
 //
-int merge __attribute__((weak));
+void videzzo_set_merge();
+void videzzo_clear_merge();
 
 #endif /* VIDEZZO_H */

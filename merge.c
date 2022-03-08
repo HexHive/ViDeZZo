@@ -10,7 +10,7 @@
 #include <argp.h>
 #include <string.h>
 
-int merge = 1;
+FeedbackHandler group_mutator_miss_handlers[0xff] = {};
 
 static size_t load_from_seed(const char *pathname, uint8_t *buf, size_t size) {
     FILE *f = fopen(pathname, "rb");
@@ -56,6 +56,8 @@ int main(int argc, char **argv) {
         printf("[-] No valid output pathname. Exit.\n");
         exit(0);
     }
+
+    videzzo_set_merge();
 
     // load
     char *pathname;

@@ -2,23 +2,27 @@
 crash-*
 slow-unit-*
 leak-*
+
 # cache
 __pycache__
+
 # objects
 *.[aoi]
 *.py[cd]
 vmm
 vmm-debug
 videzzo-merge
+
 # temp files
 videzzo_types.c
-videzzo_vmm-01.h
-videzzo_vmm-02.h
+videzzo_vmm-00.h
 videzzo_qemu/*.h
 videzzo_qemu/*.h
 videzzo_qemu/*.h
 out
 *.zip
+*.yaml
+
 # source code
 qemu
 *.tar.gz

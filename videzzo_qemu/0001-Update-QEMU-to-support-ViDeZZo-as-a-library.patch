@@ -38,19 +38,12 @@ index e1a31fb332..7b3c1a0105 100755
    --static)
      static="yes"
      QEMU_PKG_CONFIG_FLAGS="--static $QEMU_PKG_CONFIG_FLAGS"
-@@ -1379,6 +1382,7 @@ Advanced options (experts only):
-   --with-coroutine=BACKEND coroutine backend. Supported options:
-                            ucontext, sigaltstack, windows
-   --enable-gcov            enable test coverage analysis with gcov
-+  --enable-videzzo         enable virtual device fuzzing with videzzo
-   --with-vss-sdk=SDK-path  enable Windows VSS support in QEMU Guest Agent
-   --with-win-sdk=SDK-path  path to Windows Platform SDK (to build VSS .tlb)
-   --tls-priority           default TLS protocol/cipher priority string
-@@ -3134,6 +3138,10 @@ elif test "$fortify_source" = "yes" ; then
+@@ -3134,6 +3138,11 @@ elif test "$fortify_source" = "yes" ; then
    debug=no
  fi
  
 +if test "$videzzo" = "yes" ; then
++  QEMU_CFLAGS="-videzzo-instrumentation=$source_path/videzzo_qemu_types.yaml -flegacy-pass-manager $QEMU_CFLAGS"
 +  QEMU_LDFLAGS="-L$source_path/tests/qtest/fuzz -lvidezzo"
 +fi
 +

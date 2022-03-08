@@ -1,6 +1,7 @@
 import sys
-import importlib
+import yaml
 import argparse
+import importlib
 from videzzo_types_lib import Model, FIELD_RANDOM, FIELD_POINTER, FIELD_FLAG, FIELD_CONSTANT
 
 def __gen_code(models, hypervisor_dir):
@@ -115,6 +116,11 @@ static void free_memory_blocks() {{
     guest_memory_blocks = NULL;
 }}
 
+#define RAND() (rand() & 0x7fff) /* ensure only 15-bit */
+uint32_t urand32() {{
+    return (uint32_t)(((uint32_t)RAND() << 30) ^ ((uint32_t)RAND() << 15) ^ (uint32_t)RAND());
+}}
+
 {}
 """
 
@@ -147,9 +153,12 @@ def gen_types(hypervisor, summary=True):
     module = importlib.import_module(module_name)
 
     models = {}
+    instrumentation_points = []
     for k, v in module.__dict__.items():
         if isinstance(v, Model):
             models[k] = v
+            instrumentation_points.extend(v.get_instrumentation_points())
+    yaml.safe_dump(instrumentation_points, open('./{0}/videzzo_{1}_types.yaml'.format(hypervisor_dir, hypervisor), 'w'))
     if summary:
         for model in models.values():
             model.get_stats()
@@ -157,36 +166,24 @@ def gen_types(hypervisor, summary=True):
     __gen_code(models, hypervisor_dir)
 
 def gen_vmm(summary=False):
-    vmm_01 = Model('vmm', 1)
-    t = {}
-    for i in range(0, 1):
-        t['intr{}#0x4'.format(i)] = FIELD_POINTER
-    t.update({'frame#0x2': FIELD_RANDOM, 'pad#0x2': FIELD_RANDOM, 'done#0x4': FIELD_RANDOM})
-    vmm_01.add_struct('VMM_HCCA', t)
-    vmm_01.add_struct('VMM_ED', {
-        'flags#0x4': FIELD_FLAG, 'tail#0x4': FIELD_POINTER , 'head#0x4': FIELD_POINTER, 'next#0x4': FIELD_POINTER})
-    vmm_01.add_flag('VMM_ED.flags', {0: '7@0x0', 7: 4, 11: 2, 13: 1, 14: 1, 15: 1, 16: 11, 27: 5})
-    for i in range(0, 1):
-        vmm_01.add_context_flag_to_point_to(None, 'VMM_HCCA.intr{}'.format(i), ['VMM_ED'])
-    vmm_01.add_context_flag_to_single_linked_list(None, 'VMM_ED.next', ['VMM_ED'], ['next'])
-    vmm_01.add_context_flag_to_single_linked_list(
-        ['VMM_ED.flags.15'], 'VMM_ED.head', ['VMM_TD', 'VMM_ISO_TD'], ['next', 'next'], tail='VMM_ED.tail')
-    vmm_01.add_struct('VMM_TD', {
-        'flags#0x4': FIELD_FLAG, 'cbp#0x4': FIELD_RANDOM, 'next#0x4': FIELD_POINTER, 'be#0x4': FIELD_RANDOM})
-    vmm_01.add_flag('VMM_TD.flags', {0: 16, 18: 1, 19: 2, 21: 3, 24: 1, 25: 1, 26: 2, 28: 4})
-    vmm_01.add_context_flag_to_single_linked_list(None, 'VMM_TD.next', ['VMM_TD'], ['next'])
-    vmm_01.add_struct('VMM_ISO_TD', {
-        'flags#0x4': FIELD_FLAG, 'bp#0x4': FIELD_RANDOM, 'next#0x4': FIELD_POINTER, 'be#0x4': FIELD_RANDOM,
-        'offset0#0x2': FIELD_RANDOM, 'offset1#0x2': FIELD_RANDOM, 'offset2#0x2': FIELD_RANDOM, 'offset3#0x2': FIELD_RANDOM,
-        'offset4#0x2': FIELD_RANDOM, 'offset5#0x2': FIELD_RANDOM, 'offset6#0x2': FIELD_RANDOM, 'offset7#0x2': FIELD_RANDOM})
-    vmm_01.add_flag('VMM_ISO_TD.flags', {0: 16, 18: 1, 19: 2, 21: 3, 24: 1, 25: 1, 26: 2, 28: 4})
-    vmm_01.add_context_flag_to_single_linked_list(None, 'VMM_ISO_TD.next', ['VMM_ISO_TD'], ['next'])
-    vmm_01.add_head(['VMM_HCCA'], ['ohci_frame_boundary', 'ohci_read_hcca'])
-    vmm_02 = Model('vmm', 2)
-    vmm_02.add_struct('TEMP_BUF', {'temp#0x1000': FIELD_RANDOM})
-    vmm_02.add_head(['TEMP_BUF'], ['vmm_transfer_audio', 'pci_dma_read'])
+    vmm_00 = Model('vmm', 0)
+    vmm_00.add_struct('VMM_BD', {'addr0#0x4': FIELD_POINTER, 'addr1#0x4': FIELD_POINTER, 'ctl_len#0x4': FIELD_FLAG})
+    vmm_00.add_flag('VMM_BD.ctl_len', {0: 16, 16: 14, 30: 1, 31: 1})
+    vmm_00.add_struct('VMM_BUF0', {'buf#0x1000': FIELD_RANDOM, 'constant#0x4': FIELD_CONSTANT})
+    vmm_00.add_constant('VMM_BUF0.constant', [0xdeadbeef])
+    vmm_00.add_struct('VMM_BUF1', {'buf#0x1000': FIELD_RANDOM})
+    vmm_00.add_struct('VMM_BUF2', {'next#0x4': FIELD_POINTER})
+    vmm_00.add_point_to('VMM_BUF2.next', ['VMM_BUF2'])
+    vmm_00.add_point_to('VMM_BD.addr0', ['VMM_BUF0', 'VMM_BUF1'], flags=['VMM_BD.ctl_len.31'], alignment=2)
+    vmm_00.add_point_to_single_linked_list('VMM_BD.addr1', None, ['VMM_BUF2'], ['next'], alignment=2)
+    vmm_00.add_head(['VMM_BD'])
+    vmm_00.add_instrumentation_point('videzzo_vmm.c', ['generic_pio_write', 'dma_memory_read', 0, 0])
+    vmm_00.add_instrumentation_point('videzzo_vmm.c', ['generic_mmio_write', 'dma_memory_read', 0, 0])
 
-    models = {'videzzo_vmm-01': vmm_01, 'videzzo_vmm-02': vmm_02}
+    instrumentation_points = vmm_00.get_instrumentation_points()
+    yaml.safe_dump(instrumentation_points, open('./videzzo_vmm_types.yaml', 'w'))
+
+    models = {'videzzo_vmm-00': vmm_00}
     if summary:
         for model in models.values():
             model.get_stats()
