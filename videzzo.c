@@ -206,7 +206,7 @@ InterfaceDescription Id_Description[INTERFACE_END] = {
     }, [INTERFACE_SOCKET_WRITE] = {
         .type = EVENT_TYPE_SOCKET_WRITE,
         .emb = {.addr = 0xFFFFFFFF, .size = 0xFFFFFFFF},
-        .name = "socket_write", .dynamic = true,
+        .name = "socket_write", .dynamic = false, // disable socket write
         .min_access_size = 0xFF, .max_access_size = 0xFF,
     }, [INTERFACE_GROUP_EVENT] = {
         .type = EVENT_TYPE_GROUP_EVENT,
