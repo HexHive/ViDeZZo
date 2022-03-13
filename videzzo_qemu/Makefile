@@ -16,21 +16,34 @@ compile:
 	bash -x 0002-copy-to-qemu.sh
 	bash -x 0003-compile-qemu.sh
 
+compile-coverage:
+	bash -x 0002-copy-to-qemu.sh
+	bash -x 0005-compile-qemu-cov.sh
+
 .PHONY: qemu
 
-qemu:
-	sudo apt-get install -y make autoconf automake libtool ninja-build libglib2.0-dev \
-		libfdt-dev libpixman-1-dev zlib1g-dev patchelf wget libattr1 libattr1-dev \
-		libcap-ng-dev pkg-config libvncserver-dev
-	if [ ! -d "qemu" ]; then git clone https://github.com/qemu/qemu.git --depth 1; make patch; fi
+qemu-dep:
+	if [ ! -d "qemu" ]; then \
+		sudo apt-get install -y make autoconf automake libtool ninja-build libglib2.0-dev \
+			libfdt-dev libpixman-1-dev zlib1g-dev patchelf wget libattr1 libattr1-dev \
+			libcap-ng-dev pkg-config libvncserver-dev && \
+		git clone https://github.com/qemu/qemu.git --depth 1; make patch; fi
+
+qemu: qemu-dep
 	make compile
+
+qemu-coverage: qemu-dep
+	make compile-coverage
 
 update:
 	cd qemu && git pull && cd $(OLDPWD)
 	make compile
 
 clusterfuzz:
-	bash -x 0004-zip-qemu-targets.sh
+	bash -x 0004-zip-qemu-targets.sh san
+
+clusterfuzz-coverage:
+	bash -x 0004-zip-qemu-targets.sh cov
 
 clean:
 	# do nothing

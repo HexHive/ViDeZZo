@@ -3,11 +3,12 @@
 # This script is derived from QEMU/scripts/oss-fuzz/build.sh
 
 # let's assume we've compiled QEMU
-# so we have qemu/build-san-6/qemu-fuzz-[i386|arm]
-DEST_DIR=$PWD/out
+# so we have qemu/build-[san|cov]-6/qemu-fuzz-[i386|arm]
+CONTROL=$1 # san or cov
+DEST_DIR=$PWD/out-$1
 rm -rf $DEST_DIR && mkdir $DEST_DIR
 
-pushd qemu/build-san-6
+pushd qemu/build-$CONTROL-6
 cp -r ../pc-bios $DEST_DIR/pc-bios
 archs=(i386 arm)
 for arch in ${archs[@]}; do
