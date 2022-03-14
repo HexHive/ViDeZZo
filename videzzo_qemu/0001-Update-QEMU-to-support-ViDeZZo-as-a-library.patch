@@ -1,27 +1,30 @@
-From bf021f5dcf669d66e117e35975fa0a6b2a1e498c Mon Sep 17 00:00:00 2001
+From ddf5e0b978ab46c0bf50f2b67c54adbb1a952f8c Mon Sep 17 00:00:00 2001
 From: Qiang Liu <cyruscyliu@gmail.com>
 Date: Tue, 18 Jan 2022 10:16:17 +0100
 Subject: [PATCH] Update QEMU to support ViDeZZo as a library
 
 Signed-off-by: Qiang Liu <cyruscyliu@gmail.com>
 ---
- configure                           | 8 ++++++++
- meson.build                         | 4 ++--
- softmmu/qtest.c                     | 2 +-
- tests/qtest/fuzz/fuzz.c             | 2 +-
- tests/qtest/fuzz/generic_fuzz.c     | 2 +-
- tests/qtest/fuzz/i440fx_fuzz.c      | 2 +-
- tests/qtest/fuzz/meson.build        | 3 +++
- tests/qtest/fuzz/virtio_blk_fuzz.c  | 2 +-
- tests/qtest/fuzz/virtio_net_fuzz.c  | 2 +-
- tests/qtest/fuzz/virtio_scsi_fuzz.c | 2 +-
- 10 files changed, 20 insertions(+), 9 deletions(-)
+ configure                                |  8 ++++++++
+ include/qemu/osdep.h                     |  9 ++++++++
+ meson.build                              |  6 ++++--
+ softmmu/qtest.c                          |  2 +-
+ tests/qtest/fuzz/fuzz.c                  |  2 +-
+ tests/qtest/fuzz/generic_fuzz.c          |  2 +-
+ tests/qtest/fuzz/i440fx_fuzz.c           |  2 +-
+ tests/qtest/fuzz/less_crashes_wrappers.c | 26 ++++++++++++++++++++++++
+ tests/qtest/fuzz/meson.build             |  8 ++++++--
+ tests/qtest/fuzz/virtio_blk_fuzz.c       |  2 +-
+ tests/qtest/fuzz/virtio_net_fuzz.c       |  2 +-
+ tests/qtest/fuzz/virtio_scsi_fuzz.c      |  2 +-
+ 12 files changed, 60 insertions(+), 11 deletions(-)
+ create mode 100644 tests/qtest/fuzz/less_crashes_wrappers.c
 
 diff --git a/configure b/configure
-index e1a31fb332..7b3c1a0105 100755
+index 8860003..eb9f32a 100755
 --- a/configure
 +++ b/configure
-@@ -308,6 +308,7 @@ sanitizers="no"
+@@ -304,6 +304,7 @@ sanitizers="no"
  tsan="no"
  fortify_source="$default_feature"
  gcov="no"
@@ -29,7 +32,7 @@ index e1a31fb332..7b3c1a0105 100755
  EXESUF=""
  modules="no"
  module_upgrades="no"
-@@ -828,6 +829,8 @@ for opt do
+@@ -800,6 +801,8 @@ for opt do
    ;;
    --enable-gcov) gcov="yes"
    ;;
@@ -38,7 +41,7 @@ index e1a31fb332..7b3c1a0105 100755
    --static)
      static="yes"
      QEMU_PKG_CONFIG_FLAGS="--static $QEMU_PKG_CONFIG_FLAGS"
-@@ -3134,6 +3138,11 @@ elif test "$fortify_source" = "yes" ; then
+@@ -2658,6 +2661,11 @@ elif test "$fortify_source" = "yes" ; then
    debug=no
  fi
  
@@ -50,11 +53,31 @@ index e1a31fb332..7b3c1a0105 100755
  case "$ARCH" in
  alpha)
    # Ensure there's only a single GP
+diff --git a/include/qemu/osdep.h b/include/qemu/osdep.h
+index c9ec783..319d2c1 100644
+--- a/include/qemu/osdep.h
++++ b/include/qemu/osdep.h
+@@ -183,6 +183,15 @@ extern "C" {
+ #error building with G_DISABLE_ASSERT is not supported
+ #endif
+ 
++#ifdef VIDEZZO_LESS_CRASHES
++#undef assert
++#define assert(x)
++#undef g_assert
++#define g_assert(x)
++#undef g_assert_not_reached
++#define g_assert_not_reached()
++#endif
++
+ #ifndef O_LARGEFILE
+ #define O_LARGEFILE 0
+ #endif
 diff --git a/meson.build b/meson.build
-index 762d7cee85..cc1ef732b6 100644
+index 2d66014..d5e3faf 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -243,8 +243,10 @@ if get_option('fuzzing') and get_option('fuzzing_engine') == '' and \
+@@ -262,8 +262,10 @@ if get_option('fuzzing') and get_option('fuzzing_engine') == '' and \
      not cc.links('''
            #include <stdint.h>
            #include <sys/types.h>
@@ -68,10 +91,10 @@ index 762d7cee85..cc1ef732b6 100644
          args: ['-Werror', '-fsanitize=fuzzer'])
    error('Your compiler does not support -fsanitize=fuzzer')
 diff --git a/softmmu/qtest.c b/softmmu/qtest.c
-index 72751e1fd8..3b5ab1d413 100644
+index 8b7cb6a..c5232d6 100644
 --- a/softmmu/qtest.c
 +++ b/softmmu/qtest.c
-@@ -263,7 +263,7 @@ static int hex2nib(char ch)
+@@ -264,7 +264,7 @@ static int hex2nib(char ch)
      }
  }
  
@@ -81,7 +104,7 @@ index 72751e1fd8..3b5ab1d413 100644
      qemu_gettimeofday(tv);
      tv->tv_sec -= start_time.tv_sec;
 diff --git a/tests/qtest/fuzz/fuzz.c b/tests/qtest/fuzz/fuzz.c
-index 5f77c84983..63b8c71f40 100644
+index 5f77c84..63b8c71 100644
 --- a/tests/qtest/fuzz/fuzz.c
 +++ b/tests/qtest/fuzz/fuzz.c
 @@ -133,7 +133,7 @@ size_t LLVMFuzzerCustomCrossOver(const uint8_t *data1, size_t size1,
@@ -94,7 +117,7 @@ index 5f77c84983..63b8c71f40 100644
      /*
       * Do the pre-fuzz-initialization before the first fuzzing iteration,
 diff --git a/tests/qtest/fuzz/generic_fuzz.c b/tests/qtest/fuzz/generic_fuzz.c
-index dd7e25851c..31f6d57f60 100644
+index dd7e258..31f6d57 100644
 --- a/tests/qtest/fuzz/generic_fuzz.c
 +++ b/tests/qtest/fuzz/generic_fuzz.c
 @@ -1040,4 +1040,4 @@ static void register_generic_fuzz_targets(void)
@@ -104,7 +127,7 @@ index dd7e25851c..31f6d57f60 100644
 -fuzz_target_init(register_generic_fuzz_targets);
 +// fuzz_target_init(register_generic_fuzz_targets);
 diff --git a/tests/qtest/fuzz/i440fx_fuzz.c b/tests/qtest/fuzz/i440fx_fuzz.c
-index 86796bff2b..8bf6bd6750 100644
+index 86796bf..8bf6bd6 100644
 --- a/tests/qtest/fuzz/i440fx_fuzz.c
 +++ b/tests/qtest/fuzz/i440fx_fuzz.c
 @@ -204,4 +204,4 @@ static void register_pci_fuzz_targets(void)
@@ -113,10 +136,51 @@ index 86796bff2b..8bf6bd6750 100644
  
 -fuzz_target_init(register_pci_fuzz_targets);
 +// fuzz_target_init(register_pci_fuzz_targets);
+diff --git a/tests/qtest/fuzz/less_crashes_wrappers.c b/tests/qtest/fuzz/less_crashes_wrappers.c
+new file mode 100644
+index 0000000..faf775e
+--- /dev/null
++++ b/tests/qtest/fuzz/less_crashes_wrappers.c
+@@ -0,0 +1,26 @@
++/*
++ * Stateful Virtual-Device Fuzzing Less Crashes Wrapper
++ *
++ * Copyright Red Hat Inc., 2020
++ *
++ * Authors:
++ *  Qiang Liu <cyruscyliu@gmail.com>
++ *
++ * This work is licensed under the terms of the GNU GPL, version 2 or later.
++ * See the COPYING file in the top-level directory.
++ */
++
++#define WRAP(RET_TYPE, NAME_AND_ARGS)\
++    RET_TYPE __wrap_##NAME_AND_ARGS;\
++    RET_TYPE __real_##NAME_AND_ARGS;
++
++WRAP(void     , abort())
++
++void __wrap_abort()
++{
++#ifdef VIDEZZO_LESS_CRASHES
++    return;
++#else
++    return __real_abort();
++#endif
++}
 diff --git a/tests/qtest/fuzz/meson.build b/tests/qtest/fuzz/meson.build
-index 189901d4a2..77e2a7134c 100644
+index 189901d..ebbbe71 100644
 --- a/tests/qtest/fuzz/meson.build
 +++ b/tests/qtest/fuzz/meson.build
+@@ -3,7 +3,7 @@ if not get_option('fuzzing')
+ endif
+ 
+ specific_fuzz_ss.add(files('fuzz.c', 'fork_fuzz.c', 'qos_fuzz.c',
+-                           'qtest_wrappers.c'), qos)
++                           'qtest_wrappers.c', 'less_crashes_wrappers.c'), qos)
+ 
+ # Targets
+ specific_fuzz_ss.add(when: 'CONFIG_I440FX', if_true: files('i440fx_fuzz.c'))
 @@ -11,6 +11,9 @@ specific_fuzz_ss.add(when: 'CONFIG_VIRTIO_NET', if_true: files('virtio_net_fuzz.
  specific_fuzz_ss.add(when: 'CONFIG_VIRTIO_SCSI', if_true: files('virtio_scsi_fuzz.c'))
  specific_fuzz_ss.add(when: 'CONFIG_VIRTIO_BLK', if_true: files('virtio_blk_fuzz.c'))
@@ -127,8 +191,18 @@ index 189901d4a2..77e2a7134c 100644
  
  fork_fuzz = declare_dependency(
    link_args: fuzz_exe_ldflags +
+@@ -32,7 +35,8 @@ fork_fuzz = declare_dependency(
+               '-Wl,-wrap,qtest_bufread',
+               '-Wl,-wrap,qtest_memwrite',
+               '-Wl,-wrap,qtest_bufwrite',
+-              '-Wl,-wrap,qtest_memset']
++              '-Wl,-wrap,qtest_memset',
++              '-Wl,-wrap,abort']
+ )
+ 
+ specific_fuzz_ss.add(fork_fuzz)
 diff --git a/tests/qtest/fuzz/virtio_blk_fuzz.c b/tests/qtest/fuzz/virtio_blk_fuzz.c
-index 623a756fd4..0fab87faba 100644
+index 623a756..0fab87f 100644
 --- a/tests/qtest/fuzz/virtio_blk_fuzz.c
 +++ b/tests/qtest/fuzz/virtio_blk_fuzz.c
 @@ -231,4 +231,4 @@ static void register_virtio_blk_fuzz_targets(void)
@@ -138,7 +212,7 @@ index 623a756fd4..0fab87faba 100644
 -fuzz_target_init(register_virtio_blk_fuzz_targets);
 +// fuzz_target_init(register_virtio_blk_fuzz_targets);
 diff --git a/tests/qtest/fuzz/virtio_net_fuzz.c b/tests/qtest/fuzz/virtio_net_fuzz.c
-index 0e873ab8e2..a3dfdfbd46 100644
+index 0e873ab..a3dfdfb 100644
 --- a/tests/qtest/fuzz/virtio_net_fuzz.c
 +++ b/tests/qtest/fuzz/virtio_net_fuzz.c
 @@ -198,4 +198,4 @@ static void register_virtio_net_fuzz_targets(void)
@@ -148,7 +222,7 @@ index 0e873ab8e2..a3dfdfbd46 100644
 -fuzz_target_init(register_virtio_net_fuzz_targets);
 +// fuzz_target_init(register_virtio_net_fuzz_targets);
 diff --git a/tests/qtest/fuzz/virtio_scsi_fuzz.c b/tests/qtest/fuzz/virtio_scsi_fuzz.c
-index 6ff6fabe4a..7e032f2f46 100644
+index 6ff6fab..7e032f2 100644
 --- a/tests/qtest/fuzz/virtio_scsi_fuzz.c
 +++ b/tests/qtest/fuzz/virtio_scsi_fuzz.c
 @@ -212,4 +212,4 @@ static void register_virtio_scsi_fuzz_targets(void)
