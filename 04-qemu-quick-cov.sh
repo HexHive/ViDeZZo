@@ -10,10 +10,10 @@ pushd videzzo_qemu/out-cov
 # stage 2
 rm -rf clangcovdump.profraw*
 bin=./qemu-fuzz-${arch}-target-videzzo-fuzz-${target}
-$bin -max_total_time=20
+$bin -max_total_time=300
 
 # stage 3
 llvm-profdata merge -output=clangcovdump.profraw $(ls clangcovdump.profraw-* | tail -n 1)
-llvm-cov show $bin -instr-profile=clangcovdump.profraw -format=html -output-dir=./coverage-reports/${target} ../qemu
+llvm-cov show -format=html -output-dir=./coverage-reports/${target} -instr-profile clangcovdump.profraw $bin
 echo "please check $PWD/coverage-reports/${target}"
 popd
