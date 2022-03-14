@@ -262,7 +262,7 @@ rtl8139_24.add_instrumentation_point('rtl8139.c', ['rtl8139_do_receive', 'pci_dm
 rtl8139_25 = Model('rtl8139', 25)
 rtl8139_25.add_struct('RTL8139_BUF', {'buf#0x2000': FIELD_RANDOM})
 rtl8139_25.add_head(['RTL8139_BUF'])
-rtl8139_25.add_instrumentation_point('rtl8139.c', ['rtl8139_transmit_one', 'pci_dam_read', 0, 1])
+rtl8139_25.add_instrumentation_point('rtl8139.c', ['rtl8139_transmit_one', 'pci_dma_read', 0, 1])
 ###################################################################################################################
 rtl8139_26 = Model('rtl8139', 26)
 rtl8139_26.add_struct('RTL8139_TX_RING_DESC', {

@@ -118,7 +118,7 @@ uint64_t dispatch_socket_write(Event *event) {
     return 0;
 }
 
-uint64_t around_invalid_address(uint64_t physaddr) {
+uint64_t AroundInvalidAddress(uint64_t physaddr) {
     // TARGET_NAME=i386 -> i386/pc
     if (strncmp(TARGET_NAME, "i386", 4) == 0) {
         if (physaddr < I386_MEM_HIGH - I386_MEM_LOW)

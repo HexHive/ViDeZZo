@@ -213,6 +213,9 @@ uint64_t dispatch_mem_write(Event *event) {
 }
 
 static int mem_index = 0;
+
+uint64_t AroundInvalidAddress(uint64_t physaddr) { return physaddr; }
+
 uint64_t dispatch_mem_alloc(Event *event) {
     // a small allocator
     mem_index += 1;

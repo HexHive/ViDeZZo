@@ -91,7 +91,8 @@ uint64_t dispatch_clock_step(Event *event) __attribute__((weak));
 uint64_t dispatch_socket_write(Event *event) __attribute__((weak));
 uint64_t dispatch_mem_alloc(Event *event) __attribute__((weak));
 uint64_t dispatch_mem_free(Event *event) __attribute__((weak));
-uint64_t around_invalid_address(uint64_t physaddr) __attribute__((weak));
+
+uint64_t AroundInvalidAddress(uint64_t physaddr) __attribute__((weak));
 
 enum Sizes {ViDeZZo_Empty, ViDeZZo_Byte=1, ViDeZZo_Word=2, ViDeZZo_Long=4, ViDeZZo_Quad=8};
 extern EventOps event_ops[N_EVENT_TYPES];

@@ -37,8 +37,6 @@ void enable_group_mutator_miss(void) {
     DisableGroupMutator = false;
 }
 
-uint64_t around_invalid_address(uint64_t physaddr) { return physaddr; }
-
 void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
 #ifdef VIDEZZO_DEBUG
     fprintf(stderr, "- GroupMutatorMiss\n");
@@ -65,7 +63,6 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
 
     // In this handler, the current input will be changed
     // Don't delete any events from the current event to the end
-    physaddr = around_invalid_address(physaddr);
     group_mutator_miss_handlers[id](physaddr);
 
     // nice, all events go into our new input
@@ -660,6 +657,8 @@ uint64_t dispatch_clock_step(Event *event) { return 0; }
 uint64_t dispatch_socket_write(Event *event) { return 0; }
 uint64_t dispatch_mem_alloc(Event *event) { return 0; }
 uint64_t dispatch_mem_free(Event *event) { return 0; }
+
+uint64_t AroundInvalidAddress(uint64_t physaddr) { return physaddr; }
 
 EventOps event_ops[] = {
     [EVENT_TYPE_MMIO_READ] = {
