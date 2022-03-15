@@ -59,7 +59,10 @@ extern QTestState *get_qtest_state(void);
 // P.S. "videzzo" is only a mark here.
 static QGuestAllocator *videzzo_alloc;
 
-#define I386_MEM_LOW  0x00100000
+// To avoid overlap between dyn-alloced and QEMU-assumed buffers,
+// where dyn-alloced buffers start from 1M,
+// we enforce the dynamic alloc memory to be higher than 256M.
+#define I386_MEM_LOW  0x10000000
 #define I386_MEM_HIGH 0x20000000
 uint64_t AroundInvalidAddress(uint64_t physaddr);
 

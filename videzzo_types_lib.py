@@ -89,7 +89,7 @@ class Model(object):
             raise KeyError('{} is not a valid field'.format(field_name))
 
     def get_field_size(self, struct_type, field_name):
-        return hex(self.structs[struct_type][field_name]['field_size'])
+        return self.structs[struct_type][field_name]['field_size']
 
     def add_head(self, head_struct_types):
         """
@@ -228,8 +228,10 @@ class Model(object):
     def __gen_event_memwrite(self, struct_name, field_name, value, value_size):
         struct_type = self.recover_struct_type_from_name(struct_name)
         field_size = self.get_field_size(struct_type, field_name)
+        if value_size < field_size and field_size == 8:
+            value_size = field_size
         self.append_code('EVENT_MEMWRITE({} + offsetof({}, {}), {}, {}, {}, {});'.format(
-            struct_name, struct_type, field_name, field_size, value, value_size, self.get_uuid()))
+            struct_name, struct_type, field_name, hex(field_size), value, hex(value_size), self.get_uuid()))
 
     def gen_flag(self, struct_name, field_name, metadata):
         flags = []
@@ -340,7 +342,7 @@ class Model(object):
                 tmp_buf_name = 'tmp_buf_{}'.format(self.get_uuid())
                 self.append_code('uint64_t {} = 0;'.format(tmp_buf_name))
                 self.append_code('EVENT_MEMREAD({} + offsetof({}, {}), {}, &{}, {}, {});'.format(
-                    struct_name, struct_type, flag['field_name'], field_size, tmp_buf_name, 4, self.get_uuid()))
+                    struct_name, struct_type, flag['field_name'], hex(field_size), tmp_buf_name, hex(4), self.get_uuid()))
                 conds.append('get_bit({}, {}, {})'.format(tmp_buf_name, flag['bit'], flag['length']))
             cond = ' | '.join(conds)
             self.append_code('switch ({}) {{'.format(cond))
