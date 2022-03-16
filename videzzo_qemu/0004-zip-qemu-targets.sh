@@ -65,25 +65,15 @@ rm qemu-fuzz-i386-target-videzzo-fuzz-am53c974
 rm qemu-fuzz-i386-target-videzzo-fuzz-bochs-display
 rm qemu-fuzz-i386-target-videzzo-fuzz-cs4231
 rm qemu-fuzz-i386-target-videzzo-fuzz-ctu-can
-rm qemu-fuzz-i386-target-videzzo-fuzz-e1000
-rm qemu-fuzz-i386-target-videzzo-fuzz-ehci
 rm qemu-fuzz-i386-target-videzzo-fuzz-fw-cfg
 rm qemu-fuzz-i386-target-videzzo-fuzz-kvaser-can
-rm qemu-fuzz-i386-target-videzzo-fuzz-lsi53c895a
-rm qemu-fuzz-i386-target-videzzo-fuzz-mptsas1068
-rm qemu-fuzz-i386-target-videzzo-fuzz-nvme
-rm qemu-fuzz-i386-target-videzzo-fuzz-megasas
-rm qemu-fuzz-i386-target-videzzo-fuzz-ohci
 rm qemu-fuzz-i386-target-videzzo-fuzz-parallel
 rm qemu-fuzz-i386-target-videzzo-fuzz-pcm3680-can
 rm qemu-fuzz-i386-target-videzzo-fuzz-qxl
 rm qemu-fuzz-i386-target-videzzo-fuzz-rocker
 rm qemu-fuzz-i386-target-videzzo-fuzz-secondary-vga
 rm qemu-fuzz-i386-target-videzzo-fuzz-std-vga
-rm qemu-fuzz-i386-target-videzzo-fuzz-uhci
 rm qemu-fuzz-i386-target-videzzo-fuzz-vmw-pvscsi
 rm qemu-fuzz-i386-target-videzzo-fuzz-vmware-svga
-rm qemu-fuzz-i386-target-videzzo-fuzz-vmxnet3
-rm qemu-fuzz-i386-target-videzzo-fuzz-xhci
 # zip -r ../qemu-address-$(date '+%Y%m%d%H%M%S').zip *
 popd

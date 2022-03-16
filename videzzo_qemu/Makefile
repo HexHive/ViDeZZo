@@ -14,11 +14,15 @@ patch:
 
 compile:
 	bash -x 0002-copy-to-qemu.sh
-	bash -x 0003-compile-qemu.sh
+	bash -x 0003-compile-qemu-san.sh
 
 compile-coverage:
 	bash -x 0002-copy-to-qemu.sh
 	bash -x 0005-compile-qemu-cov.sh
+
+compile-deployment:
+	bash -x 0002-copy-to-qemu.sh
+	bash -x 0006-compile-qemu-dep.sh
 
 .PHONY: qemu
 
@@ -35,6 +39,9 @@ qemu: qemu-dep
 qemu-coverage: qemu-dep
 	make compile-coverage
 
+qemu-deployment: qemu-dep
+	make compile-deployment
+
 update:
 	cd qemu && git pull && cd $(OLDPWD)
 	make compile
@@ -44,6 +51,9 @@ clusterfuzz:
 
 clusterfuzz-coverage:
 	bash -x 0004-zip-qemu-targets.sh cov
+
+clusterfuzz-deployment:
+	bash -x 0004-zip-qemu-targets.sh dep
 
 clean:
 	# do nothing

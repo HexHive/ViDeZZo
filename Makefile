@@ -47,11 +47,17 @@ videzzo-qemu-coverage:
 	CFLAGS="${CFLAGS}"                               HYPERVISOR=qemu make videzzo-core
 	make -C videzzo_qemu qemu-coverage clusterfuzz-coverage
 
+videzzo-qemu-deployment:
+	CFLAGS="${CFLAGS} ${SANITIZERS}"                 HYPERVISOR=qemu make videzzo-core
+	make -C videzzo_qemu qemu-deployment clusterfuzz-deployment
+
 qemu: videzzo-qemu
 
 qemu-debug: videzzo-qemu-debug
 
 qemu-coverage: videzzo-qemu-coverage
+
+qemu-deployment: videzzo-qemu-deployment
 
 clean:
 	rm -rf *.o *.a *.i videzzo-merge
