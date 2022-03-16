@@ -37,9 +37,11 @@ void enable_group_mutator_miss(void) {
     DisableGroupMutator = false;
 }
 
+static int loop_counter = 0;
+
 void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
 #ifdef VIDEZZO_DEBUG
-    fprintf(stderr, "- GroupMutatorMiss\n");
+    fprintf(stderr, "- GroupMutatorMiss: %d\n", loop_counter);
 #endif
     if (DisableGroupMutator)
         return;
@@ -50,7 +52,7 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
 
     // we dislike a group event to trigger this Miss
     Event *trigger_event = get_event(old_input, old_current_event);
-    if (trigger_event->type == EVENT_TYPE_GROUP_EVENT)
+    if (trigger_event->type == EVENT_TYPE_GROUP_EVENT && loop_counter == 0)
         return;
 
     // create new context
@@ -61,27 +63,42 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
     gfctx_set_current_input(input);
     gfctx_set_current_event(current_event);
 
-    // In this handler, the current input will be changed
+    // in this handler, the current input will be updated
     // Don't delete any events from the current event to the end
     group_mutator_miss_handlers[id](physaddr);
 
     // nice, all events go into our new input
-    // we inject the trigger event into this input
-    Event *trigger_event_copy = (Event *)calloc(sizeof(Event), 1);
-    event_ops[trigger_event->type].deep_copy(trigger_event, trigger_event_copy);
-    append_event(input, trigger_event_copy);
-
-    // we are going to construct a group event
-    Event *group_event = event_ops[EVENT_TYPE_GROUP_EVENT].construct(
-        EVENT_TYPE_GROUP_EVENT, INTERFACE_GROUP_EVENT, 0, sizeof(Input), 0, (uint8_t *)input);
+    // we construct the group event
+    if (trigger_event->type == EVENT_TYPE_GROUP_EVENT) {
+        // apprantly, we are in a loop
+        Input *group_event_input = (Input* )trigger_event->data;
+        Event *injected_event = input->events, *tmp_event;
+        // copy event from the injected input to the group event input
+        while (injected_event != NULL) {
+            Event *tmp_event = (Event *)calloc(sizeof(Event), 1);
+            event_ops[injected_event->type].deep_copy(injected_event, tmp_event);
+            insert_event(group_event_input, tmp_event, group_event_input->n_events - 1);
+            injected_event = injected_event->next;
+        }
+        free_input(input);
+    } else {
+        // apprantly, this is the first time to have a GroupMutatorMiss
+        Event *trigger_event_copy = (Event *)calloc(sizeof(Event), 1);
+        event_ops[trigger_event->type].deep_copy(trigger_event, trigger_event_copy);
+        append_event(input, trigger_event_copy);
+        // we are going to construct a group event
+        Event *group_event = event_ops[EVENT_TYPE_GROUP_EVENT].construct(
+            EVENT_TYPE_GROUP_EVENT, INTERFACE_GROUP_EVENT, 0, sizeof(Input), 0, (uint8_t *)input);
+        // we inject this group event into the old input
+        insert_event(old_input, group_event, old_current_event);
+        old_input->n_groups++;
+    }
+    loop_counter += 1;
 
     // recover
     gfctx_set_current_input(old_input);
     gfctx_set_current_event(old_current_event);
 
-    // we inject this group event into the old input
-    insert_event(old_input, group_event, old_current_event);
-    old_input->n_groups++;
 #ifdef VIDEZZO_DEBUG
     fprintf(stderr, "- GroupMutatorMiss Done\n");
 #endif
@@ -149,6 +166,10 @@ void __videzzo_execute_one_input(Input *input) {
         gfctx_set_current_event(i);
         videzzo_dispatch_event(event);
         event = get_next_event(event);
+        if (loop_counter) {
+            remove_event(input, i + 1);
+        }
+        loop_counter = 0;
     }
     gfctx_set_current_event(0);
 #ifdef VIDEZZO_DEBUG
@@ -633,6 +654,7 @@ static void release_data(Event *event) {
 
 static void release_group_event(Event *event) {
     Input *input = (Input *)event->data;
+
     free_input(input);
 }
 
@@ -958,10 +980,10 @@ Input *init_input(const uint8_t *Data, size_t Size) {
 }
 
 static void free_events(Input *input) {
-    Event *events = input->events, *tmp;
-    while ((tmp = events)) {
+    Event *event = input->events, *tmp;
+    while ((tmp = event)) {
         event_ops[tmp->type].release(tmp);
-        events = events->next;
+        event = tmp->next;
         free(tmp);
     }
 }
