@@ -20,9 +20,9 @@ compile-coverage:
 	bash -x 0002-copy-to-qemu.sh
 	bash -x 0005-compile-qemu-cov.sh
 
-compile-deployment:
+compile-debug:
 	bash -x 0002-copy-to-qemu.sh
-	bash -x 0006-compile-qemu-dep.sh
+	bash -x 0006-compile-qemu-deb.sh
 
 .PHONY: qemu
 
@@ -39,8 +39,8 @@ qemu: qemu-dep
 qemu-coverage: qemu-dep
 	make compile-coverage
 
-qemu-deployment: qemu-dep
-	make compile-deployment
+qemu-debug: qemu-dep
+	make compile-debug
 
 update:
 	cd qemu && git pull && cd $(OLDPWD)
@@ -52,8 +52,8 @@ clusterfuzz:
 clusterfuzz-coverage:
 	bash -x 0004-zip-qemu-targets.sh cov
 
-clusterfuzz-deployment:
-	bash -x 0004-zip-qemu-targets.sh dep
+clusterfuzz-debug:
+	bash -x 0004-zip-qemu-targets.sh deb
 
 clean:
 	# do nothing
