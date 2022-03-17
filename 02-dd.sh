@@ -5,7 +5,8 @@ function usage() {
 Usage: $0 -t TARGET_PATH -c CRASH_PATH -s SEEDS_PATH
 
 positional arguments:
-  -t, TARGET_PATH absolute pathname of the fuzz target
+  -t, TARGET_PATH  absolute pathname of the fuzz target
+  -a, ARG_LIST     argument list for the fuzz target, e.g., "-L pathname/to/pc-bios"
   -c, CRASH_PATH   absolute pathname of the crashing test case
   -s, SEEDS_PATH   absolute pathname of the corpus
 
@@ -16,10 +17,13 @@ HEREDOC
   exit 1
 }
 
-while getopts ":t:c:s:" o; do
+while getopts ":t:a:c:s:" o; do
   case "${o}" in
     t)
       target=${OPTARG}
+      ;;
+    a)
+      arglist=${OPTARG}
       ;;
     c)
       crash=${OPTARG}
@@ -48,6 +52,8 @@ if [[ -z $seeds ]]; then
     exit 1
 fi
 
+seeds=${seeds}*
+
 echo "[-] target = $target"
 echo "[-] crash  = $crash"
 echo "[-] seeds  = $seeds"
@@ -59,7 +65,7 @@ echo [-] working in $ws
 # step 2: create a tester script
 echo "#!/bin/bash" > $ws/picire_tester.sh
 echo "export ASAN_OPTIONS=detect_leaks=0" >> $ws/picire_tester.sh
-echo "$target $crash -pre_seed_inputs=@\$1 2>&1 | grep -q -e \"ERROR\" -e \"runtime error\";" >> $ws/picire_tester.sh
+echo "$target $crash $arglist -pre_seed_inputs=@\$1 2>&1 | grep -q -e \"ERROR\" -e \"runtime error\";" >> $ws/picire_tester.sh
 chmod +x $ws/picire_tester.sh
 echo [-] created $ws/picire_tester.sh
 echo "#!/bin/bash" > $ws/picire_reproduce.sh

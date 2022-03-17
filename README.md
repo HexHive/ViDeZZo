@@ -25,15 +25,13 @@ please run `make qemu-debug`.
 
 ## Reprocuder
 
-As ViDeZZo introduces types-aware mutators that inevitably introduces overhead,
-we avoid using fork() in ViDeZZo to make the fuzzer faster. Due to accumulated
-states, some crashes are not reproducible. We first solve this problem via delta
-debugging.
+As we don't use fork() in ViDeZZo, ViDeZZo is faster. However, due to
+accumulated states, some crashes are not reproducible. We first solve this
+problem via delta debugging.
 
-1. Please use corpus when running a fuzzer
+1. Please use corpus `CORPUS` when running a fuzzer
 2. Run `02-dd.sh -t ABS_PATH_TO_BINARY -c ABS_PATH_TO_CRASHING_SEED -s
-   ABS_PATH_TO_CORPUS`. Importantly, please add * after the curpus path because
-   there are actual two corpus directories.
+   ABS_PATH_TO_CORPUS`.
 3. Wait and follow the instructions shown after the delta debugging.
 
 ## Contribution
