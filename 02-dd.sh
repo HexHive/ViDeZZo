@@ -70,12 +70,12 @@ chmod +x $ws/picire_tester.sh
 echo [-] created $ws/picire_tester.sh
 echo "#!/bin/bash" > $ws/picire_reproduce.sh
 echo "export ASAN_OPTIONS=detect_leaks=0" >> $ws/picire_reproduce.sh
-echo "$target $crash -pre_seed_inputs=@\$1" >> $ws/picire_reproduce.sh
+echo "$target $crash $arglist -pre_seed_inputs=@\$1" >> $ws/picire_reproduce.sh
 chmod +x $ws/picire_reproduce.sh
 echo [-] created $ws/picire_reproduce.sh
 echo "#!/bin/bash" > $ws/picire_latest.sh
 echo "export ASAN_OPTIONS=detect_leaks=0" >> $ws/picire_latest.sh
-echo "$target $crash -pre_seed_inputs=@\$1" >> $ws/picire_latest.sh
+echo "$target $crash $arglist -pre_seed_inputs=@\$1" >> $ws/picire_latest.sh
 chmod +x $ws/picire_latest.sh
 echo [-] created $ws/picire_latest.sh
 
