@@ -40,6 +40,7 @@ static void generic_pio_write(uint64_t addr, uint32_t size, uint64_t valu) {
         // suppose we are going to read some here
         dma_memory_read(0x10000);
         // some dma memory read in the following
+        if (size == 0x4) { assert(1 == 0); }
     }
 }
 
