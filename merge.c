@@ -97,6 +97,7 @@ int main(int argc, char **argv) {
     uint8_t *monolith = (uint8_t *)calloc(DEFAULT_INPUT_MAXSIZE * n_seeds, 1);
     SerializationSize = serialize(monolithic_input, monolith, DEFAULT_INPUT_MAXSIZE * n_seeds);
     free_input(monolithic_input);
+    free(Data);
 
     // dump
     dump_to_file(monolith, SerializationSize, output);

@@ -12,7 +12,10 @@ CFLAGS ?= -g -fPIE -fno-omit-frame-pointer -fno-optimize-sibling-calls
 videzzo-merge:
 	clang ${CFLAGS} -o videzzo-merge merge.c videzzo.c
 
-tools: videzzo-merge
+videzzo-poc-gen:
+	clang ${CFLAGS} -o videzzo-poc-gen poc-gen.c videzzo.c
+
+tools: videzzo-merge videzzo-poc-gen
 
 videzzo-core:
 	python3 videzzo_types_gen.py ${HYPERVISOR}

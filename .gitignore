@@ -12,6 +12,7 @@ __pycache__
 vmm
 vmm-debug
 videzzo-merge
+videzzo-poc-gen
 
 # temp files
 videzzo_types.c
