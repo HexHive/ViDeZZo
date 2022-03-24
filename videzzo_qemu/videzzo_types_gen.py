@@ -21,7 +21,6 @@ ac97_00.add_point_to('AC97_BD.addr', ['AC97_BUF0'], alignment=2)
 ac97_00.add_head(['AC97_BD'])
 ac97_00.add_instrumentation_point('ac97.c', ['fetch_bd', 'pci_dma_read', 0, 1])
 ###################################################################################################################
-# cs423a uses i8257_dma_read_memory
 cs4231a_01 = Model('cs4231a', 1)
 cs4231a_01.add_struct('CS4231A_BUF0', {'buf#0x1000': FIELD_RANDOM})
 cs4231a_01.add_head(['CS4231A_BUF0'])
@@ -33,9 +32,11 @@ es1370_02.add_head(['ES1370_BUF0'])
 es1370_02.add_instrumentation_point('es1370.c', ['es1370_transfer_audio', 'pci_dma_read', 0, 1])
 ###################################################################################################################
 intel_hda_03 = Model('intel_hda', 3)
-intel_hda_03.add_struct('INTEL_HDA_BUF0', {'addr#0x8': FIELD_POINTER, 'len#0x4': FIELD_RANDOM, 'flags#0x4': FIELD_FLAG})
+intel_hda_03.add_struct('INTEL_HDA_BUF0', {'addr#0x8': FIELD_POINTER, 'len#0x4': FIELD_CONSTANT, 'flags#0x4': FIELD_FLAG})
 intel_hda_03.add_struct('INTEL_HDA_BUF1', {'buf#0x1000': FIELD_RANDOM})
 intel_hda_03.add_point_to('INTEL_HDA_BUF0.addr', ['INTEL_HDA_BUF1'])
+# 2.4.1.3 we have to enforce the lenght of INTEL_HDA_BUF1
+intel_hda_03.add_constant('INTEL_HDA_BUF0.len', [0x1000])
 intel_hda_03.add_flag('INTEL_HDA_BUF0.flags', {0: 1, 1: 31})
 intel_hda_03.add_head(['INTEL_HDA_BUF0'])
 intel_hda_03.add_instrumentation_point('intel-hda.c', ['intel_hda_parse_bdl', 'pci_dma_read', 0, 1])
@@ -46,7 +47,6 @@ intel_hda_04.add_flag('INTEL_HDA_VERB.verb', {0: 8, 8: 12, 20: 7, 27: 1, 28: 4})
 intel_hda_04.add_head(['INTEL_HDA_VERB'])
 intel_hda_04.add_instrumentation_point('intel-hda.c', ['intel_hda_corb_run', 'ldl_le_pci_dma', 0, 1])
 ###################################################################################################################
-# sb16 also uses i8257_dma_read_memory but we only instrument once
 sb16_05 = Model('sb16', 5)
 sb16_05.add_struct('SB16_BUF0', {'buf#0x1000': FIELD_RANDOM})
 sb16_05.add_head(['SB16_BUF0'])
@@ -119,34 +119,40 @@ eepro100_12.add_point_to('EEPRO100_RX.rx_buf_addr', ['EEPRO100_RX_BUF'])
 eepro100_12.add_head(['EEPRO100_RX'])
 eepro100_12.add_instrumentation_point('eepro100.c', ['nic_receive', 'pci_read_dma', 0, 1])
 ###################################################################################################################
-# utils
-# we handle random:flag union as a flag: under-approximation
-e1000_tx_desc = {'buffer_addr#0x8': FIELD_POINTER, 'flags#0x4': FIELD_FLAG, 'fields#0x4': FIELD_FLAG}
+# 3.3.1 we handle random|flag union as a flag: under-approximation
+e1000_tx_desc = {'buffer_addr#0x8': FIELD_POINTER,
+                 'flags#0x4': FIELD_FLAG, 'fields#0x4': FIELD_FLAG}
+# 3.3.1 we handle pointer|flag union as pointer|flag: extract-approximation
+e1000_context_desc = {'ip_fields#0x4': FIELD_FLAG, 'tcp_fields#0x4': FIELD_FLAG,
+                      'cmd_and_length#0x4': FIELD_FLAG, 'fields#0x4': FIELD_FLAG}
 ###################################################################################################################
-# for e1000e, you have to carefully search via read/dma key words
 e1000e_13 = Model('e1000e', 13)
 e1000e_13.add_struct('E1000_TX_DESC0', e1000_tx_desc)
-# it's not necessary to handle e1000x_read_tx_ctx_descr
-e1000e_13.add_flag('E1000_TX_DESC0.flags', {
-    0: 16, 16: 4, 20: 1, 21: 3, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
-e1000e_13.add_flag('E1000_TX_DESC0.fields', {0: 16, 16: 8, 24: 16})
+e1000e_13.add_flag('E1000_TX_DESC0.flags', {0: 16, 16: 4, 20: 1, 21: 7, 28: 1, 29: 1, 30: 2})
+e1000e_13.add_flag('E1000_TX_DESC0.fields', {0: 4, 4: 1, 5: 11, 16: 8, 24: 8})
 e1000e_13.add_struct('E1000E_BUF0', {'buf#0x10000': FIELD_RANDOM})
 e1000e_13.add_point_to('E1000_TX_DESC0.buffer_addr', ['E1000E_BUF0'])
-e1000e_13.add_head(['E1000_TX_DESC0'])
+e1000e_13.add_struct('E1000_CONTEXT_DESC', e1000_context_desc)
+e1000e_13.add_flag('E1000_CONTEXT_DESC.ip_fields', {0: 8, 8: 8, 16: 16})
+e1000e_13.add_flag('E1000_CONTEXT_DESC.tcp_fields', {0: 8, 8: 8, 16: 16})
+e1000e_13.add_flag('E1000_CONTEXT_DESC.fields', {0: 8, 8: 8, 16: 16})
+e1000e_13.add_flag('E1000_CONTEXT_DESC.cmd_and_length', {0: 16, 16: 4, 20: 1, 21: 3, 24: 1, 25: 1, 26: 1, 27: 2, 29: 1, 30: 1, 31: 1})
+e1000e_13.add_head(['E1000_TX_DESC0', 'E1000_CONTEXT_DESC'])
+# 3.2.1 we use a round-robin approach to support e1000_tx_desc and e1000_context_desc
 e1000e_13.add_instrumentation_point('e1000e_core.c', ['e1000e_start_xmit', 'pci_dma_read', 0, 1])
 ###################################################################################################################
 e1000e_14 = Model('e1000e', 14)
-# quite complicated: e1000e_read_rx_descr, e1000_rx_desc_packet_split, e1000_rx_desc_extended
-# buffer_addr works for e1000e_read_rx_descr (under-but-exact-approximation)
-e1000e_14.add_struct('DESC', {'buffer_addr#0x8': FIELD_POINTER})
+# 3.2.2 e1000e_read_rx_descr, e1000_rx_desc_packet_split, e1000_rx_desc_extended share buffer_addr and other staff
+# However, it seems we don't use any other fields except buffer_addr, so make other staff random.
+e1000e_14.add_struct('E1000E_READ_RX_DESC', {'buffer_addr0#0x8': FIELD_POINTER, 'buffer_addr1#0x8': FIELD_RANDOM,
+                              'buffer_addr2#0x8': FIELD_RANDOM, 'buffer_addr3#0x8': FIELD_RANDOM})
 e1000e_14.add_struct('E1000E_BUF1', {'buf#0x1000': FIELD_RANDOM})
-e1000e_14.add_point_to('DESC.buffer_addr', ['E1000E_BUF1'])
-e1000e_14.add_head(['DESC'])
+e1000e_14.add_point_to('E1000E_READ_RX_DESC.buffer_addr0', ['E1000E_BUF1'])
+e1000e_14.add_head(['E1000E_READ_RX_DESC'])
 e1000e_14.add_instrumentation_point('e1000e_core.c', ['e1000e_write_packet_to_guest', 'pci_dma_read', 0, 1])
 ###################################################################################################################
 e1000_15 = Model('e1000', 15)
 e1000_15.add_struct('E1000_TX_DESC1', e1000_tx_desc)
-# it's not necessary to handle e1000x_read_tx_ctx_descr
 e1000_15.add_flag('E1000_TX_DESC1.flags', {
     0: 16, 16: 4, 20: 1, 21: 3, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
 e1000_15.add_flag('E1000_TX_DESC1.fields', {0: 16, 16: 8, 24: 16})
