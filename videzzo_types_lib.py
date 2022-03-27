@@ -233,7 +233,7 @@ class Model(object):
         self.append_code('EVENT_MEMWRITE({} + offsetof({}, {}), {}, {}, {}, {});'.format(
             struct_name, struct_type, field_name, hex(field_size), value, hex(value_size), self.get_uuid()))
 
-    def gen_flag(self, struct_name, field_name, metadata):
+    def __gen_flag_value(self, metadata):
         flags = []
         length_in_total = 0
         for start, length_and_initvalue in metadata.items():
@@ -245,9 +245,12 @@ class Model(object):
             flags.append(('(({0} % (1 << 0x{1:02x})) << 0x{2:02x})'.format(initvalue, length, length_in_total)))
             length_in_total += int(length)
         sep = '\n    {} | '.format(' ' * self.indent * 4)
+        return sep.join(flags)
+
+    def gen_flag(self, struct_name, field_name, metadata):
         # MAGIC
         # self.append_code('{}->{} = {};'.format(struct_name, field_name, sep.join(flags)))
-        self.__gen_event_memwrite(struct_name, field_name, sep.join(flags), 4)
+        self.__gen_event_memwrite(struct_name, field_name, self.__gen_flag_value(metadata), 4)
 
     def gen_random(self, struct_name, field_name, metadata):
         # MAGIC
@@ -283,7 +286,7 @@ class Model(object):
         self.__gen_event_memwrite(
             struct_name, field_name, '{}_{}_constant[urand32() % {}]'.format(struct_type, field_name, len(field_value)), 4)
 
-    def __gen_point_to(self, struct_name, field_name, metadata):
+    def __gen_point_to(self, struct_name, field_name, metadata, flag_value):
         """
         Handle each pointer.
         """
@@ -300,24 +303,27 @@ class Model(object):
             head_struct_name = self.construct_struct_name_from_type(__struct_type)
             last_struct_name = 'last_struct_name_{}'.format(self.get_uuid())
             tail_struct_name = 'tail_struct_name_{}'.format(self.get_uuid())
-            self.append_code('GEN_LINKED_LIST({}, {}, {}, {}, {}, {});'.format(
-                __struct_type, __field_name, head_struct_name, last_struct_name, tail_struct_name, self.get_uuid()))
+            self.append_code('GEN_LINKED_LIST({}, {}, {}, {}, {}, {}, {});'.format(
+                __struct_type, __field_name, head_struct_name, last_struct_name, tail_struct_name, self.get_uuid(), flag_value))
             return head_struct_name, tail_struct_name
 
         def gen_single_linked_list(__struct_type, __field_name):
             head_struct_name, tail_struct_name = __gen_single_linked_list(__struct_type, __field_name)
             # MAGIC
             # self.append_code('{}->{} = {};'.format(struct_name, field_name, head_struct_name))
+            self.append_code('{} |= {};'.format(head_struct_name, flag_value))
             self.__gen_event_memwrite(struct_name, field_name, head_struct_name, 4);
             if 'tail' in metadata and isinstance(metadata['tail'], dict):
                 # MAGIC
                 # self.append_code('{}->{} = {};'.format(struct_name, metadata['tail']['field_name'], tail_struct_name))
+                self.append_code('{} |= {};'.format(tail_struct_name, flag_value))
                 self.__gen_event_memwrite(struct_name, metadata['tail']['field_name'], tail_struct_name, 4);
 
         def gen_single_object(__struct_type):
             sub_struct_name = self.gen_struct_point_to(__struct_type)
             # MAGIC
             # self.append_code('{}->{} = {};'.format(struct_name, field_name, sub_struct_name))
+            self.append_code('{} |= {};'.format(sub_struct_name, flag_value))
             self.__gen_event_memwrite(struct_name, field_name, sub_struct_name, 4);
 
         def is_single_linked_list(__metadata):
@@ -377,7 +383,11 @@ class Model(object):
         for field_name, metadata in self.get_struct(struct_type).items():
             field_type = metadata['field_type']
             if field_type & FIELD_POINTER:
-                self.__gen_point_to(struct_name, field_name, metadata['point_to'])
+                if field_type & FIELD_FLAG:
+                    flag_value = self.__gen_flag_value(metadata['flags'])
+                else:
+                    flag_value = '0x0'
+                self.__gen_point_to(struct_name, field_name, metadata['point_to'], flag_value=flag_value)
         return struct_name
 
     def gen_struct_declaration(self):
@@ -412,7 +422,7 @@ class Model(object):
         self.append_code('if (physaddr == INVALID_ADDRESS) {{ {0} = (uint64_t)EVENT_MEMALLOC(sizeof({1})); }} else {{ {0} = physaddr; }}'.format(struct_name, struct_type))
         for field_name, metadata in self.get_struct(struct_type).items():
             field_type = metadata['field_type']
-            if field_type & FIELD_FLAG:
+            if (field_type & FIELD_FLAG) and (not field_type & FIELD_POINTER):
                 assert 'flags' in metadata, 'flag {}.{} is not set up'.format(struct_type, field_name)
                 self.gen_flag(struct_name, field_name, metadata['flags'])
             elif field_type & FIELD_RANDOM:
@@ -481,12 +491,13 @@ class Model(object):
     __EVENT_MEMWRITE(physaddr, size, tmp_buf_##uuid); \\
     // free(tmp_buf_##uuid);
 
-#define GEN_LINKED_LIST(type, field_name, head_name, last_name, tail_name, uuid) \\
+#define GEN_LINKED_LIST(type, field_name, head_name, last_name, tail_name, uuid, flag_value) \\
     uint64_t head_name = get_##type(INVALID_ADDRESS); \\
     append_address(head_name); \\
     uint64_t last_name = head_name, tail_name = head_name; \\
     for (int i = 0; i < (urand32() % 5 -1); i++) { \\
         uint64_t next_##type = get_##type(INVALID_ADDRESS); \\
+        next_##type |= flag_value; \\
         append_address(next_##type); \\
         EVENT_MEMWRITE(last_name + offsetof(type, field_name), 4, next_##type, 4, uuid) \\
         last_name = next_##type; \\

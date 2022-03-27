@@ -119,10 +119,8 @@ eepro100_12.add_point_to('EEPRO100_RX.rx_buf_addr', ['EEPRO100_RX_BUF'])
 eepro100_12.add_head(['EEPRO100_RX'])
 eepro100_12.add_instrumentation_point('eepro100.c', ['nic_receive', 'pci_read_dma', 0, 1])
 ###################################################################################################################
-# 3.3.1 we handle random|flag union as a flag: under-approximation
 e1000_tx_desc = {'buffer_addr#0x8': FIELD_POINTER,
                  'flags#0x4': FIELD_FLAG, 'fields#0x4': FIELD_FLAG}
-# 3.3.1 we handle pointer|flag union as pointer|flag: extract-approximation
 e1000_context_desc = {'ip_fields#0x4': FIELD_FLAG, 'tcp_fields#0x4': FIELD_FLAG,
                       'cmd_and_length#0x4': FIELD_FLAG, 'fields#0x4': FIELD_FLAG}
 ###################################################################################################################
@@ -189,7 +187,7 @@ pcnet_18.add_flag('PCNET_TMD.status', {0: 7, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12:
 pcnet_18.add_flag('PCNET_TMD.misc', {0: 4, 4: 12, 16: 10, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
 pcnet_18.add_struct('PCNET_BUF1', {'buf#0x1000': FIELD_RANDOM})
 pcnet_18.add_point_to('PCNET_TMD.tbadr', ['PCNET_BUF1'])
-# pcnet_tmd_load: 321 to 325: this union needs extra hackings! under approximation
+# 3.3.1 we handle pointer|flag union as a flag: pcnet_tmd_load from 321 to 325 swaps misc and tbadr
 pcnet_18.add_head(['PCNET_TMD'])
 pcnet_18.add_instrumentation_point('pcnet.c', ['pcnet_tmd_load', 'phys_mem_read', 1, 1])
 ###################################################################################################################
@@ -208,7 +206,7 @@ pcnet_20.add_flag('PCNET_RMD.status', {0: 4, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1,
 pcnet_20.add_flag('PCNET_RMD.msg_length', {0: 12, 12: 4, 16: 8, 24: 8})
 pcnet_20.add_struct('PCNET_BUF3', {'buf#0x1000': FIELD_RANDOM})
 pcnet_20.add_point_to('PCNET_RMD.rbadr', ['PCNET_BUF3'])
-# pcnet_tmd_load: 390 to 394: this union needs extra hackings! under approximation
+# 3.3.1 we handle pointer|flag union as a flag: pcnet_tmd_load from 390 to 394 swaps misc and tbadr
 pcnet_20.add_head(['PCNET_RMD'])
 pcnet_20.add_instrumentation_point('pcnet.c', ['pcnet_rmd_load', 'phys_mem_read', 1, 1])
 ###################################################################################################################
@@ -251,7 +249,6 @@ pcnet_22.add_instrumentation_point('pcnet.c', ['pcnet_init', 'phys_mem_read', 1,
 ###################################################################################################################
 pcnet_23 = Model('pcnet', 23)
 pcnet_23.add_struct('PCNET_BUF4', {'buf#0x1000': FIELD_RANDOM})
-# point-to dependency with complicated constraits: cannot support PHYSADDR
 pcnet_23.add_head(['PCNET_BUF4'])
 pcnet_23.add_instrumentation_point('pcnet.c', ['pcnet_transmit', 'phys_mem_read', 0, 1])
 ###################################################################################################################
@@ -351,24 +348,6 @@ floppy_40 = Model('floppy', 40)
 floppy_40.add_struct('FLOPPY_BUF', {'buf#0x1000': FIELD_RANDOM})
 floppy_40.add_head(['FLOPPY_BUF'])
 floppy_40.add_instrumentation_point('i8257.c', ['i8257_dma_read_memory', 'cpu_physical_memory_read', 0, 0])
-###################################################################################################################
-nvme_41 = Model('nvme', 41)
-# type fusion with complicated constraits: cannot tell io or admin command
-# we also have a sub-type-fusion and we try to do a under-proximitation
-nvme_41.add_struct('NvmeCmd', {
-    'opcode#0x1': FIELD_CONSTANT, 'fuse#0x1': FIELD_RANDOM, 'cid#0x2': FIELD_RANDOM, 'nsid#0x4': FIELD_RANDOM,
-    'res1#0x8': FIELD_RANDOM, 'mptr#0x8': FIELD_POINTER, 'prp1#0x8': FIELD_POINTER, 'prp2#0x8': FIELD_RANDOM,
-    'cdw10#0x4': FIELD_RANDOM, 'cdw11#0x4': FIELD_RANDOM, 'cdw12#0x4': FIELD_RANDOM,
-    'cdw13#0x4': FIELD_RANDOM, 'cdw14#0x4': FIELD_RANDOM, 'cdw15#0x4': FIELD_RANDOM})
-nvme_41.add_constant('NvmeCmd.opcode', [0x0, 0x1, 0x2, 0x4, 0x5, 0x6, 0x8, 0x9, 0xc, 0x10, 0x11, 0x80, 0x81, 0x82])
-nvme_41.add_struct('NVME_BUF', {'buf#0x1000': FIELD_RANDOM})
-nvme_41.add_point_to('NvmeCmd.mptr', ['NVME_BUF'])
-nvme_41.add_point_to('NvmeCmd.prp1', ['NVME_BUF'])
-nvme_41.add_point_to('NvmeCmd.prp2', ['NVME_BUF'])
-nvme_41.add_head(['NvmeCmd'])
-nvme_41.add_instrumentation_point('nvme.c', ['nvme_addr_read', 'pci_dma_read', 0, 1])
-###################################################################################################################
-# onenand and pflash are also block devices with MemoryRegion
 ###################################################################################################################
 # ahci: we don't ignore this because I realised dma_memory_map is something we should handle!
 ahci_42 = Model('ahci', 42)
@@ -485,7 +464,6 @@ lsi53c895a_58.add_struct('LSI53C895A_DATA', {'data#0x8': FIELD_RANDOM})
 lsi53c895a_58.add_head(['LSI53C895A_DATA'])
 lsi53c895a_58.add_instrumentation_point('lsi53c895a.c', ['lsi_execute_script', 'pci_dma_read', 1, 1])
 ###################################################################################################################
-# conditions are too complext to analyze
 megasas_59 = Model('megasas', 59)
 megasas_59.add_struct('MEGASAS_REPLY_QUEUE_TAIL', {'reply_qeueu_tail#0x2': FIELD_RANDOM})
 megasas_59.add_head(['MEGASAS_REPLY_QUEUE_TAIL'])
@@ -493,14 +471,14 @@ megasas_59.add_instrumentation_point('megasas.c', ['megasas_enqueue_frame', 'ldl
 megasas_59.add_instrumentation_point('megasas.c', ['megasas_complete_frame', 'ldl_le_pci_dma', 0, 1])
 megasas_59.add_instrumentation_point('megasas.c', ['megasas_complete_frame', 'ldl_le_pci_dma', 1, 1])
 ###################################################################################################################
-# we handle this struct-fusion in a smart way
+# 3.2.1 we handle this struct-fusion in a smart way
 megasas_60 = Model('megasas', 60)
 # common header
 __mfi_frame_header = {
     'frame_cmd#0x1': FIELD_CONSTANT, 'sense_len#0x1': FIELD_RANDOM, 'cmd_status#0x1': FIELD_RANDOM, 'scsi_status#0x1': FIELD_RANDOM,
     'target_id#0x1': FIELD_RANDOM, 'lun_id#0x1': FIELD_RANDOM, 'cdb_len#0x1': FIELD_RANDOM, 'sge_count#0x1': FIELD_RANDOM,
     'context#0x8': FIELD_RANDOM, 'flags0#0x2': FIELD_FLAG, 'timeout#0x2': FIELD_RANDOM, 'data_len#0x4': FIELD_RANDOM}
-# we cannot perfectly analyze union mfi_sgl so we use a under-approximation
+# 3.3.1 we cannot perfectly analyze union mfi_sgl so we use a under-approximation
 # cmd->iov_size -= dma_buf_read((uint8_t *)&fw_time, dcmd_size, &cmd->qsg);
 __mfi_sgl = {'addr#0x8': FIELD_RANDOM, 'len#0x4': FIELD_RANDOM, 'flag#0x4': FIELD_RANDOM}
 mfi_init_qinfo = {'flags1#0x4': FIELD_FLAG, 'rq_entries#0x4': FIELD_RANDOM, 'rq_addr#0x8': FIELD_RANDOM, 'pi_addr#0x8': FIELD_RANDOM, 'ci_addr#0x8': FIELD_RANDOM}

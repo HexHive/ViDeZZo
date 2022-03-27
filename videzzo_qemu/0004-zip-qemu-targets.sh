@@ -6,7 +6,7 @@
 # so we have qemu/build-[san|cov]-6/qemu-fuzz-[i386|arm]
 CONTROL=$1 # san or cov
 DEST_DIR=$PWD/out-$1
-rm -rf $DEST_DIR && mkdir $DEST_DIR
+mkdir $DEST_DIR
 
 pushd qemu/build-$CONTROL-6
 cp -r ../pc-bios $DEST_DIR/pc-bios
