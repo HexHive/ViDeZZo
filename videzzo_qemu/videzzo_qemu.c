@@ -392,7 +392,7 @@ static void register_videzzo_qemu_targets(void) {
         g_string_append_printf(name, "-%s", config->name);
         fuzz_add_target(&(FuzzTarget){
                 .name = name->str,
-                .description = "Predefined stateful-fuzz config.",
+                .description = "Predefined videzzo-fuzz config.",
                 .get_init_cmdline = videzzo_qemu_predefined_config_cmdline,
                 .pre_fuzz = videzzo_qemu_pre,
                 .fuzz = videzzo_qemu,
