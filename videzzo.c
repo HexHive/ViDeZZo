@@ -40,6 +40,8 @@ void enable_group_mutator_miss(void) {
 static int loop_counter = 0;
 
 void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
+    if (getenv("VIDEZZO_DISABLE_INTRA_MESSAGE_ANNOTATION"))
+        return;
 #ifdef VIDEZZO_DEBUG
     fprintf(stderr, "- GroupMutatorMiss: %d\n", loop_counter);
 #endif
@@ -188,12 +190,16 @@ size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flu
     gfctx_set_current_input(input);
     gfctx_set_object(object);
     gfctx_set_flush(flush);
-    // if (fork() == 0) {
+    if (getenv("VIDEZZO_FORK")) {
+        if (fork() == 0) {
+            __videzzo_execute_one_input(input);
+            _Exit(0);
+        } else {
+            wait(0);
+        }
+    } else {
         __videzzo_execute_one_input(input);
-    //    _Exit(0);
-    // } else {
-    //     wait(0);
-    // }
+    }
     size_t SerializationSize = serialize(input, Data, Size);
     gfctx_set_current_input(NULL);
     gfctx_set_object(NULL);
