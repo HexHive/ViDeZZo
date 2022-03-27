@@ -237,6 +237,8 @@ class Model(object):
         flags = []
         length_in_total = 0
         for start, length_and_initvalue in metadata.items():
+            if int(start) != length_in_total:
+                length_in_total = int(start)
             length = length_and_initvalue['length']
             initvalue = length_and_initvalue['initvalue']
             if initvalue is None:

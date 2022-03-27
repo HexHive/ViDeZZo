@@ -435,6 +435,7 @@ static const videzzo_qemu_config predefined_configs[] = {
         .mrnames = "*rtl8139*",
         .file = "hw/net/rtl8139.c",
         .socket = true,
+        .byte_address = true,
     },{
         .arch = "i386",
         .name = "i82550",

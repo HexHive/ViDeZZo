@@ -43,8 +43,30 @@ uint64_t dispatch_mem_read(Event *event) {
     return 0;
 }
 
+static bool xhci = false;
+static bool pcnet = false;
+static bool e1000e = false;
+static bool vmxnet3 = false;
+
 uint64_t dispatch_mmio_write(Event *event) {
     QTestState *s = (QTestState *)gfctx_get_object();
+    if (xhci && event->addr > 0xe0006100) {
+        event->addr = 0xe0006000;
+        event->valu = 0;
+    }
+    if (xhci && ((event->addr - 0xe0004020) % 0x20) == 0x8)
+        event->valu = rand() % 3;
+    if (pcnet && event->addr == 0xe0001010) {
+        uint64_t tmp = (event->valu & 0xff) % 5;
+        event->valu = (event->valu & 0xffffffffffffff00) | tmp;
+    }
+    if (vmxnet3 && event->addr == 0xe0002020) {
+        if (rand() % 2) {
+            event->valu = 0xCAFE0000 + rand() % 11;
+        } else {
+            event->valu = 0xF00D0000 + rand() % 10;
+        }
+    }
     switch (event->size) {
         case ViDeZZo_Byte: qtest_writeb(s, event->addr, event->valu & 0xFF); break;
         case ViDeZZo_Word: qtest_writew(s, event->addr, event->valu & 0xFFFF); break;
@@ -57,6 +79,8 @@ uint64_t dispatch_mmio_write(Event *event) {
 
 uint64_t dispatch_pio_write(Event *event) {
     QTestState *s = (QTestState *)gfctx_get_object();
+    if (e1000e && event->addr == 0xc080)
+        event->valu %= event->valu % 0xfffff;
     switch (event->size) {
         case ViDeZZo_Byte: qtest_outb(s, event->addr, event->valu & 0xFF); break;
         case ViDeZZo_Word: qtest_outw(s, event->addr, event->valu & 0xFFFF); break;
@@ -287,6 +311,14 @@ static void videzzo_qemu_pre(QTestState *s) {
 
     mrnames = g_strsplit(getenv("QEMU_FUZZ_MRNAME"), ",", -1);
     for (int i = 0; mrnames[i] != NULL; i++) {
+        if (strncmp("*doorbell*", mrnames[i], strlen(mrnames[i])) == 0)
+            xhci = true;
+        if (strncmp("*pcnet-mmio*", mrnames[i], strlen(mrnames[i])) == 0)
+            pcnet = true;
+        if (strncmp("*e1000e-mmio*", mrnames[i], strlen(mrnames[i])) == 0)
+            e1000e = true;
+        if (strncmp("*vmxnet3-b1*", mrnames[i], strlen(mrnames[i])) == 0)
+            vmxnet3 = true;
         locate_fuzzable_objects(qdev_get_machine(), mrnames[i]);
     }
 

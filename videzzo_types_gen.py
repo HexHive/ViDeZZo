@@ -168,7 +168,7 @@ def gen_types(hypervisor, summary=True):
 def gen_vmm(summary=False):
     vmm_00 = Model('vmm', 0)
     vmm_00.add_struct('VMM_BD', {'addr0#0x4': FIELD_POINTER | FIELD_FLAG, 'addr1#0x4': FIELD_POINTER, 'ctl_len#0x4': FIELD_FLAG})
-    vmm_00.add_flag('VMM_BD.addr0', {0: 1})
+    vmm_00.add_flag('VMM_BD.addr0', {1: 1})
     vmm_00.add_flag('VMM_BD.ctl_len', {0: 16, 16: 14, 30: 1, 31: 1})
     vmm_00.add_struct('VMM_BUF0', {'buf#0x1000': FIELD_RANDOM, 'constant#0x4': FIELD_CONSTANT})
     vmm_00.add_constant('VMM_BUF0.constant', [0xdeadbeef])

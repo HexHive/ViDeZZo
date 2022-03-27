@@ -4,10 +4,9 @@ from videzzo_types_lib import dict_append
 
 # id slots
 # - audio: 00-09
-# - network: 10-39
+# - network: 10-39, 100-110
 # - block: 40-69
-# - usb: 70-89
-# - display: 90-99
+# - usb: 70-99
 # convention
 # - Model name: ac97 (all lowercase)
 # - field name: AC97_BD (all uppercase)
@@ -124,7 +123,7 @@ e1000_tx_desc = {'buffer_addr#0x8': FIELD_POINTER,
 e1000_context_desc = {'ip_fields#0x4': FIELD_FLAG, 'tcp_fields#0x4': FIELD_FLAG,
                       'cmd_and_length#0x4': FIELD_FLAG, 'fields#0x4': FIELD_FLAG}
 ###################################################################################################################
-e1000e_13 = Model('e1000e', 13)
+e1000e_13 = Model('e1000e', 13) # 15 is available
 e1000e_13.add_struct('E1000_TX_DESC0', e1000_tx_desc)
 e1000e_13.add_flag('E1000_TX_DESC0.flags', {0: 16, 16: 4, 20: 1, 21: 7, 28: 1, 29: 1, 30: 2})
 e1000e_13.add_flag('E1000_TX_DESC0.fields', {0: 4, 4: 1, 5: 11, 16: 8, 24: 8})
@@ -138,6 +137,7 @@ e1000e_13.add_flag('E1000_CONTEXT_DESC.cmd_and_length', {0: 16, 16: 4, 20: 1, 21
 e1000e_13.add_head(['E1000_TX_DESC0', 'E1000_CONTEXT_DESC'])
 # 3.2.1 we use a round-robin approach to support e1000_tx_desc and e1000_context_desc
 e1000e_13.add_instrumentation_point('e1000e_core.c', ['e1000e_start_xmit', 'pci_dma_read', 0, 1])
+e1000e_13.add_instrumentation_point('e1000.c', ['start_xmit', 'pci_dma_read', 0, 1])
 ###################################################################################################################
 e1000e_14 = Model('e1000e', 14)
 # 3.2.2 e1000e_read_rx_descr, e1000_rx_desc_packet_split, e1000_rx_desc_extended share buffer_addr and other staff
@@ -148,16 +148,6 @@ e1000e_14.add_struct('E1000E_BUF1', {'buf#0x1000': FIELD_RANDOM})
 e1000e_14.add_point_to('E1000E_READ_RX_DESC.buffer_addr0', ['E1000E_BUF1'])
 e1000e_14.add_head(['E1000E_READ_RX_DESC'])
 e1000e_14.add_instrumentation_point('e1000e_core.c', ['e1000e_write_packet_to_guest', 'pci_dma_read', 0, 1])
-###################################################################################################################
-e1000_15 = Model('e1000', 15)
-e1000_15.add_struct('E1000_TX_DESC1', e1000_tx_desc)
-e1000_15.add_flag('E1000_TX_DESC1.flags', {
-    0: 16, 16: 4, 20: 1, 21: 3, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
-e1000_15.add_flag('E1000_TX_DESC1.fields', {0: 16, 16: 8, 24: 16})
-e1000_15.add_struct('E1000_BUF0', {'buf#0x10000': FIELD_RANDOM})
-e1000_15.add_point_to('E1000_TX_DESC1.buffer_addr', ['E1000_BUF0'])
-e1000_15.add_head(['E1000_TX_DESC1'])
-e1000_15.add_instrumentation_point('e1000.c', ['start_xmit', 'pci_dma_read', 0, 1])
 ###################################################################################################################
 e1000_16 = Model('e1000', 16)
 e1000_16.add_struct('E1000_RX_DESC', {
@@ -253,14 +243,29 @@ pcnet_23.add_head(['PCNET_BUF4'])
 pcnet_23.add_instrumentation_point('pcnet.c', ['pcnet_transmit', 'phys_mem_read', 0, 1])
 ###################################################################################################################
 rtl8139_24 = Model('rtl8139', 24)
-rtl8139_24.add_struct('RTL8139_RX_RING_DESC', {
-    'rxdw0#0x4': FIELD_FLAG, 'rxdw1#0x4': FIELD_FLAG, 'rxbuf#0x8': FIELD_POINTER})
-rtl8139_24.add_flag('RTL8139_RX_RING_DESC.rxdw0', {0: 13, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 4, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
-rtl8139_24.add_flag('RTL8139_RX_RING_DESC.rxdw1', {0: 13, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 4, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
-rtl8139_24.add_struct('RTL8139_RX_RING_DESC_BUF', {'buf#0x1000': FIELD_RANDOM})
-rtl8139_24.add_point_to('RTL8139_RX_RING_DESC.rxbuf', ['RTL8139_RX_RING_DESC_BUF'])
-rtl8139_24.add_head(['RTL8139_RX_RING_DESC'])
+rtl8139_24.add_struct('RTL8139_RX_RING_DESC_RXDW0', {'rxdw0#0x4': FIELD_FLAG})
+rtl8139_24.add_flag('RTL8139_RX_RING_DESC_RXDW0.rxdw0', {0: 13, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 4, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
+rtl8139_24.add_head(['RTL8139_RX_RING_DESC_RXDW0'])
 rtl8139_24.add_instrumentation_point('rtl8139.c', ['rtl8139_do_receive', 'pci_dma_read', 0, 1])
+###################################################################################################################
+rtl8139_100 = Model('rtl8139', 100)
+rtl8139_100.add_struct('RTL8139_RX_RING_DESC_RXDW1', {'rxdw1#0x4': FIELD_FLAG})
+rtl8139_100.add_flag('RTL8139_RX_RING_DESC_RXDW1.rxdw1', {0: 13, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 4, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
+rtl8139_100.add_head(['RTL8139_RX_RING_DESC_RXDW1'])
+rtl8139_100.add_instrumentation_point('rtl8139.c', ['rtl8139_do_receive', 'pci_dma_read', 1, 1])
+###################################################################################################################
+rtl8139_101 = Model('rtl8139', 101)
+rtl8139_101.add_struct('RTL8139_RX_RING_DESC_BUF', {'buf#0x1000': FIELD_RANDOM})
+rtl8139_101.add_struct('RTL8139_RX_RING_DESC_RXBUFLO', {'rxbuflo#0x4': FIELD_POINTER})
+rtl8139_101.add_point_to('RTL8139_RX_RING_DESC_RXBUFLO.rxbuflo', ['RTL8139_RX_RING_DESC_BUF'])
+rtl8139_101.add_head(['RTL8139_RX_RING_DESC_RXBUFLO'])
+rtl8139_101.add_instrumentation_point('rtl8139.c', ['rtl8139_do_receive', 'pci_dma_read', 2, 1])
+###################################################################################################################
+rtl8139_102 = Model('rtl8139', 102)
+rtl8139_102.add_struct('RTL8139_RX_RING_DESC_RXBUFHI', {'rxbufhi#0x4': FIELD_CONSTANT})
+rtl8139_102.add_constant('RTL8139_RX_RING_DESC_RXBUFHI.rxbufhi', [0])
+rtl8139_102.add_head(['RTL8139_RX_RING_DESC_RXBUFHI'])
+rtl8139_102.add_instrumentation_point('rtl8139.c', ['rtl8139_do_receive', 'pci_dma_read', 3, 1])
 ###################################################################################################################
 rtl8139_25 = Model('rtl8139', 25)
 rtl8139_25.add_struct('RTL8139_BUF', {'buf#0x2000': FIELD_RANDOM})
@@ -268,14 +273,29 @@ rtl8139_25.add_head(['RTL8139_BUF'])
 rtl8139_25.add_instrumentation_point('rtl8139.c', ['rtl8139_transmit_one', 'pci_dma_read', 0, 1])
 ###################################################################################################################
 rtl8139_26 = Model('rtl8139', 26)
-rtl8139_26.add_struct('RTL8139_TX_RING_DESC', {
-    'txdw0#0x4': FIELD_FLAG, 'txdw1#0x4': FIELD_FLAG, 'txbuf#0x8': FIELD_POINTER})
-rtl8139_26.add_flag('RTL8139_TX_RING_DESC.txdw0', {0: 16, 16: 1, 17: 1, 18: 9, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
-rtl8139_26.add_flag('RTL8139_TX_RING_DESC.txdw1', {0: 16, 16: 1, 17: 1, 18: 14})
-rtl8139_26.add_struct('RTL8139_TX_RING_DESC_BUF', {'buf#0x1000': FIELD_RANDOM})
-rtl8139_26.add_point_to('RTL8139_TX_RING_DESC.txbuf', ['RTL8139_TX_RING_DESC_BUF'])
-rtl8139_26.add_head(['RTL8139_TX_RING_DESC'])
+rtl8139_26.add_struct('RTL8139_TX_RING_DESC_TXDW0', {'txdw0#0x4': FIELD_FLAG})
+rtl8139_26.add_flag('RTL8139_TX_RING_DESC_TXDW0.txdw0', {0: 16, 16: 1, 17: 1, 18: 9, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
+rtl8139_26.add_head(['RTL8139_TX_RING_DESC_TXDW0'])
 rtl8139_26.add_instrumentation_point('rtl8139.c', ['rtl8139_cplus_transmit_one', 'pci_dma_read', 0, 1])
+###################################################################################################################
+rtl8139_103 = Model('rtl8139', 103)
+rtl8139_103.add_struct('RTL8139_TX_RING_DESC_TXDW1', {'txdw1#0x4': FIELD_FLAG})
+rtl8139_103.add_flag('RTL8139_TX_RING_DESC_TXDW1.txdw1', {0: 16, 16: 1, 17: 1, 18: 14})
+rtl8139_103.add_head(['RTL8139_TX_RING_DESC_TXDW1'])
+rtl8139_103.add_instrumentation_point('rtl8139.c', ['rtl8139_cplus_transmit_one', 'pci_dma_read', 1, 1])
+###################################################################################################################
+rtl8139_104 = Model('rtl8139', 104)
+rtl8139_104.add_struct('RTL8139_TX_RING_DESC_BUF', {'buf#0x1000': FIELD_RANDOM})
+rtl8139_104.add_struct('RTL8139_TX_RING_DESC_TXBUFLO', {'txbuflo#0x4': FIELD_POINTER})
+rtl8139_104.add_point_to('RTL8139_TX_RING_DESC_TXBUFLO.txbuflo', ['RTL8139_TX_RING_DESC_BUF'])
+rtl8139_104.add_head(['RTL8139_TX_RING_DESC_TXBUFLO'])
+rtl8139_104.add_instrumentation_point('rtl8139.c', ['rtl8139_cplus_transmit_one', 'pci_dma_read', 2, 1])
+###################################################################################################################
+rtl8139_105 = Model('rtl8139', 105)
+rtl8139_105.add_struct('RTL8139_TX_RING_DESC_TXBUFHI', {'txbufhi#0x4': FIELD_CONSTANT})
+rtl8139_105.add_constant('RTL8139_TX_RING_DESC_TXBUFHI.txbufhi', [0])
+rtl8139_105.add_head(['RTL8139_TX_RING_DESC_TXBUFHI'])
+rtl8139_105.add_instrumentation_point('rtl8139.c', ['rtl8139_cplus_transmit_one', 'pci_dma_read', 3, 1])
 ###################################################################################################################
 vmxnet3_27 = Model('vmxnet3', 27)
 # part 1
@@ -552,105 +572,88 @@ megasas_60.add_head(['MEGASAS_MFI_FRAME_INIT', 'MEGASAS_MFI_FRAME_DCMD', 'MEGASA
                      'MEGASAS_MFI_FRAME_SCSI', 'MEGASAS_MFI_FRAME_IO'])
 megasas_60.add_instrumentation_point('megasas.c', ['megasas_handle_frame', 'megasas_frame_get_context', 0, 1])
 ###################################################################################################################
-# type = 11: xhci_address_slot
 xhci_70 = Model('xhci', 70)
-xhci_70.add_struct('ictrl_ctx11', {
-    'ictrl_ctx0#0x4': FIELD_CONSTANT, 'ictrl_ctx1#0x4': FIELD_CONSTANT, 'reserved#0x24': FIELD_RANDOM,
-    'slot_ctx0#0x4': FIELD_FLAG, 'slot_ctx1#0x4': FIELD_FLAG, 'slot_ctx2#0x4': FIELD_FLAG, 'slot_ctx3#0x4': FIELD_FLAG, 'reserved#0x10': FIELD_RANDOM,
-    'ep0_ctx0#0x4': FIELD_RANDOM, 'ep0_ctx1#0x4': FIELD_RANDOM, 'ep0_ctx2#0x4': FIELD_RANDOM, 'ep0_ctx3#0x4': FIELD_RANDOM, 'ep0_ctx4#0x4': FIELD_RANDOM})
-xhci_70.add_constant('ictrl_ctx11.ictrl_ctx0', [0])
-xhci_70.add_constant('ictrl_ctx11.ictrl_ctx1', [3])
-xhci_70.add_flag('ictrl_ctx11.slot_ctx0', {0: 4, 8: 4, 12: 4, 16: 4, 20: 4, 24: 8})
-xhci_70.add_flag('ictrl_ctx11.slot_ctx1', {0: 16, 16: 8, 24: 8})
-xhci_70.add_flag('ictrl_ctx11.slot_ctx2', {0: 22, 22: 10})
-xhci_70.add_flag('ictrl_ctx11.slot_ctx3', {0: 27, 27: 5})
-# type = 12: xhci_configure_slot
-xhci_70.add_struct('ictrl_ctx12', {
-    'ictrl_ctx0#0x4': FIELD_FLAG, 'ictrl_ctx1#0x4': FIELD_FLAG, 'reserved#0x24': FIELD_RANDOM,
-    'islot_ctx0#0x4': FIELD_RANDOM, 'islot_ctx1#0x4': FIELD_RANDOM, 'islot_ctx2#0x4': FIELD_RANDOM, 'islot_ctx3#0x4': FIELD_RANDOM, 'reserved#0x10': FIELD_RANDOM,
-    'ep_ctx0#0x20': FIELD_RANDOM, 'ep_ctx1#0x20': FIELD_RANDOM, 'ep_ctx2#0x20': FIELD_RANDOM, 'ep_ctx3#0x20': FIELD_RANDOM, 'ep_ctx4#0x20': FIELD_RANDOM,
-    'ep_ctx5#0x20': FIELD_RANDOM, 'ep_ctx6#0x20': FIELD_RANDOM, 'ep_ctx7#0x20': FIELD_RANDOM, 'ep_ctx8#0x20': FIELD_RANDOM, 'ep_ctx9#0x20': FIELD_RANDOM,
-    'ep_ctx10#0x20': FIELD_RANDOM, 'ep_ctx11#0x20': FIELD_RANDOM, 'ep_ctx12#0x20': FIELD_RANDOM, 'ep_ctx13#0x20': FIELD_RANDOM, 'ep_ctx14#0x20': FIELD_RANDOM,
-    'ep_ctx15#0x20': FIELD_RANDOM, 'ep_ctx16#0x20': FIELD_RANDOM, 'ep_ctx17#0x20': FIELD_RANDOM, 'ep_ctx18#0x20': FIELD_RANDOM, 'ep_ctx19#0x20': FIELD_RANDOM,
-    'ep_ctx20#0x20': FIELD_RANDOM, 'ep_ctx21#0x20': FIELD_RANDOM, 'ep_ctx22#0x20': FIELD_RANDOM, 'ep_ctx23#0x20': FIELD_RANDOM, 'ep_ctx24#0x20': FIELD_RANDOM,
-    'ep_ctx25#0x20': FIELD_RANDOM, 'ep_ctx26#0x20': FIELD_RANDOM, 'ep_ctx27#0x20': FIELD_RANDOM, 'ep_ctx28#0x20': FIELD_RANDOM, 'ep_ctx29#0x20': FIELD_RANDOM})
-xhci_70.add_flag('ictrl_ctx12.ictrl_ctx0', {0: '2@3', 2: 30})
-xhci_70.add_flag('ictrl_ctx12.ictrl_ctx1', {0: '2@3', 2: 30})
-# type = 13: xhci_evaluate_slot: 13
-xhci_70.add_struct('ictrl_ctx13', {
-    'ictrl_ctx0#0x4': FIELD_CONSTANT, 'ictrl_ctx1#0x4': FIELD_FLAG, 'reserved#0x24': FIELD_RANDOM,
-    'islot_ctx#0x20': FIELD_RANDOM, 'ep0_ctx#0x20': FIELD_RANDOM})
-xhci_70.add_constant('ictrl_ctx13.ictrl_ctx0', [0])
-xhci_70.add_flag('ictrl_ctx13.ictrl_ctx1', {0: 2, 2: '30@0'})
-xhci_70.add_struct('XHCITRB0', {'parameter#0x8': FIELD_POINTER, 'status#0x4': FIELD_FLAG, 'control#0x4': FIELD_FLAG, 'addr#0x8': FIELD_RANDOM, 'ccs#0x1': FIELD_RANDOM})
-xhci_70.add_flag('XHCITRB0.control', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 9: 1, 10: 6, 16: 5, 21: 3, 24: 8})
+xhci_70.add_struct('XHCI_BUF2', {'buf#0x1000': FIELD_RANDOM})
+xhci_70.add_struct('XHCITRB0', {
+    'parameter#0x8': FIELD_POINTER, 'status#0x4': FIELD_FLAG, 'control#0x4': FIELD_FLAG, 'addr#0x8': FIELD_RANDOM, 'ccs#0x1': FIELD_RANDOM})
+xhci_70.add_flag('XHCITRB0.control', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 9: 1, 10: 6, 16: 5, 21: 3, 24: 6, 30: '2@0'})
 xhci_70.add_flag('XHCITRB0.status', {0: 16, 16: 6, 22: 10})
-xhci_70.add_point_to('XHCITRB0.parameter', [
-    None, None, None, None, None, None, None, None, None, None, None, 'ictrl_ctx11', 'ictrl_ctx12', 'ictrl_ctx13', None, None,
-    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None], flags=['XHCITRB0.control.10'])
+xhci_70.add_point_to('XHCITRB0.parameter', ['XHCI_BUF2'])
 xhci_70.add_head(['XHCITRB0'])
-xhci_70.add_instrumentation_point('hcd-xhci.c', ['xhci_ring_fetch', 'pci_dma_read', 0, 1])
-xhci_70.add_instrumentation_point('hcd-xhci.c', ['xhci_ring_chain_length', 'pci_dma_read', 0, 1])
+xhci_70.add_instrumentation_point('hcd-xhci.c', ['xhci_ring_fetch', 'dma_memory_read', 0, 1])
+xhci_70.add_instrumentation_point('hcd-xhci.c', ['xhci_ring_chain_length', 'dma_memory_read', 0, 1])
 ###################################################################################################################
 xhci_71 = Model('xhci', 71)
-xhci_71.add_struct('XHCITRB1', {'parameter#0x8': FIELD_POINTER, 'status#0x4': FIELD_FLAG, 'control#0x4': FIELD_FLAG, 'addr#0x8': FIELD_RANDOM, 'ccs#0x1': FIELD_RANDOM})
-xhci_71.add_flag('XHCITRB1.control', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 9: 1, 10: 6, 16: 5, 21: 3, 24: 8})
+xhci_71.add_struct('XHCITRB1', {
+    'parameter#0x8': FIELD_POINTER, 'status#0x4': FIELD_FLAG, 'control#0x4': FIELD_FLAG, 'addr#0x8': FIELD_RANDOM, 'ccs#0x1': FIELD_RANDOM})
+xhci_71.add_flag('XHCITRB1.control', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 9: 1, 10: 6, 16: 5, 21: 3, 24: 6, 30: '2@0'})
 xhci_71.add_flag('XHCITRB1.status', {0: 16, 16: 6, 22: 10})
 xhci_71.add_struct('XHCI_BUF0', {'buf#0x1000': FIELD_RANDOM})
 xhci_71.add_point_to('XHCITRB1.parameter', ['XHCI_BUF0'])
-xhci_71.add_struct('XHCIEvRingSeg', {'addr#0x8': FIELD_POINTER, 'size#0x4': FIELD_RANDOM, 'rsvd#0x4': FIELD_RANDOM})
-xhci_71.add_point_to('XHCIEvRingSeg.addr', ['XHCITRB1'], array=True)
+xhci_71.add_struct('XHCIEvRingSeg', {'addr#0x8': FIELD_POINTER, 'size#0x4': FIELD_FLAG, 'rsvd#0x4': FIELD_RANDOM})
+xhci_71.add_flag('XHCIEvRingSeg.size', {0: 4, 4: 8, 12: '20@0'})
+xhci_71.add_point_to('XHCIEvRingSeg.addr', ['XHCITRB1'])
 xhci_71.add_head(['XHCIEvRingSeg'])
-xhci_71.add_instrumentation_point('hcd-xhci.c', ['xhci_er_reset', 'pci_dma_read', 0, 1])
+xhci_71.add_instrumentation_point('hcd-xhci.c', ['xhci_er_reset', 'dma_memory_read', 0, 1])
 ###################################################################################################################
 xhci_72 = Model('xhci', 72)
 xhci_72.add_struct('XHCI_POCTX', {'poctx#0x8': FIELD_POINTER})
-xhci_72.add_struct('XHCI_OCTX00', {'slot_ctx#0x10': FIELD_RANDOM})
-xhci_72.add_point_to('XHCI_POCTX.poctx', ['XHCI_OCTX00'])
+xhci_72.add_struct('XHCI_BUF1', {'buf#0x1000': FIELD_RANDOM})
+xhci_72.add_point_to('XHCI_POCTX.poctx', ['XHCI_BUF1'])
 xhci_72.add_head(['XHCI_POCTX'])
-xhci_72.add_instrumentation_point('hcd-xhci.c', ['xhci_address_slot', 'ldq_le_pci_dma', 0, 1])
+xhci_72.add_instrumentation_point('hcd-xhci.c', ['xhci_address_slot', 'ldq_le_dma', 0, 1])
+xhci_72.add_instrumentation_point('hcd-xhci.c', ['usb_xhci_post_load', 'ldq_le_dma', 0, 1])
 ###################################################################################################################
-xhci_73 = Model('xhci', 73)
-xhci_73.add_struct('XHCI_CTX0', {'ctx0#0x4': FIELD_FLAG, 'ctx1#0x4': FIELD_RANDOM})
-xhci_73.add_flag('XHCI_CTX0.ctx0', {0: 1, 1: 3, 4: 28})
-xhci_73.add_head(['XHCI_CTX0'])
+xhci_73 = Model('xhci', 73) # 74, 75 are available
+xhci_73.add_struct('XHCI_CTX', {'ctx0#0x4': FIELD_FLAG, 'ctx1#0x4': FIELD_RANDOM})
+xhci_73.add_flag('XHCI_CTX.ctx0', {0: 1, 1: 3, 4: 28})
+xhci_73.add_head(['XHCI_CTX'])
 xhci_73.add_instrumentation_point('hcd-xhci.c', ['xhci_find_stream', 'xhci_dma_read_u32s', 0, 1])
+xhci_73.add_instrumentation_point('hcd-xhci.c', ['xhci_set_ep_state', 'xhci_dma_read_u32s', 0, 1])
+xhci_73.add_instrumentation_point('hcd-xhci.c', ['xhci_set_ep_state', 'xhci_dma_read_u32s', 1, 1])
 ###################################################################################################################
-xhci_74 = Model('xhci', 74)
-xhci_74.add_struct('XHCI_CTX1', {'ctx#0x14': FIELD_RANDOM})
-xhci_74.add_head(['XHCI_CTX1'])
-xhci_74.add_instrumentation_point('hcd-xhci.c', ['xhci_set_ep_state', 'xhci_dma_read_u32s', 0, 1])
-###################################################################################################################
-xhci_75 = Model('xhci', 75)
-xhci_75.add_struct('XHCI_CTX2', {'ctx#0x8': FIELD_RANDOM})
-xhci_75.add_head(['XHCI_CTX2'])
-xhci_75.add_instrumentation_point('hcd-xhci.c', ['xhci_set_ep_state', 'xhci_dma_read_u32s', 1, 1])
+xhci_93 = Model('xhci', 93)
+xhci_93.add_struct('XHCI_CTL_CTX', {'ctl_ctx0#0x4': FIELD_CONSTANT, 'ctl_ctx1#0x4': FIELD_CONSTANT})
+xhci_93.add_constant('XHCI_CTL_CTX.ctl_ctx0', [0])
+xhci_93.add_constant('XHCI_CTL_CTX.ctl_ctx1', [0, 1, 2, 3])
+xhci_93.add_head(['XHCI_CTL_CTX'])
+xhci_93.add_instrumentation_point('hcd-xhci.c', ['xhci_evaluate_slot', 'xhci_dma_read_u32s', 0, 1])
+xhci_93.add_instrumentation_point('hcd-xhci.c', ['xhci_address_slot', 'xhci_dma_read_u32s', 0, 1])
 ###################################################################################################################
 xhci_76 = Model('xhci', 76)
-xhci_76.add_struct('XHCI_SLOT_CTX', {
-    'slot_ctx#0x20': FIELD_RANDOM,
-    'ep_ctx0#0x20': FIELD_RANDOM, 'ep_ctx1#0x20': FIELD_RANDOM, 'ep_ctx2#0x20': FIELD_RANDOM, 'ep_ctx3#0x20': FIELD_RANDOM,
-    'ep_ctx4#0x20': FIELD_RANDOM, 'ep_ctx5#0x20': FIELD_RANDOM, 'ep_ctx6#0x20': FIELD_RANDOM, 'ep_ctx7#0x20': FIELD_RANDOM,
-    'ep_ctx8#0x20': FIELD_RANDOM, 'ep_ctx9#0x20': FIELD_RANDOM, 'ep_ctx10#0x20': FIELD_RANDOM, 'ep_ctx11#0x20': FIELD_RANDOM,
-    'ep_ctx12#0x20': FIELD_RANDOM, 'ep_ctx13#0x20': FIELD_RANDOM, 'ep_ctx14#0x20': FIELD_RANDOM, 'ep_ctx15#0x20': FIELD_RANDOM,
-    'ep_ctx16#0x20': FIELD_RANDOM, 'ep_ctx17#0x20': FIELD_RANDOM, 'ep_ctx18#0x20': FIELD_RANDOM, 'ep_ctx19#0x20': FIELD_RANDOM,
-    'ep_ctx20#0x20': FIELD_RANDOM, 'ep_ctx21#0x20': FIELD_RANDOM, 'ep_ctx22#0x20': FIELD_RANDOM, 'ep_ctx23#0x20': FIELD_RANDOM,
-    'ep_ctx24#0x20': FIELD_RANDOM, 'ep_ctx25#0x20': FIELD_RANDOM, 'ep_ctx26#0x20': FIELD_RANDOM, 'ep_ctx27#0x20': FIELD_RANDOM,
-    'ep_ctx28#0x20': FIELD_RANDOM, 'ep_ctx29#0x20': FIELD_RANDOM, 'ep_ctx30#0x20': FIELD_RANDOM, 'ep_ctx31#0x20': FIELD_RANDOM})
-xhci_76.add_head(['XHCI_SLOT_CTX'])
-xhci_76.add_instrumentation_point('hcd-xhci.c', ['usb_xhci_post_load', 'xhci_dma_read_u32s', 0, 1])
+xhci_76.add_struct('XHCI_CTL_CTX_76', {'ctl_ctx0#0x4': FIELD_FLAG, 'ctl_ctx1#0x4': FIELD_FLAG})
+xhci_76.add_flag('XHCI_CTL_CTX_76.ctl_ctx0', {
+    0: '2@0', 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1,
+    16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1, 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
+xhci_76.add_flag('XHCI_CTL_CTX_76.ctl_ctx1', {0: '2@1', 2: 30})
+xhci_76.add_head(['XHCI_CTL_CTX_76'])
+xhci_76.add_instrumentation_point('hcd-xhci.c', ['xhci_configure_slot', 'xhci_dma_read_u32s', 1, 1])
 ###################################################################################################################
-xhci_77 = Model('xhci', 77)
-xhci_77.add_struct('XHCI_OCTX01', {'slot_ctx#0x10': FIELD_RANDOM})
-xhci_77.add_head(['XHCI_OCTX01'])
-xhci_77.add_instrumentation_point('hcd-xhci.c', ['xhci_configure_slot', 'xhci_dma_read_u32s', 0, 1])
-xhci_77.add_instrumentation_point('hcd-xhci.c', ['xhci_configure_slot', 'xhci_dma_read_u32s', 2, 1])
-xhci_77.add_instrumentation_point('hcd-xhci.c', ['xhci_reset_slot', 'xhci_dma_read_u32s', 0, 1])
+xhci_94 = Model('xhci', 94) # 77 is available
+xhci_94.add_struct('XHCI_SLOT_CTX', {'slot_ctx0#0x4': FIELD_FLAG, 'slot_ctx1#0x4': FIELD_FLAG, 'slot_ctx2#0x4': FIELD_FLAG, 'slot_ctx3#0x4': FIELD_FLAG})
+xhci_94.add_flag('XHCI_SLOT_CTX.slot_ctx0', {0: 4, 8: 4, 12: 4, 16: 4, 20: 4, 24: 8})
+xhci_94.add_flag('XHCI_SLOT_CTX.slot_ctx1', {0: 16, 16: 6, 22: '2@0', 24: 8})
+xhci_94.add_flag('XHCI_SLOT_CTX.slot_ctx2', {0: 22, 22: 10})
+xhci_94.add_flag('XHCI_SLOT_CTX.slot_ctx3', {0: 27, 27: 5})
+xhci_94.add_head(['XHCI_SLOT_CTX'])
+xhci_94.add_instrumentation_point('hcd-xhci.c', ['xhci_evaluate_slot', 'xhci_dma_read_u32s', 1, 1])
+xhci_94.add_instrumentation_point('hcd-xhci.c', ['xhci_evaluate_slot', 'xhci_dma_read_u32s', 2, 1])
+xhci_94.add_instrumentation_point('hcd-xhci.c', ['xhci_reset_slot', 'xhci_dma_read_u32s', 0, 1])
+xhci_94.add_instrumentation_point('hcd-xhci.c', ['xhci_configure_slot', 'xhci_dma_read_u32s', 0, 1])
+xhci_94.add_instrumentation_point('hcd-xhci.c', ['xhci_configure_slot', 'xhci_dma_read_u32s', 2, 1])
+xhci_94.add_instrumentation_point('hcd-xhci.c', ['xhci_configure_slot', 'xhci_dma_read_u32s', 3, 1])
+xhci_94.add_instrumentation_point('hcd-xhci.c', ['xhci_address_slot', 'xhci_dma_read_u32s', 1, 1])
+xhci_94.add_instrumentation_point('hcd-xhci.c', ['usb_xhci_post_load', 'xhci_dma_read_u32s', 0, 1])
 ###################################################################################################################
-xhci_78 = Model('xhci', 78)
-xhci_78.add_struct('XHCI_OCTX1', {'slot_ctx#0x20': FIELD_RANDOM, 'ep0_ctx#0x14': FIELD_RANDOM})
-xhci_78.add_head(['XHCI_OCTX1'])
-xhci_78.add_instrumentation_point('hcd-xhci.c', ['xhci_evaluate_slot', 'xhci_dma_read_u32s', 2, 1])
+xhci_95 = Model('xhci', 95) # 78
+xhci_95.add_struct('XHCI_EP0_CTX', {
+    'ep0_ctx0#0x4': FIELD_RANDOM, 'ep0_ctx1#0x4': FIELD_RANDOM, 'ep0_ctx2#0x4': FIELD_RANDOM, 'ep0_ctx3#0x4': FIELD_RANDOM, 'ep0_ctx4#0x4': FIELD_RANDOM})
+xhci_95.add_head(['XHCI_EP0_CTX'])
+xhci_95.add_instrumentation_point('hcd-xhci.c', ['xhci_evaluate_slot', 'xhci_dma_read_u32s', 3, 1])
+xhci_95.add_instrumentation_point('hcd-xhci.c', ['xhci_evaluate_slot', 'xhci_dma_read_u32s', 4, 1])
+xhci_95.add_instrumentation_point('hcd-xhci.c', ['xhci_configure_slot', 'xhci_dma_read_u32s', 4, 1])
+xhci_95.add_instrumentation_point('hcd-xhci.c', ['xhci_address_slot', 'xhci_dma_read_u32s', 2, 1])
+xhci_95.add_instrumentation_point('hcd-xhci.c', ['usb_xhci_post_load', 'xhci_dma_read_u32s', 1, 1])
 ###################################################################################################################
 uhci_79 = Model('uhci', 79)
 uhci_79.add_struct('link', {'link#0x4': FIELD_POINTER | FIELD_FLAG})
@@ -736,8 +739,37 @@ for i in range(0, 5):
     ehci_87.add_point_to('EHCIqtd.bufptr{}'.format(i), ['EHCIqtd_BUF0'])
 ehci_87.add_head(['EHCIqtd'])
 ehci_87.add_instrumentation_point('hcd-ehci.c', ['ehci_writeback_async_complete_packet', 'get_dwords', 1, 1])
-ehci_87.add_instrumentation_point('hcd-ehci.c', ['ehci_state_fetchqtd', 'get_dwords', 0, 1])
 ehci_87.add_instrumentation_point('hcd-ehci.c', ['ehci_fill_queue', 'get_dwords', 0, 1])
+###################################################################################################################
+ehci_89 = Model('ehci', 89)
+ehci_89.add_struct('EHCIqtd_TOKEN', {'token#0x4': FIELD_FLAG})
+ehci_89.add_flag('EHCIqtd_TOKEN.token', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 2, 10: 2, 12: 3, 15: 1, 16: 15, 31: 1})
+ehci_89.add_head(['EHCIqtd_TOKEN'])
+ehci_89.add_instrumentation_point('hcd-ehci.c', ['ehci_state_fetchqtd', 'get_dwords', 0, 1])
+###################################################################################################################
+ehci_90 = Model('ehci', 90)
+ehci_90.add_struct('EHCIqtd_BUF1', {'buf#0x1000': FIELD_RANDOM})
+ehci_90.add_struct('EHCIqtd_NEXT', {'next#0x4': FIELD_POINTER})
+ehci_90.add_point_to('EHCIqtd_NEXT.next', ['EHCIqtd_BUF1'])
+ehci_90.add_head(['EHCIqtd_NEXT'])
+ehci_90.add_instrumentation_point('hcd-ehci.c', ['ehci_state_fetchqtd', 'get_dwords', 1, 1])
+###################################################################################################################
+ehci_91 = Model('ehci', 91)
+ehci_91.add_struct('EHCIqtd_BUF2', {'buf#0x1000': FIELD_RANDOM})
+ehci_91.add_struct('EHCIqtd_ALTNEXT', {'altnext#0x4': FIELD_POINTER})
+ehci_91.add_point_to('EHCIqtd_ALTNEXT.altnext', ['EHCIqtd_BUF2'])
+ehci_91.add_head(['EHCIqtd_ALTNEXT'])
+ehci_91.add_instrumentation_point('hcd-ehci.c', ['ehci_state_fetchqtd', 'get_dwords', 2, 1])
+###################################################################################################################
+ehci_92 = Model('ehci', 92)
+ehci_92.add_struct('EHCIqtd_BUF3', {'buf#0x1000': FIELD_RANDOM})
+ehci_92.add_struct('EHCIqtd_BUFPTRS', {
+    'bufptr0#0x4': FIELD_POINTER, 'bufptr1#0x4': FIELD_POINTER, 'bufptr2#0x4': FIELD_POINTER,
+    'bufptr3#0x4': FIELD_POINTER, 'bufptr4#0x4': FIELD_POINTER})
+for i in range(0, 5):
+    ehci_92.add_point_to('EHCIqtd_BUFPTRS.bufptr{}'.format(i), ['EHCIqtd_BUF3'])
+ehci_92.add_head(['EHCIqtd_BUFPTRS'])
+ehci_92.add_instrumentation_point('hcd-ehci.c', ['ehci_state_fetchqtd', 'get_dwords', 3, 1])
 ###################################################################################################################
 ehci_88 = Model('ehci', 88)
 ehci_88.add_struct('EHCIqh_BUF0', {'buf#0x1000': FIELD_RANDOM})
