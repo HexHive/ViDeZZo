@@ -141,6 +141,21 @@ uint32_t urand32() {{
             f.write('    [{0}] = videzzo_group_mutator_miss_handler_{0},\n'.format(model.index))
         f.write('};')
 
+def update_stat(stats, new_stat):
+    # name, #-of-head-objects, #-of-structs, #-of-flag-fields, #-of-pointer-fields, #-of-fields
+    name = new_stat[0]
+    if name in stats:
+        stats[name]['#-of-head-objects'] += 1
+        stats[name]['#-of-structs'] += new_stat[2]
+        stats[name]['#-of-flag-fields'] += new_stat[3]
+        stats[name]['#-of-pointer-fields'] += new_stat[4]
+        stats[name]['#-of-fields'] += new_stat[5]
+    else:
+        stats[name] = {
+            '#-of-head-objects': 1,
+            '#-of-structs': new_stat[2], '#-of-flag-fields': new_stat[3],
+            '#-of-pointer-fields': new_stat[4], '#-of-fields': new_stat[5]}
+
 def gen_types(hypervisor, summary=True):
     """
     file orgranization
@@ -160,8 +175,12 @@ def gen_types(hypervisor, summary=True):
             instrumentation_points.extend(v.get_instrumentation_points())
     yaml.safe_dump(instrumentation_points, open('./{0}/videzzo_{1}_types.yaml'.format(hypervisor_dir, hypervisor), 'w'))
     if summary:
+        stats = {}
         for model in models.values():
-            model.get_stats()
+            update_stat(stats, model.get_stats())
+        print('name, #-of-head-objects, #-of-structs, #-of-flag-fields, #-of-pointer-fields, #-of-fields')
+        for k, v in stats.items():
+            print(','.join([str(i) for i in [k, v['#-of-head-objects'], v['#-of-structs'], v['#-of-flag-fields'], v['#-of-pointer-fields'], v['#-of-fields']]]))
         return
     __gen_code(models, hypervisor_dir)
 
@@ -186,6 +205,7 @@ def gen_vmm(summary=False):
 
     models = {'videzzo_vmm-00': vmm_00}
     if summary:
+        print('name, id, #-of-structs, #-of-flag-fields, #-of-pointer-fields, #-of-fields')
         for model in models.values():
             model.get_stats()
         return
@@ -197,8 +217,6 @@ def main(argv):
     parser.add_argument('vmm', help='Hypervisors', choices=['vmm', 'qemu', 'byhve', 'virtualbox'])
     args = parser.parse_args()
 
-    if args.summary:
-        print('name, id, #-of-structs, #-of-flag-fields, #-of-pointer-fields, #-of-fields')
     if args.vmm == 'vmm':
         gen_vmm(summary=args.summary)
     else:

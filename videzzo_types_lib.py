@@ -50,7 +50,7 @@ class Model(object):
                     n_pointer_fields += 1
                 else:
                     pass
-        print('{}, {}, {}, {}, {}, {}'.format(self.name, self.index, n_structs, n_flag_fields, n_pointer_fields, n_fields))
+        return [self.name, self.index, n_structs, n_flag_fields, n_pointer_fields, n_fields]
 
 ###########################################################################################
 ### Construct
