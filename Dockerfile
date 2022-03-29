@@ -9,7 +9,7 @@ git libjpeg-dev libsasl2-dev libncurses5-dev libncursesw5-dev \
 libgtk-3-dev libsdl2-dev screen parallel \
 htop cpulimit meson autoconf-archive python2.7 libopus-dev zip unzip sudo
 
-RUN pip3 install wllvm picire gdown
+RUN pip3 install wllvm picire gdown pyyaml
 
 WORKDIR /root
 
