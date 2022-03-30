@@ -10,7 +10,7 @@ CFLAGS ?=
 
 patch:
 	cp 0001-Update-QEMU-to-support-ViDeZZo-as-a-library.patch qemu/
-	cd qemu && git am < 0001-Update-QEMU-to-support-ViDeZZo-as-a-library.patch && cd $(OLDPWD)
+	cd qemu && patch -p 1 < 0001-Update-QEMU-to-support-ViDeZZo-as-a-library.patch && cd $(OLDPWD)
 
 compile:
 	bash -x 0002-copy-to-qemu.sh
