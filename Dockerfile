@@ -9,7 +9,9 @@ git libjpeg-dev libsasl2-dev libncurses5-dev libncursesw5-dev \
 libgtk-3-dev libsdl2-dev screen parallel \
 htop cpulimit meson autoconf-archive libopus-dev zip unzip sudo
 
+RUN apt-get install -y curl
 RUN rm /usr/bin/python3 && ln -s /usr/bin/python3.7 /usr/bin/python3
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3 get-pip.py
 RUN python3 -m pip install install wllvm picire gdown pyyaml
 
 WORKDIR /root
