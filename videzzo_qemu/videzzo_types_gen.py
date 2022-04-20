@@ -604,7 +604,7 @@ xhci_72.add_head(['XHCI_POCTX'])
 xhci_72.add_instrumentation_point('hcd-xhci.c', ['xhci_address_slot', 'ldq_le_dma', 0, 1])
 xhci_72.add_instrumentation_point('hcd-xhci.c', ['usb_xhci_post_load', 'ldq_le_dma', 0, 1])
 ###################################################################################################################
-xhci_73 = Model('xhci', 73) # 74, 75 are available
+xhci_73 = Model('xhci', 73) # 75 are available
 xhci_73.add_struct('XHCI_CTX', {'ctx0#0x4': FIELD_FLAG, 'ctx1#0x4': FIELD_RANDOM})
 xhci_73.add_flag('XHCI_CTX.ctx0', {0: 1, 1: 3, 4: 28})
 xhci_73.add_head(['XHCI_CTX'])
@@ -827,4 +827,9 @@ ehci_86.add_flag('EHCIsitd.results', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 
 ehci_86.add_point_to('EHCIsitd.next', ['EHCIsitd_BUF0'])
 ehci_86.add_head(['EHCIsitd'])
 ehci_86.add_instrumentation_point('hcd-ehci.c', ['ehci_state_fetchsitd', 'get_dwords', 0, 1])
+###################################################################################################################
+dwc2_74 = Model('dwc2', 74)
+dwc2_74.add_struct('DWC2_BUF0', {'buf#0x10000': FIELD_RANDOM})
+dwc2_74.add_head(['DWC2_BUF0'])
+dwc2_74.add_instrumentation_point('hcd-dwc2.c', ['dwc2_handle_packet', 'dma_memory_read', 0, 1])
 ###################################################################################################################

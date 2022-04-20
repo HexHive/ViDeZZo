@@ -10,7 +10,10 @@ CFLAGS ?=
 
 patch:
 	cp 0001-Update-QEMU-to-support-ViDeZZo-as-a-library.patch qemu/
-	cd qemu && patch -p 1 < 0001-Update-QEMU-to-support-ViDeZZo-as-a-library.patch && cd $(OLDPWD)
+	cp 0001-fix-assertion-in-hw-usb-core.c.patch qemu/
+	cd qemu && patch -p 1 < 0001-Update-QEMU-to-support-ViDeZZo-as-a-library.patch \
+		patch -p 1 < 0001-fix-assertion-in-hw-usb-core.c.patch \
+		&& cd $(OLDPWD)
 
 compile:
 	bash -x 0002-copy-to-qemu.sh

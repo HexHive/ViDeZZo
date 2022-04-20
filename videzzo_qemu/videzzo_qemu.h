@@ -252,8 +252,15 @@ static QGuestAllocator *get_videzzo_alloc(QTestState *qts) {
     QOSGraphObject *obj;
 
     // TARGET_NAME=i386 -> i386/pc
-    // TARGET_NAME=     -> x86_64/pc
-    node = qos_graph_get_node("i386/pc");
+    // TARGET_NAME=arm  -> arm/raspi2b
+    if (strcmp(TARGET_NAME, "i386") == 0) {
+        node = qos_graph_get_node("i386/pc");
+    } else if (strcmp(TARGET_NAME, "arm") == 0) {
+        node = qos_graph_get_node("arm/raspi2b");
+    } else {
+        g_assert(1 == 0);
+    }
+
     g_assert(node->type == QNODE_MACHINE);
 
     obj = qos_machine_new(node, qts);
@@ -562,6 +569,16 @@ static const videzzo_qemu_config predefined_configs[] = {
         .mrnames = "*smc91c111-mmio*",
         .file = "hw/net/smc91c111.c",
         .socket = true,
+    },{
+        .arch = "arm",
+        .name = "dwc2",
+        // arm supports raspi0/1ap/2b, aarch64 supports raspi3
+        .args = "-machine raspi2b -m 1G -nodefaults "
+        COMMON_USB_CMD,
+        .objects = "*dwc2-io* *dwc2-fifo*",
+        .mrnames = "*dwc2-io*,*dwc2-fifo*",
+        .file = "hw/usb/hcd-dwc2.c",
+        .socket = false,
     }
 };
 

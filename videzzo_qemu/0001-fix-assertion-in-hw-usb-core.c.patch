@@ -1,0 +1,25 @@
+From 480a067fb697331d1ae4c2b05f3df0b732e26e7b Mon Sep 17 00:00:00 2001
+From: Qiang Liu <cyruscyliu@gmail.com>
+Date: Wed, 30 Mar 2022 08:41:49 +0200
+Subject: [PATCH] fix assertion in hw/usb/core.c
+
+---
+ hw/usb/core.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/hw/usb/core.c b/hw/usb/core.c
+index 975f76250a..94e4e69b9a 100644
+--- a/hw/usb/core.c
++++ b/hw/usb/core.c
+@@ -738,7 +738,7 @@ struct USBEndpoint *usb_ep_get(USBDevice *dev, int pid, int ep)
+     struct USBEndpoint *eps;
+ 
+     assert(dev != NULL);
+-    if (ep == 0) {
++    if (ep == 0 || pid == 0 || pid == USB_TOKEN_SETUP) {
+         return &dev->ep_ctl;
+     }
+     assert(pid == USB_TOKEN_IN || pid == USB_TOKEN_OUT);
+-- 
+2.17.1
+

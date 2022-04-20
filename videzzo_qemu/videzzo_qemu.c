@@ -47,6 +47,7 @@ static bool xhci = false;
 static bool pcnet = false;
 static bool e1000e = false;
 static bool vmxnet3 = false;
+static bool dwc2 = false;
 
 uint64_t dispatch_mmio_write(Event *event) {
     QTestState *s = (QTestState *)gfctx_get_object();
@@ -66,6 +67,21 @@ uint64_t dispatch_mmio_write(Event *event) {
         } else {
             event->valu = 0xF00D0000 + rand() % 10;
         }
+    }
+    if (dwc2 && (event->addr >= 0x3f980500) &&
+            (event->addr < 0x3f980800) &&
+            ((event->addr & 0x1c) == 0x0)) {
+        event->valu = ((rand() % (1 << 11)) << 0)
+             | ((rand() % (1 << 4)) << 11)
+             | ((rand() % (1 << 1)) << 15)
+             | ((rand() % (1 << 1)) << 16)
+             | ((rand() % (1 << 1)) << 17)
+             | ((rand() % (1 << 2)) << 18)
+             | ((rand() % (1 << 2)) << 20)
+             | ((rand() % (1 << 7)) << 22)
+             | ((rand() % (1 << 1)) << 29)
+             | ((rand() % (1 << 1)) << 30)
+             | ((rand() % (1 << 1)) << 31);
     }
     switch (event->size) {
         case ViDeZZo_Byte: qtest_writeb(s, event->addr, event->valu & 0xFF); break;
@@ -319,6 +335,8 @@ static void videzzo_qemu_pre(QTestState *s) {
             e1000e = true;
         if (strncmp("*vmxnet3-b1*", mrnames[i], strlen(mrnames[i])) == 0)
             vmxnet3 = true;
+        if (strncmp("*dwc2-io*", mrnames[i], strlen(mrnames[i])) == 0)
+            dwc2 = true;
         locate_fuzzable_objects(qdev_get_machine(), mrnames[i]);
     }
 
