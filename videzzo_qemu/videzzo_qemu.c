@@ -51,6 +51,8 @@ static bool dwc2 = false;
 
 uint64_t dispatch_mmio_write(Event *event) {
     QTestState *s = (QTestState *)gfctx_get_object();
+    unsigned int pid, len;
+
     if (xhci && event->addr > 0xe0006100) {
         event->addr = 0xe0006000;
         event->valu = 0;
@@ -69,19 +71,61 @@ uint64_t dispatch_mmio_write(Event *event) {
         }
     }
     if (dwc2 && (event->addr >= 0x3f980500) &&
-            (event->addr < 0x3f980800) &&
-            ((event->addr & 0x1c) == 0x0)) {
-        event->valu = ((rand() % (1 << 11)) << 0)
-             | ((rand() % (1 << 4)) << 11)
-             | ((rand() % (1 << 1)) << 15)
-             | ((rand() % (1 << 1)) << 16)
-             | ((rand() % (1 << 1)) << 17)
-             | ((rand() % (1 << 2)) << 18)
-             | ((rand() % (1 << 2)) << 20)
-             | ((rand() % (1 << 7)) << 22)
-             | ((rand() % (1 << 1)) << 29)
-             | ((rand() % (1 << 1)) << 30)
-             | ((rand() % (1 << 1)) << 31);
+            (event->addr < 0x3f980800)) {
+        switch (event->addr & 0x1c) {
+            case 0x0:
+                // 0: 11, 11: 4, 15: 1, 16: 1, 17: 1, 18: 1
+                // 18: 2, 20: 2, 22: 7, 29: 1, 30: 1, 31: 1
+                event->valu = ((rand() % (1 << 11)) << 0)
+                     | ((rand() % (1 << 4)) << 11)
+                     | ((rand() % (1 << 1)) << 15)
+                     | ((rand() % (1 << 1)) << 16)
+                     | ((rand() % (1 << 1)) << 17)
+                     | ((rand() % (1 << 2)) << 18)
+                     | ((rand() % (1 << 2)) << 20)
+                     | (0) << 22 // dwc2 -> storage.addr (0)
+                     | ((rand() % (1 << 1)) << 29)
+                     | ((rand() % (1 << 1)) << 30)
+                     | ((rand() % (1 << 1)) << 31);
+                break;
+            case 0x4:
+                // 0: 7, 7: 7, 14: 2, 16: 1, 17: 14, 31: 1
+                event->valu = ((rand() % (1 << 7)) << 0)
+                     | ((rand() % (1 << 7)) << 7)
+                     | ((rand() % (1 << 2)) << 14)
+                     | ((rand() % (1 << 1)) << 16)
+                     | ((rand() % (1 << 14)) << 17)
+                     | ((rand() % (1 << 1)) << 31);
+                break;
+            case 0x8:
+                // 0...14, 14: 14, 18
+                event->valu = ((rand() % (1 << 1)) << 0)
+                     | ((rand() % (1 << 1)) << 1)
+                     | ((rand() % (1 << 1)) << 2)
+                     | ((rand() % (1 << 1)) << 3)
+                     | ((rand() % (1 << 1)) << 4)
+                     | ((rand() % (1 << 1)) << 5)
+                     | ((rand() % (1 << 1)) << 6)
+                     | ((rand() % (1 << 1)) << 7)
+                     | ((rand() % (1 << 1)) << 8)
+                     | ((rand() % (1 << 1)) << 9)
+                     | ((rand() % (1 << 1)) << 10)
+                     | ((rand() % (1 << 1)) << 11)
+                     | ((rand() % (1 << 1)) << 12)
+                     | ((rand() % (1 << 1)) << 13)
+                     | ((rand() % (1 << 18)) << 14);
+                break;
+            case 0x10:
+                // 0: 19, 19: 10, 29: 2, 31: 1
+                pid = rand() % 4;
+                // check and fault injection
+                len = (pid == 3 ? 8 : (rand() % 2 ? 31 : rand() % (65536 + 65553)));
+                event->valu = (len << 0)
+                     | ((rand() % (1 << 10)) << 19)
+                     | (pid << 29)
+                     | ((rand() % (1 << 1)) << 31);
+                break;
+        }
     }
     switch (event->size) {
         case ViDeZZo_Byte: qtest_writeb(s, event->addr, event->valu & 0xFF); break;
@@ -158,13 +202,16 @@ uint64_t dispatch_socket_write(Event *event) {
     return 0;
 }
 
+
 uint64_t AroundInvalidAddress(uint64_t physaddr) {
     // TARGET_NAME=i386 -> i386/pc
-    if (strncmp(TARGET_NAME, "i386", 4) == 0) {
+    if (strcmp(TARGET_NAME, "i386") == 0) {
         if (physaddr < I386_MEM_HIGH - I386_MEM_LOW)
             return physaddr + I386_MEM_LOW;
         else
             return (physaddr - I386_MEM_LOW) % (I386_MEM_HIGH - I386_MEM_LOW) + I386_MEM_LOW;
+    } else if (strcmp(TARGET_NAME, "arm") == 0) {
+        return (physaddr - RASPI2_RAM_LOW) % (RASPI2_RAM_HIGH - RASPI2_RAM_LOW) + RASPI2_RAM_LOW;
     }
     return physaddr;
 }

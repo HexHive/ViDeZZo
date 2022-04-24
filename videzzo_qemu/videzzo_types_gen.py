@@ -829,7 +829,21 @@ ehci_86.add_head(['EHCIsitd'])
 ehci_86.add_instrumentation_point('hcd-ehci.c', ['ehci_state_fetchsitd', 'get_dwords', 0, 1])
 ###################################################################################################################
 dwc2_74 = Model('dwc2', 74)
-dwc2_74.add_struct('DWC2_BUF0', {'buf#0x10000': FIELD_RANDOM})
-dwc2_74.add_head(['DWC2_BUF0'])
+dwc2_74.add_struct('DWC2_SETUP_BUF', {
+    'setup_buf0#0x1': FIELD_FLAG, 'setup_buf1#0x1': FIELD_CONSTANT, 'setup_buf2#0x1': FIELD_RANDOM, 'setup_buf3#0x1': FIELD_RANDOM,
+    'setup_buf4#0x1': FIELD_RANDOM, 'setup_buf5#0x1': FIELD_RANDOM, 'setup_buf6#0x1': FIELD_RANDOM, 'setup_buf7#0x1': FIELD_CONSTANT,
+    'reserved_8#0x10000': FIELD_RANDOM})
+dwc2_74.add_flag('DWC2_SETUP_BUF.setup_buf0', {0: 2, 2: '3@0', 5: 2, 7: 1})
+dwc2_74.add_constant('DWC2_SETUP_BUF.setup_buf1', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0x30, 0x31, 0xff, 0xfe])
+dwc2_74.add_constant('DWC2_SETUP_BUF.setup_buf7', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]) # check-and-fault-injection
+# hard to infer the dependencies
+dwc2_74.add_struct('DWC2_USB_MSD_CBW', {
+    'sig#04': FIELD_CONSTANT, 'tag#0x4': FIELD_RANDOM, 'data_len#0x4': FIELD_FLAG,
+    'flags#0x1': FIELD_FLAG, 'lun#0x1': FIELD_CONSTANT, 'cmd_len#0x1': FIELD_RANDOM, 'cmd#0x10': FIELD_RANDOM})
+dwc2_74.add_head(['DWC2_SETUP_BUF', 'DWC2_USB_MSD_CBW'])
+dwc2_74.add_constant('DWC2_USB_MSD_CBW.sig', [0x43425355, 0x0])
+dwc2_74.add_constant('DWC2_USB_MSD_CBW.lun', [0, 1])
+dwc2_74.add_flag('DWC2_USB_MSD_CBW.data_len', {0: 2, 2: '28@0', 30: 2})
+dwc2_74.add_flag('DWC2_USB_MSD_CBW.flags', {0: 7, 7: 1})
 dwc2_74.add_instrumentation_point('hcd-dwc2.c', ['dwc2_handle_packet', 'dma_memory_read', 0, 1])
 ###################################################################################################################

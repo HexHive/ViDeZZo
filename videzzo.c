@@ -301,7 +301,7 @@ static uint32_t around_event_size(uint8_t id, uint32_t raw_size) {
     if (merge)
         return raw_size; // do nothing
     if (id != INTERFACE_SOCKET_WRITE && id < INTERFACE_DYNAMIC)
-        return raw_size % 0x10000; // 1M to avoid oom
+        return raw_size % 0x80000; // 8M to avoid oom
     if (id == INTERFACE_SOCKET_WRITE)
         return (raw_size - SOCKET_WRITE_MIN_SIZE) %
             (SOCKET_WRITE_MAX_SIZE - SOCKET_WRITE_MIN_SIZE) + SOCKET_WRITE_MIN_SIZE;

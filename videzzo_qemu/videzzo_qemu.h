@@ -64,34 +64,18 @@ static QGuestAllocator *videzzo_alloc;
 // we enforce the dynamic alloc memory to be higher than 256M.
 #define I386_MEM_LOW  0x10000000
 #define I386_MEM_HIGH 0x20000000
+#define RASPI2_RAM_LOW  (1 << 20)
+#define RASPI2_RAM_HIGH (0x20000000)
 uint64_t AroundInvalidAddress(uint64_t physaddr);
 
-static uint64_t (*videzzo_guest_alloc)(size_t) = NULL;
-static void (*videzzo_guest_free)(size_t) = NULL;
-
-static uint64_t __wrap_guest_alloc(size_t size) {
-    if (videzzo_guest_alloc)
-        return videzzo_guest_alloc(size);
-    else
-        // alloc a dma accessible buffer in guest memory
-        return guest_alloc(videzzo_alloc, size);
-}
-
-static void __wrap_guest_free(uint64_t addr) {
-    if (videzzo_guest_free)
-        videzzo_guest_free(addr);
-    else
-        // free the dma accessible buffer in guest memory
-        guest_free(videzzo_alloc, addr);
-}
-
 static uint64_t videzzo_malloc(size_t size) {
-    return __wrap_guest_alloc(size);
+    // alloc a dma accessible buffer in guest memory
+    return guest_alloc(videzzo_alloc, size);
 }
 
 static bool videzzo_free(uint64_t addr) {
-    // give back the guest memory
-    __wrap_guest_free(addr);
+    // free the dma accessible buffer in guest memory
+    guest_free(videzzo_alloc, addr);
     return true;
 }
 
@@ -286,6 +270,16 @@ static inline gchar *generic_fuzzer_virtio_9p_args(void){
 #define COMMON_USB_CMD_1 \
     "-usb " \
     "-device usb-kbd "
+#define COMMON_USB_CMD_2 \
+    "-usb " \
+    "-drive file=null-co://,if=none,format=raw,id=disk0 -device usb-storage,drive=disk0 " \
+    "-chardev null,id=cd0 -device usb-braille,chardev=cd0 " \
+    "-chardev null,id=cd1 -device usb-serial,chardev=cd1 " \
+    "-device usb-kbd -device usb-mouse -device usb-tablet " \
+    "-device usb-bot -device usb-ccid -device usb-ccid -device usb-wacom-tablet -device usb-audio"
+#define COMMON_USB_CMD_STORAGE \
+    "-usb " \
+    "-drive file=null-co://,if=none,format=raw,id=disk0 -device usb-storage,port=1,drive=disk0"
 
 static const videzzo_qemu_config predefined_configs[] = {
     {
@@ -574,7 +568,7 @@ static const videzzo_qemu_config predefined_configs[] = {
         .name = "dwc2",
         // arm supports raspi0/1ap/2b, aarch64 supports raspi3
         .args = "-machine raspi2b -m 1G -nodefaults "
-        COMMON_USB_CMD,
+        COMMON_USB_CMD_STORAGE,
         .objects = "*dwc2-io* *dwc2-fifo*",
         .mrnames = "*dwc2-io*,*dwc2-fifo*",
         .file = "hw/usb/hcd-dwc2.c",
