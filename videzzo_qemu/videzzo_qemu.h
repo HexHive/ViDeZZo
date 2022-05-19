@@ -36,7 +36,6 @@
 #include <sys/socket.h>
 
 bool ViDeZZoFuzzer;
-static bool qtest_log_enabled;
 static void usage(void);
 
 // TODO implement a timeout handler in videzzo
@@ -45,10 +44,8 @@ static void usage(void);
 static useconds_t timeout = DEFAULT_TIMEOUT_US;
 
 static inline void handle_timeout(int sig) {
-    if (qtest_log_enabled) {
-        fprintf(stderr, "[Timeout]\n");
-        fflush(stderr);
-    }
+    fprintf(stderr, "[Timeout]\n");
+    fflush(stderr);
     _Exit(0);
 }
 

@@ -360,13 +360,6 @@ static void videzzo_qemu_pre(QTestState *s) {
     char **mrnames;
     ViDeZZoFuzzer = 1;
 
-    if (getenv("QTEST_LOG")) {
-        qtest_log_enabled = 1;
-    }
-    if (getenv("QEMU_FUZZ_TIMEOUT")) {
-        timeout = g_ascii_strtoll(getenv("QEMU_FUZZ_TIMEOUT"), NULL, 0);
-    }
-
     fuzzable_memoryregions = g_hash_table_new(NULL, NULL);
     fuzzable_pci_devices = g_ptr_array_new();
 
@@ -435,8 +428,6 @@ static void usage(void) {
     printf("QEMU_FUZZ_ARGS= the command line arguments passed to qemu\n");
     printf("QEMU_FUZZ_OBJECTS= "
             "a space separated list of QOM type names for objects to fuzz\n");
-    printf("Optionally: QEMU_FUZZ_TIMEOUT= Specify a custom timeout (us). "
-            "0 to disable. %d by default\n", timeout);
     exit(0);
 }
 
