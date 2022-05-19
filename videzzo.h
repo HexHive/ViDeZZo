@@ -15,6 +15,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <sys/queue.h>
 
 //
 // Event
@@ -226,5 +227,50 @@ size_t LLVMFuzzerCustomMutator(
 //
 void videzzo_set_merge();
 void videzzo_clear_merge();
+
+//
+// Fuzz Targets
+//
+typedef struct ViDeZZoFuzzTarget {
+    const char *name;         /* target identifier (passed to --fuzz-target=)*/
+    const char *description;  /* help text */
+
+    /*
+     * Returns the arguments that are passed to qemu/softmmu init().
+     * Freed by the caller.
+     */
+    char *(*get_init_cmdline)(struct ViDeZZoFuzzTarget *);
+
+    /*
+     * Will run once, after a VM is initialized.
+     * Eg: set up shared-memory for communication with the child-process.
+     * Can be NULL.
+     */
+    void(*pre_vm_init)(void);
+
+    /*
+     * Will run once, after a VM has been initialized, prior to the fuzz-loop.
+     * Eg: detect the memory map.
+     * Can be NULL.
+     */
+    void(*pre_fuzz)(void *opaque);
+
+    /*
+     * This is repeatedly executed during the fuzzing loop.
+     * This accepts and executes an input from libfuzzer. Its should handle
+     * setup, input execution and cleanup.
+     * Cannot be NULL.
+     */
+    void(*fuzz)(void *opaque, const unsigned char *, size_t);
+
+    void *opaque;
+} ViDeZZoFuzzTarget;
+
+typedef struct ViDeZZoFuzzTargetState {
+    ViDeZZoFuzzTarget *target;
+    LIST_ENTRY(ViDeZZoFuzzTargetState) target_list;
+} ViDeZZoFuzzTargetState;
+
+typedef LIST_HEAD(, ViDeZZoFuzzTargetState) ViDeZZoFuzzTargetList;
 
 #endif /* VIDEZZO_H */

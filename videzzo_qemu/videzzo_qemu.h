@@ -181,56 +181,6 @@ typedef struct MemoryRegionPortioList {
     MemoryRegionPortio ports[];
 } MemoryRegionPortioList;
 
-static inline GString *videzzo_qemu_cmdline(FuzzTarget *t)
-{
-    GString *cmd_line = g_string_new(TARGET_NAME);
-    if (!getenv("QEMU_FUZZ_ARGS")) {
-        usage();
-    }
-    g_string_append_printf(cmd_line, " -display none \
-                                      -machine accel=qtest, \
-                                      -m 512M %s ", getenv("QEMU_FUZZ_ARGS"));
-    return cmd_line;
-}
-
-static inline GString *videzzo_qemu_predefined_config_cmdline(FuzzTarget *t)
-{
-    GString *args = g_string_new(NULL);
-    const videzzo_qemu_config *config;
-    g_assert(t->opaque);
-    int port = 0;
-
-    config = t->opaque;
-    if (config->socket && !sockfds_initialized) {
-        init_sockets();
-        port = sockfds[1];
-    }
-    if (config->display) {
-        init_vnc();
-        vnc_client_needed = true;
-        port = vnc_port - SERVER_PORT_OFFSET;
-    }
-    if (config->byte_address) {
-        setenv("VIDEZZO_BYTE_ALIGNED_ADDRESS", "1", 1);
-    }
-    setenv("QEMU_AVOID_DOUBLE_FETCH", "1", 1);
-    if (config->argfunc) {
-        gchar *t = config->argfunc();
-        g_string_append_printf(args, t, port);
-        g_free(t);
-    } else {
-        g_assert_nonnull(config->args);
-        g_string_append_printf(args, config->args, port);
-    }
-    gchar *args_str = g_string_free(args, FALSE);
-    setenv("QEMU_FUZZ_ARGS", args_str, 1);
-    g_free(args_str);
-
-    setenv("QEMU_FUZZ_OBJECTS", config->objects, 1);
-    setenv("QEMU_FUZZ_MRNAME", config->mrnames, 1);
-    return videzzo_qemu_cmdline(t);
-}
-
 static QGuestAllocator *get_videzzo_alloc(QTestState *qts) {
     QOSGraphNode *node;
     QOSGraphObject *obj;
@@ -572,6 +522,15 @@ static const videzzo_qemu_config predefined_configs[] = {
         .objects = "*dwc2-io* *dwc2-fifo*",
         .mrnames = "*dwc2-io*,*dwc2-fifo*",
         .file = "hw/usb/hcd-dwc2.c",
+        .socket = false,
+    },{
+        .arch = "arm",
+        .name = "bcm2835_thermal",
+        // arm supports raspi0/1ap/2b, aarch64 supports raspi3
+        .args = "-machine raspi2b -m 1G -nodefaults",
+        .objects = "*bcm2835-thermal*",
+        .mrnames = "*bcm2835-thermal*",
+        .file = "hw/misc/bcm2835-thermal.c",
         .socket = false,
     }
 };

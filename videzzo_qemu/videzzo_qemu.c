@@ -202,7 +202,6 @@ uint64_t dispatch_socket_write(Event *event) {
     return 0;
 }
 
-
 uint64_t AroundInvalidAddress(uint64_t physaddr) {
     // TARGET_NAME=i386 -> i386/pc
     if (strcmp(TARGET_NAME, "i386") == 0) {
@@ -225,7 +224,6 @@ uint64_t dispatch_mem_free(Event *event) {
     QTestState *s = (QTestState *)gfctx_get_object();
     return videzzo_free(event->valu);
 }
-
 
 //
 // QEMU specific initialization - Set up interfaces
@@ -467,8 +465,58 @@ size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size,
 //
 // QEMU specific initialization - Register all targets
 //
+static GString *videzzo_qemu_cmdline(ViDeZZoFuzzTarget *t)
+{
+    GString *cmd_line = g_string_new(TARGET_NAME);
+    if (!getenv("QEMU_FUZZ_ARGS")) {
+        usage();
+    }
+    g_string_append_printf(cmd_line, " -display none \
+                                      -machine accel=qtest, \
+                                      -m 512M %s ", getenv("QEMU_FUZZ_ARGS"));
+    return cmd_line;
+}
+
+static GString *videzzo_qemu_predefined_config_cmdline(ViDeZZoFuzzTarget *t)
+{
+    GString *args = g_string_new(NULL);
+    const videzzo_qemu_config *config;
+    g_assert(t->opaque);
+    int port = 0;
+
+    config = t->opaque;
+    if (config->socket && !sockfds_initialized) {
+        init_sockets();
+        port = sockfds[1];
+    }
+    if (config->display) {
+        init_vnc();
+        vnc_client_needed = true;
+        port = vnc_port - SERVER_PORT_OFFSET;
+    }
+    if (config->byte_address) {
+        setenv("VIDEZZO_BYTE_ALIGNED_ADDRESS", "1", 1);
+    }
+    setenv("QEMU_AVOID_DOUBLE_FETCH", "1", 1);
+    if (config->argfunc) {
+        gchar *t = config->argfunc();
+        g_string_append_printf(args, t, port);
+        g_free(t);
+    } else {
+        g_assert_nonnull(config->args);
+        g_string_append_printf(args, config->args, port);
+    }
+    gchar *args_str = g_string_free(args, FALSE);
+    setenv("QEMU_FUZZ_ARGS", args_str, 1);
+    g_free(args_str);
+
+    setenv("QEMU_FUZZ_OBJECTS", config->objects, 1);
+    setenv("QEMU_FUZZ_MRNAME", config->mrnames, 1);
+    return videzzo_qemu_cmdline(t);
+}
+
 static void register_videzzo_qemu_targets(void) {
-    fuzz_add_target(&(FuzzTarget){
+    videzzo_add_fuzz_target(&(ViDeZZoFuzzTarget){
             .name = "videzzo-fuzz",
             .description = "Fuzz based on any qemu command-line args. ",
             .get_init_cmdline = videzzo_qemu_cmdline,
@@ -479,15 +527,13 @@ static void register_videzzo_qemu_targets(void) {
     GString *name;
     const videzzo_qemu_config *config;
 
-    for (int i = 0;
-         i < sizeof(predefined_configs) / sizeof(videzzo_qemu_config);
-         i++) {
+    for (int i = 0; i < sizeof(predefined_configs) / sizeof(videzzo_qemu_config); i++) {
         config = predefined_configs + i;
         if (strcmp(TARGET_NAME, config->arch) != 0)
             continue;
         name = g_string_new("videzzo-fuzz");
         g_string_append_printf(name, "-%s", config->name);
-        fuzz_add_target(&(FuzzTarget){
+        videzzo_add_fuzz_target(&(ViDeZZoFuzzTarget){
                 .name = name->str,
                 .description = "Predefined videzzo-fuzz config.",
                 .get_init_cmdline = videzzo_qemu_predefined_config_cmdline,

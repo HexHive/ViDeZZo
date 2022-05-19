@@ -1546,3 +1546,30 @@ size_t reset_data(uint8_t *Data, size_t MaxSize) {
     free_input(input);
     return Size;
 }
+
+//
+// Fuzz Target
+//
+// all targets go here
+ViDeZZoFuzzTargetList *videzzo_fuzz_target_list;
+
+// add a target to videzzo_fuzz_target_list
+// we don't want to expose a videzzo_get_fuzz_target method that is never used
+void videzzo_add_fuzz_target(ViDeZZoFuzzTarget *target) {
+    ViDeZZoFuzzTargetState *tmp;
+    ViDeZZoFuzzTargetState *target_state;
+    if (!videzzo_fuzz_target_list) {
+        videzzo_fuzz_target_list =
+            (ViDeZZoFuzzTargetList *)calloc(sizeof(ViDeZZoFuzzTargetList), 1);
+    }
+
+    LIST_FOREACH(tmp, videzzo_fuzz_target_list, target_list) {
+        if (strcmp(tmp->target->name, target->name) == 0) {
+            fprintf(stderr, "Error: Fuzz target name %s already in use\n", target->name);
+            abort();
+        }
+    }
+    target_state = (ViDeZZoFuzzTargetState *)calloc(sizeof(ViDeZZoFuzzTargetState), 1);
+    target_state->target = target;
+    LIST_INSERT_HEAD(videzzo_fuzz_target_list, target_state, target_list);
+}
