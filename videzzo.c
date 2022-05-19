@@ -7,9 +7,11 @@
  */
 
 #include "videzzo.h"
-#include <sys/types.h>
 #include <unistd.h>
+#include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/socket.h>
+#include <rfb/rfbclient.h>
 
 //
 // Reproducer
@@ -1572,4 +1574,101 @@ void videzzo_add_fuzz_target(ViDeZZoFuzzTarget *target) {
     target_state = (ViDeZZoFuzzTargetState *)calloc(sizeof(ViDeZZoFuzzTargetState), 1);
     target_state->target = target;
     LIST_INSERT_HEAD(videzzo_fuzz_target_list, target_state, target_list);
+}
+
+typedef struct videzzo_target_config {
+    const char *arch, *name, *args, *objects, *mrnames, *file;
+    gchar* (*argfunc)(void); /* Result must be freeable by g_free() */
+    bool socket; /* Need support or not */
+    bool display; /* Need support or not */
+    bool byte_address; /* Need support or not */
+} videzzo_qemu_config;
+
+// Sockets and VNC support
+static int sockfds[2];
+static bool sockfds_initialized = false;
+
+static void init_sockets(void) {
+    int ret = socketpair(PF_UNIX, SOCK_STREAM, 0, sockfds);
+    g_assert_cmpint(ret, !=, -1);
+    fcntl(sockfds[0], F_SETFL, O_NONBLOCK);
+    sockfds_initialized = true;
+}
+
+static rfbClient* client;
+static bool vnc_client_needed = false;
+static bool vnc_client_initialized = false;
+static void vnc_client_output(rfbClient* client, int x, int y, int w, int h) {}
+static int vnc_port;
+
+/*
+ * FindFreeTcpPort tries to find unused TCP port in the range
+ * (SERVER_PORT_OFFSET, SERVER_PORT_OFFSET + 99]. Returns 0 on failure.
+ */
+static int FindFreeTcpPort1(void) {
+  int sock, port;
+  struct sockaddr_in addr;
+
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+  sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock < 0) {
+    rfbClientErr(": FindFreeTcpPort: socket\n");
+    return 0;
+  }
+
+  for (port = SERVER_PORT_OFFSET + 99; port > SERVER_PORT_OFFSET; port--) {
+    addr.sin_port = htons((unsigned short)port);
+    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
+      close(sock);
+      return port;
+    }
+  }
+
+  close(sock);
+  return 0;
+}
+
+static void init_vnc(void) {
+    vnc_port = FindFreeTcpPort1();
+    if (!vnc_port) {
+        _Exit(1);
+    }
+}
+
+static int init_vnc_client(void *s) {
+    client = rfbGetClient(8, 3, 4);
+    if (fork() == 0) {
+        client->GotFrameBufferUpdate = vnc_client_output;
+        client->serverPort = vnc_port;
+        if(!rfbInitClient(client, NULL, NULL)) {
+            _Exit(1);
+        }
+        while (1) {
+            if(WaitForMessage(client, 50) < 0)
+                break;
+            if(!HandleRFBServerMessage(client))
+                break;
+        }
+        rfbClientCleanup(client);
+        _Exit(0);
+    } else {
+        flush_events(s);
+    }
+    vnc_client_initialized = true;
+    return 0;
+}
+
+static void vnc_client_receive(void) {
+    while (1) {
+        if(WaitForMessage(client, 50) < 0)
+            break;
+        if(!HandleRFBServerMessage(client))
+            break;
+    }
+}
+
+static void uninit_vnc_client(void) {
+    rfbClientCleanup(client);
 }

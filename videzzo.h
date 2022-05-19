@@ -16,6 +16,8 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <sys/queue.h>
+#include <fcntl.h>
+#include <gmodule.h>
 
 //
 // Event
@@ -94,6 +96,7 @@ uint64_t dispatch_mem_alloc(Event *event) __attribute__((weak));
 uint64_t dispatch_mem_free(Event *event) __attribute__((weak));
 
 uint64_t AroundInvalidAddress(uint64_t physaddr) __attribute__((weak));
+void flush_events(void *opaque) __attribute__((weak));
 
 enum Sizes {ViDeZZo_Empty, ViDeZZo_Byte=1, ViDeZZo_Word=2, ViDeZZo_Long=4, ViDeZZo_Quad=8};
 extern EventOps event_ops[N_EVENT_TYPES];
@@ -239,7 +242,7 @@ typedef struct ViDeZZoFuzzTarget {
      * Returns the arguments that are passed to qemu/softmmu init().
      * Freed by the caller.
      */
-    char *(*get_init_cmdline)(struct ViDeZZoFuzzTarget *);
+    GString *(*get_init_cmdline)(struct ViDeZZoFuzzTarget *);
 
     /*
      * Will run once, after a VM is initialized.

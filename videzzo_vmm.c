@@ -217,6 +217,8 @@ static int mem_index = 0;
 
 uint64_t AroundInvalidAddress(uint64_t physaddr) { return physaddr; }
 
+void flush_events(void *opaque) {};
+
 uint64_t dispatch_mem_alloc(Event *event) {
     // a small allocator
     mem_index += 1;

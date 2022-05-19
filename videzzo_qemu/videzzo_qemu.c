@@ -163,9 +163,8 @@ uint64_t dispatch_clock_step(Event *event) {
 }
 
 #define fmt_timeval "%ld.%06ld"
-void qtest_get_time(qemu_timeval *tv);
-static void printf_qtest_prefix()
-{
+extern void qtest_get_time(qemu_timeval *tv);
+static void printf_qtest_prefix() {
     qemu_timeval tv;
     qtest_get_time(&tv);
     printf("[r +" fmt_timeval "] ",
@@ -215,6 +214,17 @@ uint64_t AroundInvalidAddress(uint64_t physaddr) {
     return physaddr;
 }
 
+static uint64_t videzzo_malloc(size_t size) {
+    // alloc a dma accessible buffer in guest memory
+    return guest_alloc(qemu_alloc, size);
+}
+
+static bool videzzo_free(uint64_t addr) {
+    // free the dma accessible buffer in guest memory
+    guest_free(qemu_alloc, addr);
+    return true;
+}
+
 uint64_t dispatch_mem_alloc(Event *event) {
     QTestState *s = (QTestState *)gfctx_get_object();
     return videzzo_malloc(event->valu);
@@ -229,8 +239,7 @@ uint64_t dispatch_mem_free(Event *event) {
 // QEMU specific initialization - Set up interfaces
 //
 // enumerate PCI devices
-static inline void pci_enum(gpointer pcidev, gpointer bus)
-{
+static inline void pci_enum(gpointer pcidev, gpointer bus) {
     PCIDevice *dev = pcidev;
     QPCIDevice *qdev;
     int i;
@@ -273,8 +282,7 @@ static uint8_t get_memoryregion_addr(MemoryRegion *mr, uint64_t *addr) {
 }
 
 // insertion helper
-static int insert_qom_composition_child(Object *obj, void *opaque)
-{
+static int insert_qom_composition_child(Object *obj, void *opaque) {
     g_array_append_val(opaque, obj);
     return 0;
 }
@@ -353,6 +361,27 @@ static void locate_fuzzable_objects(Object *obj, char *mrname) {
      g_array_free(children, TRUE);
 }
 
+static QGuestAllocator *get_qemu_alloc(QTestState *qts) {
+    QOSGraphNode *node;
+    QOSGraphObject *obj;
+
+    // TARGET_NAME=i386 -> i386/pc
+    // TARGET_NAME=arm  -> arm/raspi2b
+    if (strcmp(TARGET_NAME, "i386") == 0) {
+        node = qos_graph_get_node("i386/pc");
+    } else if (strcmp(TARGET_NAME, "arm") == 0) {
+        node = qos_graph_get_node("arm/raspi2b");
+    } else {
+        g_assert(1 == 0);
+    }
+
+    g_assert(node->type == QNODE_MACHINE);
+
+    obj = qos_machine_new(node, qts);
+    qos_object_queue_destroy(obj);
+    return obj->get_driver(obj, "memory");
+}
+
 static void videzzo_qemu_pre(QTestState *s) {
     GHashTableIter iter;
     MemoryRegion *mr;
@@ -412,7 +441,7 @@ static void videzzo_qemu_pre(QTestState *s) {
         print_interfaces();
     }
 
-    videzzo_alloc = get_videzzo_alloc(s);
+    qemu_alloc = get_qemu_alloc(s);
     counter_shm_init();
 
 #ifdef CLANG_COV_DUMP
@@ -456,8 +485,7 @@ size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size,
 //
 // QEMU specific initialization - Register all targets
 //
-static GString *videzzo_qemu_cmdline(ViDeZZoFuzzTarget *t)
-{
+static GString *videzzo_qemu_cmdline(ViDeZZoFuzzTarget *t) {
     GString *cmd_line = g_string_new(TARGET_NAME);
     if (!getenv("QEMU_FUZZ_ARGS")) {
         usage();
@@ -468,8 +496,7 @@ static GString *videzzo_qemu_cmdline(ViDeZZoFuzzTarget *t)
     return cmd_line;
 }
 
-static GString *videzzo_qemu_predefined_config_cmdline(ViDeZZoFuzzTarget *t)
-{
+static GString *videzzo_qemu_predefined_config_cmdline(ViDeZZoFuzzTarget *t) {
     GString *args = g_string_new(NULL);
     const videzzo_qemu_config *config;
     g_assert(t->opaque);

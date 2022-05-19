@@ -7,7 +7,8 @@
 #
 
 SANITIZERS = -fsanitize=address,undefined
-CFLAGS ?= -g -fPIE -fno-omit-frame-pointer -fno-optimize-sibling-calls
+CFLAGS ?= -g -fPIE -fno-omit-frame-pointer -fno-optimize-sibling-calls \
+		  -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include
 
 videzzo-merge:
 	clang ${CFLAGS} -o videzzo-merge merge.c videzzo.c
