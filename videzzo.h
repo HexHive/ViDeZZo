@@ -68,7 +68,6 @@ typedef struct Event {
     struct Event *next;                 /* event linker */
 } Event;
 
-// TODO make struct EventOps a field in struct Event
 typedef struct EventOps {
     void (*change_addr)(Event *event, uint64_t new_addr);
     uint32_t (*change_size)(Event *event, uint32_t new_size); // return real size
@@ -94,13 +93,12 @@ uint64_t dispatch_clock_step(Event *event) __attribute__((weak));
 uint64_t dispatch_socket_write(Event *event) __attribute__((weak));
 uint64_t dispatch_mem_alloc(Event *event) __attribute__((weak));
 uint64_t dispatch_mem_free(Event *event) __attribute__((weak));
-
 uint64_t AroundInvalidAddress(uint64_t physaddr) __attribute__((weak));
 void flush_events(void *opaque) __attribute__((weak));
 
 enum Sizes {ViDeZZo_Empty, ViDeZZo_Byte=1, ViDeZZo_Word=2, ViDeZZo_Long=4, ViDeZZo_Quad=8};
 extern EventOps event_ops[N_EVENT_TYPES];
-void videzzo_dispatch_event(Event *event);
+extern void videzzo_dispatch_event(Event *event);
 
 //
 // Input
@@ -165,7 +163,7 @@ typedef struct {
 // extern InterfaceDescription Id_Description[INTERFACE_END];
 // extern uint32_t n_interfaces;
 void add_interface(EventType type, uint64_t addr, uint32_t size,
-        char *name, uint8_t min_access_size, uint8_t max_access_size, bool dynamic);
+        const char *name, uint8_t min_access_size, uint8_t max_access_size, bool dynamic);
 int get_number_of_interfaces(void);
 void print_interfaces(void);
 //
@@ -228,52 +226,64 @@ size_t LLVMFuzzerCustomMutator(
 //
 // Reproduce
 //
-void videzzo_set_merge();
-void videzzo_clear_merge();
+void videzzo_set_merge(void);
+void videzzo_clear_merge(void);
 
 //
 // Fuzz Targets
 //
-typedef struct ViDeZZoFuzzTarget {
-    const char *name;         /* target identifier (passed to --fuzz-target=)*/
-    const char *description;  /* help text */
+typedef struct ViDeZZoFuzzTargetConfig {
+    // Group 1: basic information
+    const char *arch, *name, *args, *file;
+    // Group 2: virtual device specific
+    const char *mrnames;
+    bool byte_address;                      /* Support byte address or not */
+    // Group 3: multiple input controls
+    bool socket;                            /* Support socket or not */
+    bool display;                           /* Support display or not */
+} ViDeZZoFuzzTargetConfig;
 
-    /*
-     * Returns the arguments that are passed to qemu/softmmu init().
-     * Freed by the caller.
-     */
+typedef struct ViDeZZoFuzzTarget {
+    const char *name;                       /* target identifier (passed to --fuzz-target=) */
+    const char *description;                /* help text */
+
+    // Returns the arguments that are passed to qemu/softmmu init().
+    // Freed by the caller.
     GString *(*get_init_cmdline)(struct ViDeZZoFuzzTarget *);
 
-    /*
-     * Will run once, after a VM is initialized.
-     * Eg: set up shared-memory for communication with the child-process.
-     * Can be NULL.
-     */
+    // Will run once, after a VM is initialized.
+    // Can be NULL.
     void(*pre_vm_init)(void);
 
-    /*
-     * Will run once, after a VM has been initialized, prior to the fuzz-loop.
-     * Eg: detect the memory map.
-     * Can be NULL.
-     */
+    // Will run once, after a VM has been initialized, prior to the fuzz-loop.
     void(*pre_fuzz)(void *opaque);
 
-    /*
-     * This is repeatedly executed during the fuzzing loop.
-     * This accepts and executes an input from libfuzzer. Its should handle
-     * setup, input execution and cleanup.
-     * Cannot be NULL.
-     */
-    void(*fuzz)(void *opaque, const unsigned char *, size_t);
-
-    void *opaque;
+    // This is repeatedly executed during the fuzzing loop.
+    // Its should handle setup, input execution and cleanup.
+    // Cannot be NULL.
+    void(*fuzz)(void *opaque, unsigned char *, size_t);
+    void *opaque;                           /* ViDeZZoFuzzTargetConfig */
 } ViDeZZoFuzzTarget;
 
+// all fuzz targets go here
 typedef struct ViDeZZoFuzzTargetState {
     ViDeZZoFuzzTarget *target;
     LIST_ENTRY(ViDeZZoFuzzTargetState) target_list;
 } ViDeZZoFuzzTargetState;
 
 typedef LIST_HEAD(, ViDeZZoFuzzTargetState) ViDeZZoFuzzTargetList;
+extern void videzzo_add_fuzz_target(ViDeZZoFuzzTarget *target);
+
+//
+// Sockets
+//
+extern void init_sockets(int sockfds[]);
+
+//
+// VNC
+//
+extern int init_vnc(void);
+extern int init_vnc_client(void *s, int vnc_port);
+extern int remove_offset_from_vnc_port(int vnc_port);
 
 #endif /* VIDEZZO_H */

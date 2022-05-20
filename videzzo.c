@@ -259,7 +259,7 @@ int get_number_of_interfaces(void) {
 }
 
 void add_interface(EventType type, uint64_t addr, uint32_t size,
-        char *name, uint8_t min_access_size, uint8_t max_access_size, bool dynamic) {
+        const char *name, uint8_t min_access_size, uint8_t max_access_size, bool dynamic) {
     if (min_access_size == 0 && max_access_size == 0) {
         fprintf(stderr, "\n- %s has zero size!!! Won\'t add this\n", name);
         return;
@@ -1561,45 +1561,39 @@ void videzzo_add_fuzz_target(ViDeZZoFuzzTarget *target) {
     ViDeZZoFuzzTargetState *tmp;
     ViDeZZoFuzzTargetState *target_state;
     if (!videzzo_fuzz_target_list) {
-        videzzo_fuzz_target_list =
-            (ViDeZZoFuzzTargetList *)calloc(sizeof(ViDeZZoFuzzTargetList), 1);
+        videzzo_fuzz_target_list = g_new0(ViDeZZoFuzzTargetList, 1);
     }
 
     LIST_FOREACH(tmp, videzzo_fuzz_target_list, target_list) {
-        if (strcmp(tmp->target->name, target->name) == 0) {
+        if (g_strcmp0(tmp->target->name, target->name) == 0) {
             fprintf(stderr, "Error: Fuzz target name %s already in use\n", target->name);
             abort();
         }
     }
-    target_state = (ViDeZZoFuzzTargetState *)calloc(sizeof(ViDeZZoFuzzTargetState), 1);
-    target_state->target = target;
+    target_state = g_new0(ViDeZZoFuzzTargetState, 1);
+    target_state->target = g_new0(ViDeZZoFuzzTarget, 1);
+    *(target_state->target) = *target;
     LIST_INSERT_HEAD(videzzo_fuzz_target_list, target_state, target_list);
 }
 
-typedef struct videzzo_target_config {
-    const char *arch, *name, *args, *objects, *mrnames, *file;
-    gchar* (*argfunc)(void); /* Result must be freeable by g_free() */
-    bool socket; /* Need support or not */
-    bool display; /* Need support or not */
-    bool byte_address; /* Need support or not */
-} videzzo_qemu_config;
-
-// Sockets and VNC support
-static int sockfds[2];
-static bool sockfds_initialized = false;
-
-static void init_sockets(void) {
+//
+// Sockets
+//
+void init_sockets(int sockfds[]) {
     int ret = socketpair(PF_UNIX, SOCK_STREAM, 0, sockfds);
     g_assert_cmpint(ret, !=, -1);
     fcntl(sockfds[0], F_SETFL, O_NONBLOCK);
-    sockfds_initialized = true;
 }
 
+//
+// VNC
+//
 static rfbClient* client;
-static bool vnc_client_needed = false;
-static bool vnc_client_initialized = false;
 static void vnc_client_output(rfbClient* client, int x, int y, int w, int h) {}
-static int vnc_port;
+
+int remove_offset_from_vnc_port(int vnc_port) {
+    return vnc_port - SERVER_PORT_OFFSET;
+}
 
 /*
  * FindFreeTcpPort tries to find unused TCP port in the range
@@ -1630,14 +1624,15 @@ static int FindFreeTcpPort1(void) {
   return 0;
 }
 
-static void init_vnc(void) {
-    vnc_port = FindFreeTcpPort1();
+int init_vnc(void) {
+    int vnc_port = FindFreeTcpPort1();
     if (!vnc_port) {
         _Exit(1);
     }
+    return vnc_port;
 }
 
-static int init_vnc_client(void *s) {
+int init_vnc_client(void *s, int vnc_port) {
     client = rfbGetClient(8, 3, 4);
     if (fork() == 0) {
         client->GotFrameBufferUpdate = vnc_client_output;
@@ -1656,7 +1651,6 @@ static int init_vnc_client(void *s) {
     } else {
         flush_events(s);
     }
-    vnc_client_initialized = true;
     return 0;
 }
 
