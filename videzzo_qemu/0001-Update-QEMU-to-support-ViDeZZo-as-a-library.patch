@@ -1,58 +1,23 @@
-From ddf5e0b978ab46c0bf50f2b67c54adbb1a952f8c Mon Sep 17 00:00:00 2001
+From fca8ea325b3535368358073331b5dcfb839fb9e7 Mon Sep 17 00:00:00 2001
 From: Qiang Liu <cyruscyliu@gmail.com>
 Date: Tue, 18 Jan 2022 10:16:17 +0100
 Subject: [PATCH] Update QEMU to support ViDeZZo as a library
 
 Signed-off-by: Qiang Liu <cyruscyliu@gmail.com>
 ---
- configure                                |  8 ++++++++
- include/qemu/osdep.h                     |  9 ++++++++
- meson.build                              |  6 ++++--
- softmmu/qtest.c                          |  2 +-
- tests/qtest/fuzz/fuzz.c                  |  2 +-
- tests/qtest/fuzz/generic_fuzz.c          |  2 +-
- tests/qtest/fuzz/i440fx_fuzz.c           |  2 +-
- tests/qtest/fuzz/less_crashes_wrappers.c | 26 ++++++++++++++++++++++++
- tests/qtest/fuzz/meson.build             |  8 ++++++--
- tests/qtest/fuzz/virtio_blk_fuzz.c       |  2 +-
- tests/qtest/fuzz/virtio_net_fuzz.c       |  2 +-
- tests/qtest/fuzz/virtio_scsi_fuzz.c      |  2 +-
- 12 files changed, 60 insertions(+), 11 deletions(-)
- create mode 100644 tests/qtest/fuzz/less_crashes_wrappers.c
+ include/qemu/osdep.h                        |   9 +
+ meson.build                                 |  17 ++
+ meson_options.txt                           |   2 +
+ scripts/meson-buildoptions.sh               |   5 +-
+ softmmu/qtest.c                             |   2 +-
+ tests/qtest/videzzo/less_crashes_wrappers.c |  26 ++
+ tests/qtest/videzzo/meson.build             |  47 ++++
+ tests/qtest/videzzo/qtest_wrappers.c        | 252 ++++++++++++++++++++
+ 8 files changed, 358 insertions(+), 2 deletions(-)
+ create mode 100644 tests/qtest/videzzo/less_crashes_wrappers.c
+ create mode 100644 tests/qtest/videzzo/meson.build
+ create mode 100644 tests/qtest/videzzo/qtest_wrappers.c
 
-diff --git a/configure b/configure
-index 8860003..eb9f32a 100755
---- a/configure
-+++ b/configure
-@@ -304,6 +304,7 @@ sanitizers="no"
- tsan="no"
- fortify_source="$default_feature"
- gcov="no"
-+videzzo="no"
- EXESUF=""
- modules="no"
- module_upgrades="no"
-@@ -800,6 +801,8 @@ for opt do
-   ;;
-   --enable-gcov) gcov="yes"
-   ;;
-+  --enable-videzzo) videzzo="yes"
-+  ;;
-   --static)
-     static="yes"
-     QEMU_PKG_CONFIG_FLAGS="--static $QEMU_PKG_CONFIG_FLAGS"
-@@ -2658,6 +2661,11 @@ elif test "$fortify_source" = "yes" ; then
-   debug=no
- fi
- 
-+if test "$videzzo" = "yes" ; then
-+  QEMU_CFLAGS="-videzzo-instrumentation=$source_path/videzzo_qemu_types.yaml -flegacy-pass-manager $QEMU_CFLAGS"
-+  QEMU_LDFLAGS="-L$source_path/tests/qtest/fuzz -lvidezzo"
-+fi
-+
- case "$ARCH" in
- alpha)
-   # Ensure there's only a single GP
 diff --git a/include/qemu/osdep.h b/include/qemu/osdep.h
 index c9ec783..319d2c1 100644
 --- a/include/qemu/osdep.h
@@ -74,22 +39,111 @@ index c9ec783..319d2c1 100644
  #define O_LARGEFILE 0
  #endif
 diff --git a/meson.build b/meson.build
-index 2d66014..d5e3faf 100644
+index 2d66014..e247a6c 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -262,8 +262,10 @@ if get_option('fuzzing') and get_option('fuzzing_engine') == '' and \
+@@ -181,6 +181,11 @@ if get_option('gprof')
+   qemu_ldflags += ['-p']
+ endif
+ 
++if get_option('videzzo')
++  qemu_cflags += ['-videzzo-instrumentation=' + (meson.current_source_dir() / 'videzzo_qemu_types.yaml')]
++  qemu_cflags += ['-flegacy-pass-manager']
++endif
++
+ # Specify linker-script with add_project_link_arguments so that it is not placed
+ # within a linker --start-group/--end-group pair
+ if get_option('fuzzing')
+@@ -259,6 +264,7 @@ endif
+ 
+ # Fuzzing
+ if get_option('fuzzing') and get_option('fuzzing_engine') == '' and \
++    not get_option('videzzo') and \
      not cc.links('''
            #include <stdint.h>
            #include <sys/types.h>
--          int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size);
--          int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) { return 0; }
-+          void enable_group_miss_mutator(void) {}
-+          void disable_group_miss_mutator(void) {}
-+          int __LLVMFuzzerTestOneInput(uint8_t *Data, size_t Size);
-+          int __LLVMFuzzerTestOneInput(uint8_t *Data, size_t Size) { return 0; }
-         ''',
-         args: ['-Werror', '-fsanitize=fuzzer'])
-   error('Your compiler does not support -fsanitize=fuzzer')
+@@ -2595,6 +2601,7 @@ qmp_ss = ss.source_set()
+ qom_ss = ss.source_set()
+ softmmu_ss = ss.source_set()
+ specific_fuzz_ss = ss.source_set()
++videzzo_fuzz_ss = ss.source_set()
+ specific_ss = ss.source_set()
+ stub_ss = ss.source_set()
+ trace_ss = ss.source_set()
+@@ -2850,6 +2857,7 @@ subdir('linux-user')
+ # needed for fuzzing binaries
+ subdir('tests/qtest/libqos')
+ subdir('tests/qtest/fuzz')
++subdir('tests/qtest/videzzo')
+ 
+ # accel modules
+ tcg_real_module_ss = ss.source_set()
+@@ -3193,6 +3201,15 @@ foreach target : target_dirs
+         'dependencies': specific_fuzz.dependencies(),
+       }]
+     endif
++    if get_option('fuzzing')
++      videzzo_fuzz = videzzo_fuzz_ss.apply(config_target, strict: false)
++      execs += [{
++        'name': 'qemu-videzzo-' + target_name,
++        'win_subsystem': 'console',
++        'sources': videzzo_fuzz.sources(),
++        'dependencies': videzzo_fuzz.dependencies(),
++      }]
++    endif
+   else
+     execs = [{
+       'name': 'qemu-' + target_name,
+diff --git a/meson_options.txt b/meson_options.txt
+index 52b11ce..8b04f40 100644
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -32,6 +32,8 @@ option('docs', type : 'feature', value : 'auto',
+        description: 'Documentations build support')
+ option('fuzzing', type : 'boolean', value: false,
+        description: 'build fuzzing targets')
++option('videzzo', type : 'boolean', value: false,
++       description: 'build videzzo targets')
+ option('gettext', type : 'feature', value : 'auto',
+        description: 'Localization of the GTK+ user interface')
+ option('install_blobs', type : 'boolean', value : true,
+diff --git a/scripts/meson-buildoptions.sh b/scripts/meson-buildoptions.sh
+index 9ee684e..57fd337 100644
+--- a/scripts/meson-buildoptions.sh
++++ b/scripts/meson-buildoptions.sh
+@@ -20,7 +20,6 @@ meson_options_help() {
+   printf "%s\n" '  --enable-malloc=CHOICE   choose memory allocator to use [system] (choices:'
+   printf "%s\n" '                           jemalloc/system/tcmalloc)'
+   printf "%s\n" '  --enable-profiler        profiler support'
+-  printf "%s\n" '  --enable-qga-vss         build QGA VSS support'
+   printf "%s\n" '  --enable-qom-cast-debug  cast debugging support'
+   printf "%s\n" '  --enable-rng-none        dummy RNG, avoid using /dev/(u)random and'
+   printf "%s\n" '                           getrandom()'
+@@ -31,6 +30,7 @@ meson_options_help() {
+   printf "%s\n" '  --enable-trace-backends=CHOICE'
+   printf "%s\n" '                           Set available tracing backends [log] (choices:'
+   printf "%s\n" '                           dtrace/ftrace/log/nop/simple/syslog/ust)'
++  printf "%s\n" '  --enable-videzzo         build videzzo targets'
+   printf "%s\n" ''
+   printf "%s\n" 'Optional features, enabled with --enable-FEATURE and'
+   printf "%s\n" 'disabled with --disable-FEATURE, default is enabled if available'
+@@ -97,6 +97,7 @@ meson_options_help() {
+   printf "%s\n" '  parallels       parallels image format support'
+   printf "%s\n" '  qcow1           qcow1 image format support'
+   printf "%s\n" '  qed             qed image format support'
++  printf "%s\n" '  qga-vss         build QGA VSS support (broken with MinGW)'
+   printf "%s\n" '  rbd             Ceph block device driver'
+   printf "%s\n" '  replication     replication support'
+   printf "%s\n" '  sdl             SDL user interface'
+@@ -337,6 +338,8 @@ _meson_option_parse() {
+     --disable-vdi) printf "%s" -Dvdi=disabled ;;
+     --enable-vhost-user-blk-server) printf "%s" -Dvhost_user_blk_server=enabled ;;
+     --disable-vhost-user-blk-server) printf "%s" -Dvhost_user_blk_server=disabled ;;
++    --enable-videzzo) printf "%s" -Dvidezzo=true ;;
++    --disable-videzzo) printf "%s" -Dvidezzo=false ;;
+     --enable-virglrenderer) printf "%s" -Dvirglrenderer=enabled ;;
+     --disable-virglrenderer) printf "%s" -Dvirglrenderer=disabled ;;
+     --enable-virtfs) printf "%s" -Dvirtfs=enabled ;;
 diff --git a/softmmu/qtest.c b/softmmu/qtest.c
 index 8b7cb6a..c5232d6 100644
 --- a/softmmu/qtest.c
@@ -103,44 +157,11 @@ index 8b7cb6a..c5232d6 100644
  {
      qemu_gettimeofday(tv);
      tv->tv_sec -= start_time.tv_sec;
-diff --git a/tests/qtest/fuzz/fuzz.c b/tests/qtest/fuzz/fuzz.c
-index 5f77c84..63b8c71 100644
---- a/tests/qtest/fuzz/fuzz.c
-+++ b/tests/qtest/fuzz/fuzz.c
-@@ -133,7 +133,7 @@ size_t LLVMFuzzerCustomCrossOver(const uint8_t *data1, size_t size1,
- }
- 
- /* Executed for each fuzzing-input */
--int LLVMFuzzerTestOneInput(const unsigned char *Data, size_t Size)
-+int __LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size)
- {
-     /*
-      * Do the pre-fuzz-initialization before the first fuzzing iteration,
-diff --git a/tests/qtest/fuzz/generic_fuzz.c b/tests/qtest/fuzz/generic_fuzz.c
-index dd7e258..31f6d57 100644
---- a/tests/qtest/fuzz/generic_fuzz.c
-+++ b/tests/qtest/fuzz/generic_fuzz.c
-@@ -1040,4 +1040,4 @@ static void register_generic_fuzz_targets(void)
-     }
- }
- 
--fuzz_target_init(register_generic_fuzz_targets);
-+// fuzz_target_init(register_generic_fuzz_targets);
-diff --git a/tests/qtest/fuzz/i440fx_fuzz.c b/tests/qtest/fuzz/i440fx_fuzz.c
-index 86796bf..8bf6bd6 100644
---- a/tests/qtest/fuzz/i440fx_fuzz.c
-+++ b/tests/qtest/fuzz/i440fx_fuzz.c
-@@ -204,4 +204,4 @@ static void register_pci_fuzz_targets(void)
-                 );
- }
- 
--fuzz_target_init(register_pci_fuzz_targets);
-+// fuzz_target_init(register_pci_fuzz_targets);
-diff --git a/tests/qtest/fuzz/less_crashes_wrappers.c b/tests/qtest/fuzz/less_crashes_wrappers.c
+diff --git a/tests/qtest/videzzo/less_crashes_wrappers.c b/tests/qtest/videzzo/less_crashes_wrappers.c
 new file mode 100644
 index 0000000..faf775e
 --- /dev/null
-+++ b/tests/qtest/fuzz/less_crashes_wrappers.c
++++ b/tests/qtest/videzzo/less_crashes_wrappers.c
 @@ -0,0 +1,26 @@
 +/*
 + * Stateful Virtual-Device Fuzzing Less Crashes Wrapper
@@ -168,69 +189,317 @@ index 0000000..faf775e
 +    return __real_abort();
 +#endif
 +}
-diff --git a/tests/qtest/fuzz/meson.build b/tests/qtest/fuzz/meson.build
-index 189901d..ebbbe71 100644
---- a/tests/qtest/fuzz/meson.build
-+++ b/tests/qtest/fuzz/meson.build
-@@ -3,7 +3,7 @@ if not get_option('fuzzing')
- endif
- 
- specific_fuzz_ss.add(files('fuzz.c', 'fork_fuzz.c', 'qos_fuzz.c',
--                           'qtest_wrappers.c'), qos)
-+                           'qtest_wrappers.c', 'less_crashes_wrappers.c'), qos)
- 
- # Targets
- specific_fuzz_ss.add(when: 'CONFIG_I440FX', if_true: files('i440fx_fuzz.c'))
-@@ -11,6 +11,9 @@ specific_fuzz_ss.add(when: 'CONFIG_VIRTIO_NET', if_true: files('virtio_net_fuzz.
- specific_fuzz_ss.add(when: 'CONFIG_VIRTIO_SCSI', if_true: files('virtio_scsi_fuzz.c'))
- specific_fuzz_ss.add(when: 'CONFIG_VIRTIO_BLK', if_true: files('virtio_blk_fuzz.c'))
- specific_fuzz_ss.add(files('generic_fuzz.c'))
-+specific_fuzz_ss.add(files('videzzo_qemu.c'))
-+vnc_client = declare_dependency(link_args: fuzz_exe_ldflags + ['-lvncclient'])
-+specific_fuzz_ss.add(vnc_client)
- 
- fork_fuzz = declare_dependency(
-   link_args: fuzz_exe_ldflags +
-@@ -32,7 +35,8 @@ fork_fuzz = declare_dependency(
-               '-Wl,-wrap,qtest_bufread',
-               '-Wl,-wrap,qtest_memwrite',
-               '-Wl,-wrap,qtest_bufwrite',
--              '-Wl,-wrap,qtest_memset']
+diff --git a/tests/qtest/videzzo/meson.build b/tests/qtest/videzzo/meson.build
+new file mode 100644
+index 0000000..6689cb1
+--- /dev/null
++++ b/tests/qtest/videzzo/meson.build
+@@ -0,0 +1,47 @@
++if not get_option('videzzo')
++  subdir_done()
++endif
++
++videzzo_fuzz_ss.add(files('qtest_wrappers.c', 'less_crashes_wrappers.c'), qos)
++
++# Targets
++videzzo_fuzz_ss.add(files('videzzo_qemu.c'))
++
++# Dependencies
++videzzo_fuzz_ss.add(declare_dependency(
++  link_args: fuzz_exe_ldflags +
++             ['-L' + (meson.current_source_dir() / 'libvidezzo.a')])
++)
++
++videzzo_fuzz_ss.add(declare_dependency(
++  link_args: fuzz_exe_ldflags + ['lvncclient'])
++)
++
++videzzo_wrap = declare_dependency(
++  link_args: fuzz_exe_ldflags +
++             ['-Wl,-wrap,qtest_inb',
++              '-Wl,-wrap,qtest_inw',
++              '-Wl,-wrap,qtest_inl',
++              '-Wl,-wrap,qtest_outb',
++              '-Wl,-wrap,qtest_outw',
++              '-Wl,-wrap,qtest_outl',
++              '-Wl,-wrap,qtest_readb',
++              '-Wl,-wrap,qtest_readw',
++              '-Wl,-wrap,qtest_readl',
++              '-Wl,-wrap,qtest_readq',
++              '-Wl,-wrap,qtest_writeb',
++              '-Wl,-wrap,qtest_writew',
++              '-Wl,-wrap,qtest_writel',
++              '-Wl,-wrap,qtest_writeq',
++              '-Wl,-wrap,qtest_memread',
++              '-Wl,-wrap,qtest_bufread',
++              '-Wl,-wrap,qtest_memwrite',
++              '-Wl,-wrap,qtest_bufwrite',
 +              '-Wl,-wrap,qtest_memset',
 +              '-Wl,-wrap,abort']
- )
- 
- specific_fuzz_ss.add(fork_fuzz)
-diff --git a/tests/qtest/fuzz/virtio_blk_fuzz.c b/tests/qtest/fuzz/virtio_blk_fuzz.c
-index 623a756..0fab87f 100644
---- a/tests/qtest/fuzz/virtio_blk_fuzz.c
-+++ b/tests/qtest/fuzz/virtio_blk_fuzz.c
-@@ -231,4 +231,4 @@ static void register_virtio_blk_fuzz_targets(void)
-                 );
- }
- 
--fuzz_target_init(register_virtio_blk_fuzz_targets);
-+// fuzz_target_init(register_virtio_blk_fuzz_targets);
-diff --git a/tests/qtest/fuzz/virtio_net_fuzz.c b/tests/qtest/fuzz/virtio_net_fuzz.c
-index 0e873ab..a3dfdfb 100644
---- a/tests/qtest/fuzz/virtio_net_fuzz.c
-+++ b/tests/qtest/fuzz/virtio_net_fuzz.c
-@@ -198,4 +198,4 @@ static void register_virtio_net_fuzz_targets(void)
-             );
- }
- 
--fuzz_target_init(register_virtio_net_fuzz_targets);
-+// fuzz_target_init(register_virtio_net_fuzz_targets);
-diff --git a/tests/qtest/fuzz/virtio_scsi_fuzz.c b/tests/qtest/fuzz/virtio_scsi_fuzz.c
-index 6ff6fab..7e032f2 100644
---- a/tests/qtest/fuzz/virtio_scsi_fuzz.c
-+++ b/tests/qtest/fuzz/virtio_scsi_fuzz.c
-@@ -212,4 +212,4 @@ static void register_virtio_scsi_fuzz_targets(void)
-                 );
- }
- 
--fuzz_target_init(register_virtio_scsi_fuzz_targets);
-+// fuzz_target_init(register_virtio_scsi_fuzz_targets);
++)
++videzzo_fuzz_ss.add(videzzo_wrap)
++
++videzzo_fuzz_ss.add(declare_dependency(
++  link_args: fuzz_exe_ldflags + ['lvncclient'])
++)
+diff --git a/tests/qtest/videzzo/qtest_wrappers.c b/tests/qtest/videzzo/qtest_wrappers.c
+new file mode 100644
+index 0000000..0580f8d
+--- /dev/null
++++ b/tests/qtest/videzzo/qtest_wrappers.c
+@@ -0,0 +1,252 @@
++/*
++ * qtest function wrappers
++ *
++ * Copyright Red Hat Inc., 2019
++ *
++ * Authors:
++ *  Alexander Bulekov   <alxndr@bu.edu>
++ *
++ * This work is licensed under the terms of the GNU GPL, version 2 or later.
++ * See the COPYING file in the top-level directory.
++ *
++ */
++
++#include "qemu/osdep.h"
++#include "hw/core/cpu.h"
++#include "exec/ioport.h"
++
++#include "fuzz.h"
++
++static bool serialize = true;
++
++#define WRAP(RET_TYPE, NAME_AND_ARGS)\
++    RET_TYPE __wrap_##NAME_AND_ARGS;\
++    RET_TYPE __real_##NAME_AND_ARGS;
++
++WRAP(uint8_t  , qtest_inb(QTestState *s, uint16_t addr))
++WRAP(uint16_t , qtest_inw(QTestState *s, uint16_t addr))
++WRAP(uint32_t , qtest_inl(QTestState *s, uint16_t addr))
++WRAP(void     , qtest_outb(QTestState *s, uint16_t addr, uint8_t value))
++WRAP(void     , qtest_outw(QTestState *s, uint16_t addr, uint16_t value))
++WRAP(void     , qtest_outl(QTestState *s, uint16_t addr, uint32_t value))
++WRAP(uint8_t  , qtest_readb(QTestState *s, uint64_t addr))
++WRAP(uint16_t , qtest_readw(QTestState *s, uint64_t addr))
++WRAP(uint32_t , qtest_readl(QTestState *s, uint64_t addr))
++WRAP(uint64_t , qtest_readq(QTestState *s, uint64_t addr))
++WRAP(void     , qtest_writeb(QTestState *s, uint64_t addr, uint8_t value))
++WRAP(void     , qtest_writew(QTestState *s, uint64_t addr, uint16_t value))
++WRAP(void     , qtest_writel(QTestState *s, uint64_t addr, uint32_t value))
++WRAP(void     , qtest_writeq(QTestState *s, uint64_t addr, uint64_t value))
++WRAP(void     , qtest_memread(QTestState *s, uint64_t addr,
++                              void *data, size_t size))
++WRAP(void     , qtest_bufread(QTestState *s, uint64_t addr, void *data,
++                              size_t size))
++WRAP(void     , qtest_memwrite(QTestState *s, uint64_t addr, const void *data,
++                               size_t size))
++WRAP(void,      qtest_bufwrite(QTestState *s, uint64_t addr,
++                               const void *data, size_t size))
++WRAP(void,      qtest_memset(QTestState *s, uint64_t addr,
++                             uint8_t patt, size_t size))
++
++
++uint8_t __wrap_qtest_inb(QTestState *s, uint16_t addr)
++{
++    if (!serialize) {
++        return cpu_inb(addr);
++    } else {
++        return __real_qtest_inb(s, addr);
++    }
++}
++
++uint16_t __wrap_qtest_inw(QTestState *s, uint16_t addr)
++{
++    if (!serialize) {
++        return cpu_inw(addr);
++    } else {
++        return __real_qtest_inw(s, addr);
++    }
++}
++
++uint32_t __wrap_qtest_inl(QTestState *s, uint16_t addr)
++{
++    if (!serialize) {
++        return cpu_inl(addr);
++    } else {
++        return __real_qtest_inl(s, addr);
++    }
++}
++
++void __wrap_qtest_outb(QTestState *s, uint16_t addr, uint8_t value)
++{
++    if (!serialize) {
++        cpu_outb(addr, value);
++    } else {
++        __real_qtest_outb(s, addr, value);
++    }
++}
++
++void __wrap_qtest_outw(QTestState *s, uint16_t addr, uint16_t value)
++{
++    if (!serialize) {
++        cpu_outw(addr, value);
++    } else {
++        __real_qtest_outw(s, addr, value);
++    }
++}
++
++void __wrap_qtest_outl(QTestState *s, uint16_t addr, uint32_t value)
++{
++    if (!serialize) {
++        cpu_outl(addr, value);
++    } else {
++        __real_qtest_outl(s, addr, value);
++    }
++}
++
++uint8_t __wrap_qtest_readb(QTestState *s, uint64_t addr)
++{
++    uint8_t value;
++    if (!serialize) {
++        address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED,
++                            &value, 1);
++        return value;
++    } else {
++        return __real_qtest_readb(s, addr);
++    }
++}
++
++uint16_t __wrap_qtest_readw(QTestState *s, uint64_t addr)
++{
++    uint16_t value;
++    if (!serialize) {
++        address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED,
++                            &value, 2);
++        return value;
++    } else {
++        return __real_qtest_readw(s, addr);
++    }
++}
++
++uint32_t __wrap_qtest_readl(QTestState *s, uint64_t addr)
++{
++    uint32_t value;
++    if (!serialize) {
++        address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED,
++                            &value, 4);
++        return value;
++    } else {
++        return __real_qtest_readl(s, addr);
++    }
++}
++
++uint64_t __wrap_qtest_readq(QTestState *s, uint64_t addr)
++{
++    uint64_t value;
++    if (!serialize) {
++        address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED,
++                            &value, 8);
++        return value;
++    } else {
++        return __real_qtest_readq(s, addr);
++    }
++}
++
++void __wrap_qtest_writeb(QTestState *s, uint64_t addr, uint8_t value)
++{
++    if (!serialize) {
++        address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED,
++                            &value, 1);
++    } else {
++        __real_qtest_writeb(s, addr, value);
++    }
++}
++
++void __wrap_qtest_writew(QTestState *s, uint64_t addr, uint16_t value)
++{
++    if (!serialize) {
++        address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED,
++                            &value, 2);
++    } else {
++        __real_qtest_writew(s, addr, value);
++    }
++}
++
++void __wrap_qtest_writel(QTestState *s, uint64_t addr, uint32_t value)
++{
++    if (!serialize) {
++        address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED,
++                            &value, 4);
++    } else {
++        __real_qtest_writel(s, addr, value);
++    }
++}
++
++void __wrap_qtest_writeq(QTestState *s, uint64_t addr, uint64_t value)
++{
++    if (!serialize) {
++        address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED,
++                            &value, 8);
++    } else {
++        __real_qtest_writeq(s, addr, value);
++    }
++}
++
++void __wrap_qtest_memread(QTestState *s, uint64_t addr, void *data, size_t size)
++{
++    if (!serialize) {
++        address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, data,
++                           size);
++    } else {
++        __real_qtest_memread(s, addr, data, size);
++    }
++}
++
++void __wrap_qtest_bufread(QTestState *s, uint64_t addr, void *data, size_t size)
++{
++    if (!serialize) {
++        address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, data,
++                           size);
++    } else {
++        __real_qtest_bufread(s, addr, data, size);
++    }
++}
++
++void __wrap_qtest_memwrite(QTestState *s, uint64_t addr, const void *data,
++                           size_t size)
++{
++    if (!serialize) {
++        address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED,
++                            data, size);
++    } else {
++        __real_qtest_memwrite(s, addr, data, size);
++    }
++}
++
++void __wrap_qtest_bufwrite(QTestState *s, uint64_t addr,
++                    const void *data, size_t size)
++{
++    if (!serialize) {
++        address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED,
++                            data, size);
++    } else {
++        __real_qtest_bufwrite(s, addr, data, size);
++    }
++}
++void __wrap_qtest_memset(QTestState *s, uint64_t addr,
++                         uint8_t patt, size_t size)
++{
++    void *data;
++    if (!serialize) {
++        data = malloc(size);
++        memset(data, patt, size);
++        address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED,
++                            data, size);
++    } else {
++        __real_qtest_memset(s, addr, patt, size);
++    }
++}
++
++void fuzz_qtest_set_serialize(bool option)
++{
++    serialize = option;
++}
 -- 
 2.17.1
 

@@ -7,6 +7,6 @@ CC=clang CXX=clang++ ../configure \
     --enable-videzzo --enable-fuzzing --enable-debug \
     --disable-werror --enable-sanitizers \
     --target-list="i386-softmmu arm-softmmu"
-ninja qemu-fuzz-i386 qemu-fuzz-arm
+ninja qemu-videzzo-i386 qemu-videzzo-arm
 popd
 popd

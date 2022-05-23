@@ -1,6 +1,6 @@
 #!/bin/bash
 
-target=qemu/tests/qtest/fuzz
+target=qemu/tests/qtest/videzzo
 cp ../clangcovdump.h $target/
 cp ../videzzo.h $target/
 cp ../libvidezzo.a $target/
