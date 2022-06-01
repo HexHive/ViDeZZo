@@ -25,7 +25,12 @@
 #include "exec/ioport.h"
 #include "tests/qtest/libqos/pci-pc.h"
 #include "tests/qtest/libqos/qos_external.h"
+#include "tests/qtest/libqos/qgraph.h"
 #include "tests/qtest/libqos/qgraph_internal.h"
+#include "qemu/datadir.h"
+#include "qemu/main-loop.h"
+#include "sysemu/qtest.h"
+#include "sysemu/sysemu.h"
 #include "videzzo.h"
 #ifdef CLANG_COV_DUMP
 #include "clangcovdump.h"
@@ -340,37 +345,87 @@ static int vnc_port;
 bool vnc_client_needed = false;
 bool vnc_client_initialized = false;
 
-// TODO make qemu-videzzo-fuzz a separate target
-bool ViDeZZoFuzzer;
-
 //
 // QEMU Dispatcher
 //
+static uint8_t qemu_readb(uint64_t addr) {
+    uint8_t value;
+    address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 1);
+    return value;
+}
+
+static uint16_t qemu_readw(uint64_t addr) {
+    uint16_t value;
+    address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 2);
+    return value;
+}
+
+static uint32_t qemu_readl(uint64_t addr) {
+    uint32_t value;
+    address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 4);
+    return value;
+}
+
+static uint64_t qemu_readq(uint64_t addr) {
+    uint64_t value;
+    address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 8);
+    return value;
+}
+
 uint64_t dispatch_mmio_read(Event *event) {
-    QTestState *s = (QTestState *)gfctx_get_object();
     switch (event->size) {
-        case ViDeZZo_Byte: return qtest_readb(s, event->addr);
-        case ViDeZZo_Word: return qtest_readw(s, event->addr);
-        case ViDeZZo_Long: return qtest_readl(s, event->addr);
-        case ViDeZZo_Quad: return qtest_readq(s, event->addr);
+        case ViDeZZo_Byte: return qemu_readb(event->addr);
+        case ViDeZZo_Word: return qemu_readw(event->addr);
+        case ViDeZZo_Long: return qemu_readl(event->addr);
+        case ViDeZZo_Quad: return qemu_readq(event->addr);
         default: fprintf(stderr, "wrong size of dispatch_mmio_read %d\n", event->size); return 0xffffffffffffffff;
     }
 }
 
+static uint8_t qemu_inb(uint16_t addr) {
+    return cpu_inb(addr);
+}
+
+static uint16_t qemu_inw(uint16_t addr) {
+    return cpu_inw(addr);
+}
+
+static uint32_t qemu_inl(uint16_t addr) {
+    return cpu_inl(addr);
+}
+
 uint64_t dispatch_pio_read(Event *event) {
-    QTestState *s = (QTestState *)gfctx_get_object();
     switch (event->size) {
-        case ViDeZZo_Byte: return qtest_inb(s, event->addr);
-        case ViDeZZo_Word: return qtest_inw(s, event->addr);
-        case ViDeZZo_Long: return qtest_inl(s, event->addr);
+        case ViDeZZo_Byte: return qemu_inb(event->addr);
+        case ViDeZZo_Word: return qemu_inw(event->addr);
+        case ViDeZZo_Long: return qemu_inl(event->addr);
         default: fprintf(stderr, "wrong size of dispatch_pio_read %d\n", event->size); return 0xffffffffffffffff;
     }
 }
 
+static void qemu_memread(uint64_t addr, void *data, size_t size) {
+    address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, data, size);
+}
+
 uint64_t dispatch_mem_read(Event *event) {
-    QTestState *s = (QTestState *)gfctx_get_object();
-    qtest_memread(s, event->addr, event->data, event->size);
+    qemu_memread(event->addr, event->data, event->size);
     return 0;
+}
+
+static void qemu_writeb(uint64_t addr, uint8_t value) {
+    address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 1);
+}
+
+static void qemu_writew(uint64_t addr, uint16_t value) {
+    address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 2);
+}
+
+static void qemu_writel(uint64_t addr, uint32_t value) {
+    address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 4);
+}
+
+static void qemu_writeq(uint64_t addr, uint64_t value) {
+    address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 8);
 }
 
 static bool xhci = false;
@@ -380,7 +435,6 @@ static bool vmxnet3 = false;
 static bool dwc2 = false;
 
 uint64_t dispatch_mmio_write(Event *event) {
-    QTestState *s = (QTestState *)gfctx_get_object();
     unsigned int pid, len;
 
     if (xhci && event->addr > 0xe0006100) {
@@ -458,31 +512,45 @@ uint64_t dispatch_mmio_write(Event *event) {
         }
     }
     switch (event->size) {
-        case ViDeZZo_Byte: qtest_writeb(s, event->addr, event->valu & 0xFF); break;
-        case ViDeZZo_Word: qtest_writew(s, event->addr, event->valu & 0xFFFF); break;
-        case ViDeZZo_Long: qtest_writel(s, event->addr, event->valu & 0xFFFFFFFF); break;
-        case ViDeZZo_Quad: qtest_writeq(s, event->addr, event->valu); break;
+        case ViDeZZo_Byte: qemu_writeb(event->addr, event->valu & 0xFF); break;
+        case ViDeZZo_Word: qemu_writew(event->addr, event->valu & 0xFFFF); break;
+        case ViDeZZo_Long: qemu_writel(event->addr, event->valu & 0xFFFFFFFF); break;
+        case ViDeZZo_Quad: qemu_writeq(event->addr, event->valu); break;
         default: fprintf(stderr, "wrong size of dispatch_mmio_write %d\n", event->size); break;
     }
     return 0;
 }
 
+static void qemu_outb(uint16_t addr, uint8_t value) {
+    cpu_outb(addr, value);
+}
+
+static void qemu_outw(uint16_t addr, uint16_t value) {
+    cpu_outw(addr, value);
+}
+
+static void qemu_outl(uint16_t addr, uint32_t value) {
+    cpu_outl(addr, value);
+}
+
 uint64_t dispatch_pio_write(Event *event) {
-    QTestState *s = (QTestState *)gfctx_get_object();
     if (e1000e && event->addr == 0xc080)
         event->valu %= event->valu % 0xfffff;
     switch (event->size) {
-        case ViDeZZo_Byte: qtest_outb(s, event->addr, event->valu & 0xFF); break;
-        case ViDeZZo_Word: qtest_outw(s, event->addr, event->valu & 0xFFFF); break;
-        case ViDeZZo_Long: qtest_outl(s, event->addr, event->valu & 0xFFFFFFFF); break;
+        case ViDeZZo_Byte: qemu_outb(event->addr, event->valu & 0xFF); break;
+        case ViDeZZo_Word: qemu_outw(event->addr, event->valu & 0xFFFF); break;
+        case ViDeZZo_Long: qemu_outl(event->addr, event->valu & 0xFFFFFFFF); break;
         default: fprintf(stderr, "wrong size of dispatch_pio_write %d\n", event->size); break;
     }
     return 0;
 }
 
+static void qemu_memwrite(uint64_t addr, const void *data, size_t size) {
+    address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, data, size);
+}
+
 uint64_t dispatch_mem_write(Event *event) {
-    QTestState *s = (QTestState *)gfctx_get_object();
-    qtest_memwrite(s, event->addr, event->data, event->size);
+    qemu_memwrite(event->addr, event->data, event->size);
     return 0;
 }
 
@@ -702,6 +770,149 @@ static void locate_fuzzable_objects(Object *obj, char *mrname) {
      g_array_free(children, TRUE);
 }
 
+//
+// call into videzzo from QEMU
+//
+static void videzzo_qemu(void *opaque, uint8_t *Data, size_t Size) {
+    QTestState *s = opaque;
+    if (vnc_client_needed && !vnc_client_initialized) {
+        init_vnc_client(s, vnc_port);
+        vnc_client_initialized = true;
+    }
+    videzzo_execute_one_input(Data, Size, s, &flush_events);
+}
+
+//
+// call into videzzo from QEMU
+//
+size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size,
+        size_t MaxSize, unsigned int Seed) {
+    return ViDeZZoCustomMutator(Data, Size, MaxSize, Seed);
+}
+
+//
+// QEMU specific initialization - Usage
+//
+static void usage(void) {
+    printf("Please specify the following environment variables:\n");
+    printf("QEMU_FUZZ_ARGS= the command line arguments passed to qemu\n");
+    videzzo_usage();
+    exit(0);
+}
+
+//
+// QEMU specific initialization - LibFuzzer entries
+//
+static ViDeZZoFuzzTarget *fuzz_target;
+static QTestState *fuzz_qts;
+int __LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size) {
+    /*
+     * Do the pre-fuzz-initialization before the first fuzzing iteration,
+     * instead of before the actual fuzz loop. This is needed since libfuzzer
+     * may fork off additional workers, prior to the fuzzing loop, and if
+     * pre_fuzz() sets up e.g. shared memory, this should be done for the
+     * individual worker processes
+     */
+    static int pre_fuzz_done;
+    if (!pre_fuzz_done && fuzz_target->pre_fuzz) {
+        fuzz_target->pre_fuzz(fuzz_qts);
+        pre_fuzz_done = true;
+    }
+
+    fuzz_target->fuzz(fuzz_qts, Data, Size);
+    return 0;
+}
+
+static const char *fuzz_arch = TARGET_NAME;
+static QTestState *qtest_setup(void) {
+    qtest_server_set_send_handler(&qtest_client_inproc_recv, &fuzz_qts);
+    return qtest_inproc_init(&fuzz_qts, false, fuzz_arch,
+            &qtest_server_inproc_recv);
+}
+
+int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp) {
+    char *target_name;
+    const char *bindir;
+    char *datadir;
+    GString *cmd_line;
+    gchar *pretty_cmd_line;
+
+    /* Initialize qgraph and modules */
+    qos_graph_init();
+    module_call_init(MODULE_INIT_FUZZ_TARGET);
+    module_call_init(MODULE_INIT_QOM);
+    module_call_init(MODULE_INIT_LIBQOS);
+
+    qemu_init_exec_dir(**argv);
+    target_name = strstr(**argv, "-target-");
+    if (target_name) {        /* The binary name specifies the target */
+        target_name += strlen("-target-");
+        /*
+         * With oss-fuzz, the executable is kept in the root of a directory (we
+         * cannot assume the path). All data (including bios binaries) must be
+         * in the same dir, or a subdir. Thus, we cannot place the pc-bios so
+         * that it would be in exec_dir/../pc-bios.
+         * As a workaround, oss-fuzz allows us to use argv[0] to get the
+         * location of the executable. Using this we add exec_dir/pc-bios to
+         * the datadirs.
+         */
+        bindir = qemu_get_exec_dir();
+        datadir = g_build_filename(bindir, "pc-bios", NULL);
+        if (g_file_test(datadir, G_FILE_TEST_IS_DIR)) {
+            qemu_add_data_dir(datadir);
+        } else {
+            g_free(datadir);
+        }
+    } else if (*argc > 1) {  /* The target is specified as an argument */
+        target_name = (*argv)[1];
+        if (!strstr(target_name, "--fuzz-target=")) {
+            usage();
+        }
+        target_name += strlen("--fuzz-target=");
+    } else {
+        usage();
+    }
+
+    /* Identify the fuzz target */
+    fuzz_target = videzzo_get_fuzz_target(target_name);
+    if (!fuzz_target) {
+        usage();
+    }
+
+    fuzz_qts = qtest_setup();
+
+    if (fuzz_target->pre_vm_init) {
+        fuzz_target->pre_vm_init();
+    }
+
+    /* Run QEMU's softmmu main with the fuzz-target dependent arguments */
+    cmd_line = fuzz_target->get_init_cmdline(fuzz_target);
+    g_string_append_printf(cmd_line, " %s -qtest /dev/null -qtest-log none");
+
+    /* Split the runcmd into an argv and argc */
+    wordexp_t result;
+    wordexp(cmd_line->str, &result, 0);
+    g_string_free(cmd_line, true);
+
+    qemu_init(result.we_wordc, result.we_wordv, NULL);
+
+    /* re-enable the rcu atfork, which was previously disabled in qemu_init */
+    rcu_enable_atfork();
+
+    /*
+     * Disable QEMU's signal handlers, since we manually control the main_loop,
+     * and don't check for main_loop_should_exit
+     */
+    signal(SIGINT, SIG_DFL);
+    signal(SIGHUP, SIG_DFL);
+    signal(SIGTERM, SIG_DFL);
+
+    return 0;
+}
+
+//
+// QEMU specific initialization - Register all targets
+//
 static QGuestAllocator *get_qemu_alloc(QTestState *qts) {
     QOSGraphNode *node;
     QOSGraphObject *obj;
@@ -723,13 +934,13 @@ static QGuestAllocator *get_qemu_alloc(QTestState *qts) {
     return obj->get_driver(obj, "memory");
 }
 
+// This is called in __LLVMFuzzerTestOneInput
 static void videzzo_qemu_pre(void *opaque) {
     QTestState *s = opaque;
     GHashTableIter iter;
     MemoryRegion *mr;
     QPCIBus *pcibus;
     char **mrnames;
-    ViDeZZoFuzzer = 1;
 
     fuzzable_memoryregions = g_hash_table_new(NULL, NULL);
     fuzzable_pci_devices = g_ptr_array_new();
@@ -790,42 +1001,7 @@ static void videzzo_qemu_pre(void *opaque) {
 #endif
 }
 
-//
-// QEMU specific initialization - Show usage
-//
-static void usage(void) {
-    printf("Please specify the following environment variables:\n");
-    printf("QEMU_FUZZ_ARGS= the command line arguments passed to qemu\n");
-    exit(0);
-}
-
-//
-// call into videzzo from QEMU
-//
-static void videzzo_qemu(void *opaque, uint8_t *Data, size_t Size) {
-    QTestState *s = opaque;
-    if (vnc_client_needed && !vnc_client_initialized) {
-        init_vnc_client(s, vnc_port);
-        vnc_client_initialized = true;
-    }
-    videzzo_execute_one_input(Data, Size, s, &flush_events);
-}
-
-//
-// call into videzzo from QEMU
-//
-size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size,
-        size_t MaxSize, unsigned int Seed) {
-    // for generic fuzz targets
-    if (!ViDeZZoFuzzer)
-        return LLVMFuzzerMutate(Data, Size, MaxSize);
-
-    return ViDeZZoCustomMutator(Data, Size, MaxSize, Seed);
-}
-
-//
-// QEMU specific initialization - Register all targets
-//
+// This is called in LLVMFuzzerInitialize
 static GString *videzzo_qemu_cmdline(ViDeZZoFuzzTarget *t) {
     GString *cmd_line = g_string_new(TARGET_NAME);
     if (!getenv("QEMU_FUZZ_ARGS")) {
@@ -837,6 +1013,7 @@ static GString *videzzo_qemu_cmdline(ViDeZZoFuzzTarget *t) {
     return cmd_line;
 }
 
+// This is called in LLVMFuzzerInitialize
 static GString *videzzo_qemu_predefined_config_cmdline(ViDeZZoFuzzTarget *t) {
     GString *args = g_string_new(NULL);
     const ViDeZZoFuzzTargetConfig *config;
@@ -857,7 +1034,6 @@ static GString *videzzo_qemu_predefined_config_cmdline(ViDeZZoFuzzTarget *t) {
     if (config->byte_address) {
         setenv("VIDEZZO_BYTE_ALIGNED_ADDRESS", "1", 1);
     }
-    setenv("QEMU_AVOID_DOUBLE_FETCH", "1", 1);
     g_assert_nonnull(config->args);
     g_string_append_printf(args, config->args, port);
     gchar *args_str = g_string_free(args, FALSE);

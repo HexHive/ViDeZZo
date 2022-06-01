@@ -1555,6 +1555,18 @@ size_t reset_data(uint8_t *Data, size_t MaxSize) {
 // all targets go here
 ViDeZZoFuzzTargetList *videzzo_fuzz_target_list;
 
+void videzzo_usage(void) {
+    ViDeZZoFuzzTargetState *tmp;
+    if (!videzzo_fuzz_target_list) {
+        fprintf(stderr, "Fuzz target list not initialized\n");
+        abort();
+    }
+    LIST_FOREACH(tmp, videzzo_fuzz_target_list, target_list) {
+        printf(" * %s  : %s\n", tmp->target->name, tmp->target->description);
+    }
+    printf("Alternatively, add -target-FUZZ_TARGET to the executable name\n\n");
+}
+
 // add a target to videzzo_fuzz_target_list
 // we don't want to expose a videzzo_get_fuzz_target method that is never used
 void videzzo_add_fuzz_target(ViDeZZoFuzzTarget *target) {
@@ -1574,6 +1586,21 @@ void videzzo_add_fuzz_target(ViDeZZoFuzzTarget *target) {
     target_state->target = g_new0(ViDeZZoFuzzTarget, 1);
     *(target_state->target) = *target;
     LIST_INSERT_HEAD(videzzo_fuzz_target_list, target_state, target_list);
+}
+
+ViDeZZoFuzzTarget *videzzo_get_fuzz_target(char* name) {
+    ViDeZZoFuzzTargetState *tmp;
+    if (!videzzo_fuzz_target_list) {
+        fprintf(stderr, "Fuzz target list not initialized\n");
+        abort();
+    }
+
+    LIST_FOREACH(tmp, videzzo_fuzz_target_list, target_list) {
+        if (g_strcmp0(tmp->target->name, name) == 0) {
+            return tmp->target;
+        }
+    }
+    return NULL;
 }
 
 //
