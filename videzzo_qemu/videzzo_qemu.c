@@ -13,7 +13,7 @@
 #include "qemu/osdep.h"
 #include <wordexp.h>
 #include "hw/core/cpu.h"
-#include "tests/qtest/libqos/libqtest.h"
+#include "tests/qtest/libqtest.h"
 #include "exec/address-spaces.h"
 #include "string.h"
 #include "exec/memory.h"
@@ -560,13 +560,10 @@ uint64_t dispatch_clock_step(Event *event) {
     return 0;
 }
 
-#define fmt_timeval "%ld.%06ld"
-extern void qtest_get_time(qemu_timeval *tv);
+static GTimer *timer;
+#define fmt_timeval "%.06f"
 static void printf_qtest_prefix() {
-    qemu_timeval tv;
-    qtest_get_time(&tv);
-    printf("[r +" fmt_timeval "] ",
-            (long) tv.tv_sec, (long) tv.tv_usec);
+    printf("[S +" fmt_timeval "] ", g_timer_elapsed(timer, NULL));
 }
 
 uint64_t dispatch_socket_write(Event *event) {

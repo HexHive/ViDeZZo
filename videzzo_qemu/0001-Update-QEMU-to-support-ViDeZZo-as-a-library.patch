@@ -8,8 +8,6 @@ Signed-off-by: Qiang Liu <cyruscyliu@gmail.com>
  include/qemu/osdep.h                        |  9 +++++++
  meson.build                                 | 17 ++++++++++++++
  meson_options.txt                           |  2 ++
- scripts/meson-buildoptions.sh               |  5 +++-
- softmmu/qtest.c                             |  2 +-
  tests/qtest/videzzo/less_crashes_wrappers.c | 26 +++++++++++++++++++++
  tests/qtest/videzzo/meson.build             | 21 +++++++++++++++++
  7 files changed, 80 insertions(+), 2 deletions(-)
@@ -105,56 +103,6 @@ index 52b11ce..8b04f40 100644
  option('gettext', type : 'feature', value : 'auto',
         description: 'Localization of the GTK+ user interface')
  option('install_blobs', type : 'boolean', value : true,
-diff --git a/scripts/meson-buildoptions.sh b/scripts/meson-buildoptions.sh
-index 9ee684e..57fd337 100644
---- a/scripts/meson-buildoptions.sh
-+++ b/scripts/meson-buildoptions.sh
-@@ -20,7 +20,6 @@ meson_options_help() {
-   printf "%s\n" '  --enable-malloc=CHOICE   choose memory allocator to use [system] (choices:'
-   printf "%s\n" '                           jemalloc/system/tcmalloc)'
-   printf "%s\n" '  --enable-profiler        profiler support'
--  printf "%s\n" '  --enable-qga-vss         build QGA VSS support'
-   printf "%s\n" '  --enable-qom-cast-debug  cast debugging support'
-   printf "%s\n" '  --enable-rng-none        dummy RNG, avoid using /dev/(u)random and'
-   printf "%s\n" '                           getrandom()'
-@@ -31,6 +30,7 @@ meson_options_help() {
-   printf "%s\n" '  --enable-trace-backends=CHOICE'
-   printf "%s\n" '                           Set available tracing backends [log] (choices:'
-   printf "%s\n" '                           dtrace/ftrace/log/nop/simple/syslog/ust)'
-+  printf "%s\n" '  --enable-videzzo         build videzzo targets'
-   printf "%s\n" ''
-   printf "%s\n" 'Optional features, enabled with --enable-FEATURE and'
-   printf "%s\n" 'disabled with --disable-FEATURE, default is enabled if available'
-@@ -97,6 +97,7 @@ meson_options_help() {
-   printf "%s\n" '  parallels       parallels image format support'
-   printf "%s\n" '  qcow1           qcow1 image format support'
-   printf "%s\n" '  qed             qed image format support'
-+  printf "%s\n" '  qga-vss         build QGA VSS support (broken with MinGW)'
-   printf "%s\n" '  rbd             Ceph block device driver'
-   printf "%s\n" '  replication     replication support'
-   printf "%s\n" '  sdl             SDL user interface'
-@@ -337,6 +338,8 @@ _meson_option_parse() {
-     --disable-vdi) printf "%s" -Dvdi=disabled ;;
-     --enable-vhost-user-blk-server) printf "%s" -Dvhost_user_blk_server=enabled ;;
-     --disable-vhost-user-blk-server) printf "%s" -Dvhost_user_blk_server=disabled ;;
-+    --enable-videzzo) printf "%s" -Dvidezzo=true ;;
-+    --disable-videzzo) printf "%s" -Dvidezzo=false ;;
-     --enable-virglrenderer) printf "%s" -Dvirglrenderer=enabled ;;
-     --disable-virglrenderer) printf "%s" -Dvirglrenderer=disabled ;;
-     --enable-virtfs) printf "%s" -Dvirtfs=enabled ;;
-diff --git a/softmmu/qtest.c b/softmmu/qtest.c
-index 8b7cb6a..c5232d6 100644
---- a/softmmu/qtest.c
-+++ b/softmmu/qtest.c
-@@ -264,7 +264,7 @@ static int hex2nib(char ch)
-     }
- }
- 
--static void qtest_get_time(qemu_timeval *tv)
-+void qtest_get_time(qemu_timeval *tv)
- {
-     qemu_gettimeofday(tv);
-     tv->tv_sec -= start_time.tv_sec;
 diff --git a/tests/qtest/videzzo/less_crashes_wrappers.c b/tests/qtest/videzzo/less_crashes_wrappers.c
 new file mode 100644
 index 0000000..faf775e
