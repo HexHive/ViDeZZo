@@ -223,7 +223,7 @@ size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize);
 size_t LLVMFuzzerCustomMutator(
         uint8_t *Data, size_t Size, size_t MaxSize, unsigned int Seed);
 int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp);
-int __LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size);
+int LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size);
 
 //
 // Reproduce

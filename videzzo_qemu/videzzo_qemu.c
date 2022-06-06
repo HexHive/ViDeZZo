@@ -802,7 +802,7 @@ static void usage(void) {
 //
 static ViDeZZoFuzzTarget *fuzz_target;
 static QTestState *fuzz_qts;
-int __LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size) {
+int LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size) {
     /*
      * Do the pre-fuzz-initialization before the first fuzzing iteration,
      * instead of before the actual fuzz loop. This is needed since libfuzzer
