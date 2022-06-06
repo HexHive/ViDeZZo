@@ -27,6 +27,7 @@
 #include "tests/qtest/libqos/qos_external.h"
 #include "tests/qtest/libqos/qgraph.h"
 #include "tests/qtest/libqos/qgraph_internal.h"
+#include "qemu/cutils.h"
 #include "qemu/datadir.h"
 #include "qemu/main-loop.h"
 #include "sysemu/qtest.h"
@@ -832,7 +833,6 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp) {
     const char *bindir;
     char *datadir;
     GString *cmd_line;
-    gchar *pretty_cmd_line;
 
     /* Initialize qgraph and modules */
     qos_graph_init();
@@ -884,7 +884,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp) {
 
     /* Run QEMU's softmmu main with the fuzz-target dependent arguments */
     cmd_line = fuzz_target->get_init_cmdline(fuzz_target);
-    g_string_append_printf(cmd_line, " %s -qtest /dev/null -qtest-log none");
+    g_string_append_printf(cmd_line, " -qtest /dev/null -qtest-log none");
 
     /* Split the runcmd into an argv and argc */
     wordexp_t result;
