@@ -1,0 +1,64 @@
+# $Id$
+## @file
+# Sub-Makefile for the videzzo frontend.
+#
+
+#
+# Copyright (C) 2006-2022 Oracle Corporation
+#
+# This file is part of VirtualBox Open Source Edition (OSE), as
+# available from http://www.virtualbox.org. This file is free software;
+# you can redistribute it and/or modify it under the terms of the GNU
+# General Public License (GPL) as published by the Free Software
+# Foundation, in version 2 as it comes in the "COPYING" file of the
+# VirtualBox OSE distribution. VirtualBox OSE is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY of any kind.
+#
+# Author: Qiang Liu <cyrusycliu@gmail.com>
+#
+
+SUB_DEPTH = ../../../..
+include $(KBUILD_PATH)/subheader.kmk
+
+#
+# Hardened VBoxViDeZZo.
+#
+ifdef VBOX_WITH_HARDENING
+PROGRAMS += VBoxViDeZZoHardened
+VBoxViDeZZoHardened_TEMPLATE = VBOXR3HARDENEDEXE
+VBoxViDeZZoHardened_DEFS    += $(if $(VBOX_WITH_DRIVERLESS_NEM_FALLBACK),VBOX_WITH_DRIVERLESS_NEM_FALLBACK,)
+VBoxViDeZZoHardened_SOURCES = VBoxViDeZZoHardened.cpp
+VBoxViDeZZoHardened_NAME = VBoxViDeZZo
+$(call VBOX_SET_VER_INFO_DLL,VBoxViDeZZoHardened,VirtualBox ViDeZZo Frontend,$(VBOX_WINDOWS_ICON_FILE)) # Version info / description.
+endif
+
+
+#
+# VBoxViDeZZo
+#
+ifdef VBOX_WITH_HARDENING
+DLLS     += VBoxViDeZZo
+else
+PROGRAMS += VBoxViDeZZo
+endif
+VBoxViDeZZo_TEMPLATE := $(if $(VBOX_WITH_HARDENING),VBOXMAINCLIENTDLL,VBOXMAINCLIENTEXE)
+VBoxViDeZZo_DEFS     += $(if $(VBOX_WITH_RECORDING),VBOX_WITH_RECORDING,)
+VBoxViDeZZo_INCS      = \
+	$(VBOX_GRAPHICS_INCS) \
+	../Common
+VBoxViDeZZo_SOURCES   = \
+	VBoxViDeZZo.cpp
+ifdef VBOX_WITH_GUEST_PROPS
+ VBoxViDeZZo_DEFS    += VBOX_WITH_GUEST_PROPS
+endif
+ifdef VBOX_WITH_HARDENING
+ VBoxViDeZZo_LDFLAGS.darwin += -install_name $(VBOX_DYLD_EXECUTABLE_PATH)/VBoxViDeZZo.dylib
+endif
+ifdef VBOX_WITH_HARDENING
+$(call VBOX_SET_VER_INFO_DLL,VBoxViDeZZo,VirtualBox ViDeZZo Frontend (dll),$(VBOX_WINDOWS_ICON_FILE)) # Version info / description.
+else
+$(call VBOX_SET_VER_INFO_EXE,VBoxViDeZZo,VirtualBox ViDeZZo Frontend,$(VBOX_WINDOWS_ICON_FILE)) # Version info / description.
+endif
+
+include $(FILE_KBUILD_SUB_FOOTER)
+

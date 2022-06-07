@@ -30,3 +30,4 @@ qemu
 *.tar.gz
 llvm-project
 binutils-2.35
+vbox
