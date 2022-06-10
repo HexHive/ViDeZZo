@@ -274,6 +274,7 @@ typedef struct ViDeZZoFuzzTargetState {
 } ViDeZZoFuzzTargetState;
 
 void videzzo_usage(void);
+int parse_fuzz_target_name(int *argc, char ***argv, char *target_name);
 typedef LIST_HEAD(, ViDeZZoFuzzTargetState) ViDeZZoFuzzTargetList;
 void videzzo_add_fuzz_target(ViDeZZoFuzzTarget *target);
 ViDeZZoFuzzTarget *videzzo_get_fuzz_target(char* name);

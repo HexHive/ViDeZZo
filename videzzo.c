@@ -1567,6 +1567,25 @@ void videzzo_usage(void) {
     printf("Alternatively, add -target-FUZZ_TARGET to the executable name\n\n");
 }
 
+#define NAME_INVALID    0
+#define NAME_INBINARY   1
+#define NAME_INARGUMENT 2
+int parse_fuzz_target_name(int *argc, char ***argv, char *target_name) {
+    target_name = strstr(**argv, "-target-");
+    if (target_name) {      /* The binary name specifies the target */
+        target_name += strlen("-target-");
+        return NAME_INBINARY;
+    } else if (*argc > 1) { /* The target is specified as an argument */
+        target_name = (*argv)[1];
+        if (!strstr(target_name, "--fuzz-target="))
+            return NAME_INVALID;
+        target_name += strlen("--fuzz-target=");
+        return NAME_INARGUMENT;
+    } else {
+        return NAME_INVALID;
+    }
+}
+
 // add a target to videzzo_fuzz_target_list
 // we don't want to expose a videzzo_get_fuzz_target method that is never used
 void videzzo_add_fuzz_target(ViDeZZoFuzzTarget *target) {

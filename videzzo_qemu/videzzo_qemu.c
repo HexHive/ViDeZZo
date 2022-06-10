@@ -828,85 +828,6 @@ static QTestState *qtest_setup(void) {
             &qtest_server_inproc_recv);
 }
 
-int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp) {
-    char *target_name;
-    const char *bindir;
-    char *datadir;
-    GString *cmd_line;
-
-    /* Initialize qgraph and modules */
-    qos_graph_init();
-    module_call_init(MODULE_INIT_FUZZ_TARGET);
-    module_call_init(MODULE_INIT_QOM);
-    module_call_init(MODULE_INIT_LIBQOS);
-
-    qemu_init_exec_dir(**argv);
-    target_name = strstr(**argv, "-target-");
-    if (target_name) {        /* The binary name specifies the target */
-        target_name += strlen("-target-");
-        /*
-         * With oss-fuzz, the executable is kept in the root of a directory (we
-         * cannot assume the path). All data (including bios binaries) must be
-         * in the same dir, or a subdir. Thus, we cannot place the pc-bios so
-         * that it would be in exec_dir/../pc-bios.
-         * As a workaround, oss-fuzz allows us to use argv[0] to get the
-         * location of the executable. Using this we add exec_dir/pc-bios to
-         * the datadirs.
-         */
-        bindir = qemu_get_exec_dir();
-        datadir = g_build_filename(bindir, "pc-bios", NULL);
-        if (g_file_test(datadir, G_FILE_TEST_IS_DIR)) {
-            qemu_add_data_dir(datadir);
-        } else {
-            g_free(datadir);
-        }
-    } else if (*argc > 1) {  /* The target is specified as an argument */
-        target_name = (*argv)[1];
-        if (!strstr(target_name, "--fuzz-target=")) {
-            usage();
-        }
-        target_name += strlen("--fuzz-target=");
-    } else {
-        usage();
-    }
-
-    /* Identify the fuzz target */
-    fuzz_target = videzzo_get_fuzz_target(target_name);
-    if (!fuzz_target) {
-        usage();
-    }
-
-    fuzz_qts = qtest_setup();
-
-    if (fuzz_target->pre_vm_init) {
-        fuzz_target->pre_vm_init();
-    }
-
-    /* Run QEMU's softmmu main with the fuzz-target dependent arguments */
-    cmd_line = fuzz_target->get_init_cmdline(fuzz_target);
-    g_string_append_printf(cmd_line, " -qtest /dev/null -qtest-log none");
-
-    /* Split the runcmd into an argv and argc */
-    wordexp_t result;
-    wordexp(cmd_line->str, &result, 0);
-    g_string_free(cmd_line, true);
-
-    qemu_init(result.we_wordc, result.we_wordv, NULL);
-
-    /* re-enable the rcu atfork, which was previously disabled in qemu_init */
-    rcu_enable_atfork();
-
-    /*
-     * Disable QEMU's signal handlers, since we manually control the main_loop,
-     * and don't check for main_loop_should_exit
-     */
-    signal(SIGINT, SIG_DFL);
-    signal(SIGHUP, SIG_DFL);
-    signal(SIGTERM, SIG_DFL);
-
-    return 0;
-}
-
 //
 // QEMU specific initialization - Register all targets
 //
@@ -1041,6 +962,7 @@ static GString *videzzo_qemu_predefined_config_cmdline(ViDeZZoFuzzTarget *t) {
     return videzzo_qemu_cmdline(t);
 }
 
+// This is called in LLVMFuzzerInitialize
 static void register_videzzo_qemu_targets(void) {
     videzzo_add_fuzz_target(&(ViDeZZoFuzzTarget){
             .name = "videzzo-fuzz",
@@ -1071,3 +993,78 @@ static void register_videzzo_qemu_targets(void) {
 }
 
 fuzz_target_init(register_videzzo_qemu_targets);
+
+int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp) {
+    char *target_name;
+    const char *bindir;
+    char *datadir;
+    GString *cmd_line;
+
+    // step 1: initialize fuzz targets
+    qos_graph_init();
+    module_call_init(MODULE_INIT_FUZZ_TARGET);
+    module_call_init(MODULE_INIT_QOM);
+    module_call_init(MODULE_INIT_LIBQOS);
+
+    qemu_init_exec_dir(**argv);
+    // step 2: find which fuzz target to run
+    int rc = parse_fuzz_target_name(argc, argv, target_name);
+    if (rc == NAME_INBINARY) {
+        /*
+         * With oss-fuzz, the executable is kept in the root of a directory (we
+         * cannot assume the path). All data (including bios binaries) must be
+         * in the same dir, or a subdir. Thus, we cannot place the pc-bios so
+         * that it would be in exec_dir/../pc-bios.
+         * As a workaround, oss-fuzz allows us to use argv[0] to get the
+         * location of the executable. Using this we add exec_dir/pc-bios to
+         * the datadirs.
+         */
+        bindir = qemu_get_exec_dir();
+        datadir = g_build_filename(bindir, "pc-bios", NULL);
+        if (g_file_test(datadir, G_FILE_TEST_IS_DIR)) {
+            qemu_add_data_dir(datadir);
+        } else {
+            g_free(datadir);
+        }
+    } else if (rc == NAME_INVALID) {
+        usage();
+    }
+
+    // step 3: get the fuzz target
+    fuzz_target = videzzo_get_fuzz_target(target_name);
+    if (!fuzz_target) {
+        usage();
+    }
+
+    fuzz_qts = qtest_setup();
+
+    // step 4: run callback before QEMU init
+    if (fuzz_target->pre_vm_init) {
+        fuzz_target->pre_vm_init();
+    }
+
+    // step 5: construct QEMU init cmds and init QEMU
+    /* Run QEMU's softmmu main with the fuzz-target dependent arguments */
+    cmd_line = fuzz_target->get_init_cmdline(fuzz_target);
+    g_string_append_printf(cmd_line, " -qtest /dev/null -qtest-log none");
+
+    /* Split the runcmd into an argv and argc */
+    wordexp_t result;
+    wordexp(cmd_line->str, &result, 0);
+    g_string_free(cmd_line, true);
+
+    qemu_init(result.we_wordc, result.we_wordv, NULL);
+
+    /* re-enable the rcu atfork, which was previously disabled in qemu_init */
+    rcu_enable_atfork();
+
+    /*
+     * Disable QEMU's signal handlers, since we manually control the main_loop,
+     * and don't check for main_loop_should_exit
+     */
+    signal(SIGINT, SIG_DFL);
+    signal(SIGHUP, SIG_DFL);
+    signal(SIGTERM, SIG_DFL);
+
+    return 0;
+}
