@@ -1,14 +1,12 @@
 #!/bin/bash
 
-pushd qemu
-mkdir build-cov-6
-pushd build-cov-6
-CLANG_COV_DUMP=1 \
-CC=clang CXX=clang++ ../configure \
-    --enable-videzzo --enable-fuzzing --enable-debug \
-    --disable-werror --disable-sanitizers \
-    --extra-cflags="-DCLANG_COV_DUMP -DVIDEZZO_LESS_CRASHES -fprofile-instr-generate -fcoverage-mapping" \
-    --target-list="i386-softmmu arm-softmmu"
-ninja qemu-videzzo-i386 qemu-system-i386 qemu-videzzo-arm qemu-system-arm
-popd
+pushd vbox
+mkdir -p out-cov
+./configure --disable-hardening --disable-docs \
+    --disable-java --disable-qt -d --out-base-dir=out-cov
+source ./env.sh
+kmk VBOX_FUZZ=1 KBUILD_TYPE=debug VBOX_GCC_TOOL=CLANG \
+    PATH_OUT_BASE=$PWD/out-cov \
+    TOOL_CLANG_CFLAGS="-DCLANG_COV_DUMP -DVIDEZZO_LESS_CRASHES -fprofile-instr-generate -fcoverage-mapping -fPIE" \
+    TOOL_CLANG_CXXFLAGS="-DCLANG_COV_DUMP -DVIDEZZO_LESS_CRASHES -fprofile-instr-generate -fcoverage-mapping -fPIE"
 popd

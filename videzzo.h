@@ -212,9 +212,15 @@ extern FeedbackHandler group_mutator_miss_handlers[0xff];
 //
 // Open APIs
 //
+#ifdef __cplusplus
+extern "C" void __videzzo_execute_one_input(Input *input);
+extern "C" size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush flush);
+extern "C" size_t ViDeZZoCustomMutator(uint8_t *Data, size_t Size, size_t MaxSize, unsigned int Seed);
+#else
 void __videzzo_execute_one_input(Input *input);
 size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush flush);
 size_t ViDeZZoCustomMutator(uint8_t *Data, size_t Size, size_t MaxSize, unsigned int Seed);
+#endif
 
 //
 // libFuzzer
@@ -222,8 +228,13 @@ size_t ViDeZZoCustomMutator(uint8_t *Data, size_t Size, size_t MaxSize, unsigned
 size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize);
 size_t LLVMFuzzerCustomMutator(
         uint8_t *Data, size_t Size, size_t MaxSize, unsigned int Seed);
+#ifdef __cplusplus
+extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp);
+extern "C" int LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size);
+#else
 int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp);
 int LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size);
+#endif
 
 //
 // Reproduce
@@ -255,15 +266,15 @@ typedef struct ViDeZZoFuzzTarget {
 
     // Will run once, after a VM is initialized.
     // Can be NULL.
-    void(*pre_vm_init)(void);
+    void (*pre_vm_init)(void);
 
     // Will run once, after a VM has been initialized, prior to the fuzz-loop.
-    void(*pre_fuzz)(void *opaque);
+    void (*pre_fuzz)(void *opaque);
 
     // This is repeatedly executed during the fuzzing loop.
     // Its should handle setup, input execution and cleanup.
     // Cannot be NULL.
-    void(*fuzz)(void *opaque, unsigned char *, size_t);
+    void (*fuzz)(void *opaque, unsigned char *, size_t);
     void *opaque;                           /* ViDeZZoFuzzTargetConfig */
 } ViDeZZoFuzzTarget;
 
@@ -273,22 +284,43 @@ typedef struct ViDeZZoFuzzTargetState {
     LIST_ENTRY(ViDeZZoFuzzTargetState) target_list;
 } ViDeZZoFuzzTargetState;
 
+#define NAME_INVALID    0
+#define NAME_INBINARY   1
+#define NAME_INARGUMENT 2
+typedef LIST_HEAD(, ViDeZZoFuzzTargetState) ViDeZZoFuzzTargetList;
+
+#ifdef __cplusplus
+extern "C" void videzzo_usage(void);
+extern "C" int parse_fuzz_target_name(int *argc, char ***argv, char *target_name);
+extern "C" void videzzo_add_fuzz_target(ViDeZZoFuzzTarget *target);
+extern "C" ViDeZZoFuzzTarget *videzzo_get_fuzz_target(char* name);
+#else
 void videzzo_usage(void);
 int parse_fuzz_target_name(int *argc, char ***argv, char *target_name);
-typedef LIST_HEAD(, ViDeZZoFuzzTargetState) ViDeZZoFuzzTargetList;
 void videzzo_add_fuzz_target(ViDeZZoFuzzTarget *target);
 ViDeZZoFuzzTarget *videzzo_get_fuzz_target(char* name);
+#endif
 
 //
 // Sockets
 //
+#ifdef __cplusplus
+extern "C" void init_sockets(int sockfds[]);
+#else
 void init_sockets(int sockfds[]);
+#endif
 
 //
 // VNC
 //
+#ifdef __cplusplus
+extern "C" int init_vnc(void);
+extern "C" int init_vnc_client(void *s, int vnc_port);
+extern "C" int remove_offset_from_vnc_port(int vnc_port);
+#else
 int init_vnc(void);
 int init_vnc_client(void *s, int vnc_port);
 int remove_offset_from_vnc_port(int vnc_port);
+#endif
 
 #endif /* VIDEZZO_H */

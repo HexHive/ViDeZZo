@@ -214,7 +214,7 @@ def gen_vmm(summary=False):
 def main(argv):
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-s', '--summary', action='store_true', default=False, help='Print summary rather than build')
-    parser.add_argument('vmm', help='Hypervisors', choices=['vmm', 'qemu', 'byhve', 'virtualbox'])
+    parser.add_argument('vmm', help='Hypervisors', choices=['vmm', 'qemu', 'byhve', 'vbox'])
     args = parser.parse_args()
 
     if args.vmm == 'vmm':

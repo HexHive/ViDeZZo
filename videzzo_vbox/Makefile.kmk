@@ -32,7 +32,6 @@ VBoxViDeZZoHardened_NAME = VBoxViDeZZo
 $(call VBOX_SET_VER_INFO_DLL,VBoxViDeZZoHardened,VirtualBox ViDeZZo Frontend,$(VBOX_WINDOWS_ICON_FILE)) # Version info / description.
 endif
 
-
 #
 # VBoxViDeZZo
 #
@@ -42,10 +41,14 @@ else
 PROGRAMS += VBoxViDeZZo
 endif
 VBoxViDeZZo_TEMPLATE := $(if $(VBOX_WITH_HARDENING),VBOXMAINCLIENTDLL,VBOXMAINCLIENTEXE)
-VBoxViDeZZo_DEFS     += $(if $(VBOX_WITH_RECORDING),VBOX_WITH_RECORDING,)
+VBoxViDeZZo_DEFS     += $(if $(VBOX_WITH_RECORDING),VBOX_WITH_RECORDING,) $(VMM_COMMON_DEFS)
 VBoxViDeZZo_INCS      = \
 	$(VBOX_GRAPHICS_INCS) \
-	../Common
+	../Common \
+	/usr/include/glib-2.0 \
+	/usr/lib/x86_64-linux-gnu/glib-2.0/include \
+	../../VMM/include
+
 VBoxViDeZZo_SOURCES   = \
 	VBoxViDeZZo.cpp
 ifdef VBOX_WITH_GUEST_PROPS
@@ -54,6 +57,12 @@ endif
 ifdef VBOX_WITH_HARDENING
  VBoxViDeZZo_LDFLAGS.darwin += -install_name $(VBOX_DYLD_EXECUTABLE_PATH)/VBoxViDeZZo.dylib
 endif
+VBoxViDeZZo_LDFLAGS += \
+	-L$(PATH_SUB_CURRENT)/src/VBox/Frontends/VBoxViDeZZo \
+	$(VBOX_FUZZ_LDFLAGS)
+VBoxViDeZZo_LIBS += \
+    videzzo vncclient gmodule-2.0 glib-2.0 $(LIB_VMM)
+
 ifdef VBOX_WITH_HARDENING
 $(call VBOX_SET_VER_INFO_DLL,VBoxViDeZZo,VirtualBox ViDeZZo Frontend (dll),$(VBOX_WINDOWS_ICON_FILE)) # Version info / description.
 else

@@ -17,6 +17,18 @@
  * Authors: Qiang Liu <cyruscyliu@gmail.com>
  */
 
+/* without this, include/VBox/vmm/pdmtask.h does not import PDMTASKTYPE enum */
+#define VBOX_IN_VMM 1
+
+#include "PDMInternal.h"
+
+/* needed by machineDebugger COM VM getter */
+#include <VBox/vmm/vm.h>
+#include <VBox/vmm/uvm.h>
+
+#include <VBox/vmm/iem.h>
+#include <VBox/vmm/pgm.h>
+#include <VBox/vmm/iom.h>
 #include <VBox/com/com.h>
 #include <VBox/com/string.h>
 #include <VBox/com/array.h>
@@ -29,8 +41,6 @@
 #include <VBox/com/listeners.h>
 
 using namespace com;
-
-#define LOG_GROUP LOG_GROUP_GUI
 
 #include <VBox/log.h>
 #include <VBox/version.h>
@@ -52,6 +62,7 @@ static void HandleSignal(int sig);
 
 #include "PasswordInput.h"
 
+#include "videzzo.h"
 ////////////////////////////////////////////////////////////////////////////////
 
 #define LogError(m,rc) \
@@ -75,6 +86,7 @@ static volatile bool g_fTerminateFE = false;
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#define TARGET_NAME "i386"
 
 #include "videzzo.h"
 #ifdef CLANG_COV_DUMP
@@ -85,11 +97,17 @@ static volatile bool g_fTerminateFE = false;
 // Fuzz Target Configs
 //
 static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
+    {
+        .arch = "i386",
+        .name = "pcnet",
+        .args = "-machine q35 -nodefaults "
+        "-device pcnet,netdev=net0 -netdev user,id=net0",
+        .mrnames = "*pcnet-mmio*,*pcnet-io*",
+        .file = "srv/VBox/Devices/Network/DevPCNet.cpp",
+        .socket = true,
+        .byte_address = true,
+    }
 };
-
-static GHashTable *fuzzable_memoryregions;
-static GPtrArray *fuzzable_pci_devices;
-static QGuestAllocator *vbox_alloc;
 
 bool sockfds_initialized = false;
 int sockfds[2];
@@ -98,30 +116,33 @@ static int vnc_port;
 bool vnc_client_needed = false;
 bool vnc_client_initialized = false;
 
+PVMCC pVM;
+PVMCPUCC pVCpu;
+
 //
 // vbox Dispatcher
 //
 static uint8_t vbox_readb(uint64_t addr) {
     uint8_t value;
-    address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 1);
+    PGMPhysRead(pVM, addr, &value, 1, PGMACCESSORIGIN_HM);
     return value;
 }
 
 static uint16_t vbox_readw(uint64_t addr) {
     uint16_t value;
-    address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 2);
+    PGMPhysRead(pVM, addr, &value, 2, PGMACCESSORIGIN_HM);
     return value;
 }
 
 static uint32_t vbox_readl(uint64_t addr) {
     uint32_t value;
-    address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 4);
+    PGMPhysRead(pVM, addr, &value, 4, PGMACCESSORIGIN_HM);
     return value;
 }
 
 static uint64_t vbox_readq(uint64_t addr) {
     uint64_t value;
-    address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 8);
+    PGMPhysRead(pVM, addr, &value, 8, PGMACCESSORIGIN_HM);
     return value;
 }
 
@@ -136,15 +157,21 @@ uint64_t dispatch_mmio_read(Event *event) {
 }
 
 static uint8_t vbox_inb(uint16_t addr) {
-    return cpu_inb(addr);
+    uint32_t value;
+    IOMIOPortRead(pVM, pVCpu, addr, &value, 1);
+    return (uint8_t)(value & 0xff);
 }
 
 static uint16_t vbox_inw(uint16_t addr) {
-    return cpu_inw(addr);
+    uint32_t value;
+    IOMIOPortRead(pVM, pVCpu, addr, &value, 2);
+    return (uint16_t)(value & 0xffff);
 }
 
 static uint32_t vbox_inl(uint16_t addr) {
-    return cpu_inl(addr);
+    uint32_t value;
+    IOMIOPortRead(pVM, pVCpu, addr, &value, 4);
+    return value;
 }
 
 uint64_t dispatch_pio_read(Event *event) {
@@ -157,7 +184,7 @@ uint64_t dispatch_pio_read(Event *event) {
 }
 
 static void vbox_memread(uint64_t addr, void *data, size_t size) {
-    address_space_read(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, data, size);
+    PGMPhysRead(pVM, addr, data, size, PGMACCESSORIGIN_HM);
 }
 
 uint64_t dispatch_mem_read(Event *event) {
@@ -166,19 +193,19 @@ uint64_t dispatch_mem_read(Event *event) {
 }
 
 static void vbox_writeb(uint64_t addr, uint8_t value) {
-    address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 1);
+    PGMPhysWrite(pVM, addr, &value, 1, PGMACCESSORIGIN_HM);
 }
 
 static void vbox_writew(uint64_t addr, uint16_t value) {
-    address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 2);
+    PGMPhysWrite(pVM, addr, &value, 2, PGMACCESSORIGIN_HM);
 }
 
 static void vbox_writel(uint64_t addr, uint32_t value) {
-    address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 4);
+    PGMPhysWrite(pVM, addr, &value, 4, PGMACCESSORIGIN_HM);
 }
 
 static void vbox_writeq(uint64_t addr, uint64_t value) {
-    address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, &value, 8);
+    PGMPhysWrite(pVM, addr, &value, 8, PGMACCESSORIGIN_HM);
 }
 
 static bool xhci = false;
@@ -275,15 +302,15 @@ uint64_t dispatch_mmio_write(Event *event) {
 }
 
 static void vbox_outb(uint16_t addr, uint8_t value) {
-    cpu_outb(addr, value);
+    IOMIOPortWrite(pVM, pVCpu, addr, value, 1);
 }
 
 static void vbox_outw(uint16_t addr, uint16_t value) {
-    cpu_outw(addr, value);
+    IOMIOPortWrite(pVM, pVCpu, addr, value, 2);
 }
 
 static void vbox_outl(uint16_t addr, uint32_t value) {
-    cpu_outl(addr, value);
+    IOMIOPortWrite(pVM, pVCpu, addr, value, 4);
 }
 
 uint64_t dispatch_pio_write(Event *event) {
@@ -299,7 +326,7 @@ uint64_t dispatch_pio_write(Event *event) {
 }
 
 static void vbox_memwrite(uint64_t addr, const void *data, size_t size) {
-    address_space_write(first_cpu->as, addr, MEMTXATTRS_UNSPECIFIED, data, size);
+    PGMPhysWrite(pVM, addr, data, size, PGMACCESSORIGIN_HM);
 }
 
 uint64_t dispatch_mem_write(Event *event) {
@@ -308,8 +335,6 @@ uint64_t dispatch_mem_write(Event *event) {
 }
 
 uint64_t dispatch_clock_step(Event *event) {
-    QTestState *s = (QTestState *)gfctx_get_object();
-    qtest_clock_step(s, event->valu);
     return 0;
 }
 
@@ -320,31 +345,6 @@ static void printf_qtest_prefix() {
 }
 
 uint64_t dispatch_socket_write(Event *event) {
-    uint8_t D[SOCKET_WRITE_MAX_SIZE + 4];
-    uint8_t *ptr = D;
-    char *enc;
-    uint32_t i;
-    if (!sockfds_initialized)
-        return 0;
-    size_t size = event->size;
-    if (size > SOCKET_WRITE_MAX_SIZE)
-        return 0;
-    // first four bytes are lenght
-    uint32_t S = htonl(size);
-    memcpy(D, (uint8_t *)&S, 4);
-    memcpy(D + 4, event->data, size);
-    size += 4;
-    int ignore = write(sockfds[0], D, size);
-    // to show what a socket write did
-    if (getenv("FUZZ_SERIALIZE_QTEST")) {
-        enc = g_malloc(2 * size + 1);
-        for (i = 0; i < size; i++) {
-            sprintf(&enc[i * 2], "%02x", ptr[i]);
-        }
-        printf_qtest_prefix();
-        printf("sock %d 0x%zx 0x%s\n", sockfds[0], size, enc);
-    }
-    (void) ignore;
     return 0;
 }
 
@@ -358,25 +358,21 @@ uint64_t dispatch_socket_write(Event *event) {
 
 uint64_t AroundInvalidAddress(uint64_t physaddr) {
     // TARGET_NAME=i386 -> i386/pc
-    if (strcmp(TARGET_NAME, "i386") == 0) {
-        if (physaddr < I386_MEM_HIGH - I386_MEM_LOW)
-            return physaddr + I386_MEM_LOW;
-        else
-            return (physaddr - I386_MEM_LOW) % (I386_MEM_HIGH - I386_MEM_LOW) + I386_MEM_LOW;
-    } else if (strcmp(TARGET_NAME, "arm") == 0) {
-        return (physaddr - RASPI2_RAM_LOW) % (RASPI2_RAM_HIGH - RASPI2_RAM_LOW) + RASPI2_RAM_LOW;
-    }
-    return physaddr;
+    if (physaddr < I386_MEM_HIGH - I386_MEM_LOW)
+        return physaddr + I386_MEM_LOW;
+    else
+        return (physaddr - I386_MEM_LOW) % (I386_MEM_HIGH - I386_MEM_LOW) + I386_MEM_LOW;
 }
 
 static uint64_t videzzo_malloc(size_t size) {
     // alloc a dma accessible buffer in guest memory
-    return guest_alloc(vbox_alloc, size);
+    // return guest_alloc(vbox_alloc, size);
+    return 0;
 }
 
 static bool videzzo_free(uint64_t addr) {
     // free the dma accessible buffer in guest memory
-    guest_free(vbox_alloc, addr);
+    // guest_free(vbox_alloc, addr);
     return true;
 }
 
@@ -389,147 +385,21 @@ uint64_t dispatch_mem_free(Event *event) {
 }
 
 //
-// vbox specific initialization - Set up interfaces
+// VBox specific initialization - Set up interfaces
 //
-// enumerate PCI devices
-static inline void pci_enum(gpointer pcidev, gpointer bus) {
-    PCIDevice *dev = pcidev;
-    QPCIDevice *qdev;
-    int i;
-
-    qdev = qpci_device_find(bus, dev->devfn);
-    g_assert(qdev != NULL);
-    for (i = 0; i < 6; i++) {
-        if (dev->io_regions[i].size) {
-            qpci_iomap(qdev, i, NULL);
-        }
-    }
-    qpci_device_enable(qdev);
-    g_free(qdev);
-}
-
-#define INVLID_ADDRESS 0
-#define   MMIO_ADDRESS 1
-#define    PIO_ADDRESS 2
-
-// parse memory region physical address
-static uint8_t get_memoryregion_addr(MemoryRegion *mr, uint64_t *addr) {
-    MemoryRegion *tmp_mr = mr;
-    uint64_t tmp_addr = tmp_mr->addr;
-    while (tmp_mr->container) {
-        tmp_mr = tmp_mr->container;
-        tmp_addr += tmp_mr->addr;
-        if (strcmp(tmp_mr->name, "system") == 0) {
-            *addr = tmp_addr;
-            return MMIO_ADDRESS;
-        // TODO fix me
-        } else if (strcmp(tmp_mr->name, "nrf51-container") == 0) {
-            *addr = tmp_addr;
-            return MMIO_ADDRESS;
-        } else if (strcmp(tmp_mr->name, "io") == 0) {
-            *addr = tmp_addr;
-            return PIO_ADDRESS;
-        }
-    }
-    return INVLID_ADDRESS;
-}
-
-// insertion helper
-static int insert_qom_composition_child(Object *obj, void *opaque) {
-    g_array_append_val(opaque, obj);
-    return 0;
-}
-
-// testing interface identifiction
-typedef struct MemoryRegionPortioList {
-    MemoryRegion mr;
-    void *portio_opaque;
-    MemoryRegionPortio ports[];
-} MemoryRegionPortioList;
-
-static void locate_fuzzable_objects(Object *obj, char *mrname) {
-    GArray *children = g_array_new(false, false, sizeof(Object *));
-    const char *name;
-    MemoryRegion *mr;
-    int i;
-
-    if (obj == object_get_root()) {
-        name = "";
-    } else {
-        name = object_get_canonical_path_component(obj);
-    }
-
-    uint64_t addr;
-    uint8_t mr_type, max, min;
-    uint8_t event_type1, event_type2;
-    if (object_dynamic_cast(OBJECT(obj), TYPE_MEMORY_REGION)) {
-        if (g_pattern_match_simple(mrname, name)) {
-            mr = MEMORY_REGION(obj);
-            g_hash_table_insert(fuzzable_memoryregions, mr, (gpointer)true);
-            mr_type = get_memoryregion_addr(mr, &addr);
-            // TODO: Improve to resolve the max/min in the future
-            if (mr_type == MMIO_ADDRESS) {
-                if (mr->ops->valid.min_access_size == 0 &&
-                        mr->ops->valid.max_access_size == 0 &&
-                        mr->ops->impl.min_access_size == 0 &&
-                        mr->ops->impl.max_access_size == 0) {
-                    min = 1;
-                    max = 4;
-                } else {
-                    min = MAX(mr->ops->valid.min_access_size, mr->ops->impl.min_access_size);
-                    max = MAX(mr->ops->valid.max_access_size, mr->ops->impl.max_access_size);
-                }
-                event_type1 = EVENT_TYPE_MMIO_READ;
-                event_type2 = EVENT_TYPE_MMIO_WRITE;
-            } else if (mr_type == PIO_ADDRESS) {
-                MemoryRegionPortioList *mrpl = (MemoryRegionPortioList *)mr->opaque;
-                if (mr->ops->valid.min_access_size == 0 &&
-                        mr->ops->valid.max_access_size == 0 &&
-                        mr->ops->impl.min_access_size == 0 &&
-                        mr->ops->impl.max_access_size == 0 && mrpl) {
-                    min = 1;
-                    max = (((MemoryRegionPortio *)((MemoryRegionPortioList *)mr->opaque)->ports)[0]).size;
-                    if (max == 0 || max > 4) { max = 4; }
-                } else {
-                    min = MAX(mr->ops->valid.min_access_size, mr->ops->impl.min_access_size);
-                    max = MAX(mr->ops->valid.max_access_size, mr->ops->impl.max_access_size);
-                }
-                event_type1 = EVENT_TYPE_PIO_READ;
-                event_type2 = EVENT_TYPE_PIO_WRITE;
-            }
-            // TODO: Deduplicate MemoryRegions in the future
-            if (mr_type != INVLID_ADDRESS) {
-                add_interface(event_type1, addr, mr->size, mr->name, min, max, true);
-                add_interface(event_type2, addr, mr->size, mr->name, min, max, true);
-            }
-         }
-     } else if(object_dynamic_cast(OBJECT(obj), TYPE_PCI_DEVICE)) {
-            /*
-             * Don't want duplicate pointers to the same PCIDevice, so remove
-             * copies of the pointer, before adding it.
-             */
-            g_ptr_array_remove_fast(fuzzable_pci_devices, PCI_DEVICE(obj));
-            g_ptr_array_add(fuzzable_pci_devices, PCI_DEVICE(obj));
-     }
-
-     object_child_foreach(obj, insert_qom_composition_child, children);
-
-     for (i = 0; i < children->len; i++) {
-         locate_fuzzable_objects(g_array_index(children, Object *, i), mrname);
-     }
-     g_array_free(children, TRUE);
-}
 
 //
 // call into videzzo from vbox
 //
-extern "C" static void videzzo_vbox(void *opaque, uint8_t *Data, size_t Size) {
+static void videzzo_vbox(void *opaque, uint8_t *Data, size_t Size) {
+    /*
     QTestState *s = opaque;
     if (vnc_client_needed && !vnc_client_initialized) {
         init_vnc_client(s, vnc_port);
         vnc_client_initialized = true;
     }
-    videzzo_execute_one_input(Data, Size, s, &flush_events);
+    */
+    videzzo_execute_one_input(Data, Size, opaque, &flush_events);
 }
 
 //
@@ -541,7 +411,7 @@ size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size,
 }
 
 //
-// vbox specific initialization - Usage
+// VBox specific initialization - Usage
 //
 static void usage(void) {
     printf("Please specify the following environment variables:\n");
@@ -551,10 +421,9 @@ static void usage(void) {
 }
 
 //
-// vbox specific initialization - LibFuzzer entries
+// VBox specific initialization - LibFuzzer entries
 //
 static ViDeZZoFuzzTarget *fuzz_target;
-static QTestState *fuzz_qts;
 int LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size) {
     /*
      * Do the pre-fuzz-initialization before the first fuzzing iteration,
@@ -565,191 +434,28 @@ int LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size) {
      */
     static int pre_fuzz_done;
     if (!pre_fuzz_done && fuzz_target->pre_fuzz) {
-        fuzz_target->pre_fuzz(fuzz_qts);
+        fuzz_target->pre_fuzz(NULL);
         pre_fuzz_done = true;
     }
 
-    fuzz_target->fuzz(fuzz_qts, Data, Size);
+    fuzz_target->fuzz(NULL, Data, Size);
     return 0;
 }
 
 static const char *fuzz_arch = TARGET_NAME;
-static QTestState *qtest_setup(void) {
-    qtest_server_set_send_handler(&qtest_client_inproc_recv, &fuzz_qts);
-    return qtest_inproc_init(&fuzz_qts, false, fuzz_arch,
-            &qtest_server_inproc_recv);
-}
-
-int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp) {
-    char *target_name;
-    const char *bindir;
-    char *datadir;
-    GString *cmd_line;
-
-    /* Initialize qgraph and modules */
-    qos_graph_init();
-    module_call_init(MODULE_INIT_FUZZ_TARGET);
-    module_call_init(MODULE_INIT_QOM);
-    module_call_init(MODULE_INIT_LIBQOS);
-    register_videzzo_vbox_targets
-
-    vbox_init_exec_dir(**argv);
-    target_name = strstr(**argv, "-target-");
-    if (target_name) {        /* The binary name specifies the target */
-        target_name += strlen("-target-");
-        /*
-         * With oss-fuzz, the executable is kept in the root of a directory (we
-         * cannot assume the path). All data (including bios binaries) must be
-         * in the same dir, or a subdir. Thus, we cannot place the pc-bios so
-         * that it would be in exec_dir/../pc-bios.
-         * As a workaround, oss-fuzz allows us to use argv[0] to get the
-         * location of the executable. Using this we add exec_dir/pc-bios to
-         * the datadirs.
-         */
-        bindir = vbox_get_exec_dir();
-        datadir = g_build_filename(bindir, "pc-bios", NULL);
-        if (g_file_test(datadir, G_FILE_TEST_IS_DIR)) {
-            vbox_add_data_dir(datadir);
-        } else {
-            g_free(datadir);
-        }
-    } else if (*argc > 1) {  /* The target is specified as an argument */
-        target_name = (*argv)[1];
-        if (!strstr(target_name, "--fuzz-target=")) {
-            usage();
-        }
-        target_name += strlen("--fuzz-target=");
-    } else {
-        usage();
-    }
-
-    /* Identify the fuzz target */
-    fuzz_target = videzzo_get_fuzz_target(target_name);
-    if (!fuzz_target) {
-        usage();
-    }
-
-    fuzz_qts = qtest_setup();
-
-    if (fuzz_target->pre_vm_init) {
-        fuzz_target->pre_vm_init();
-    }
-
-    /* Run vbox's softmmu main with the fuzz-target dependent arguments */
-    cmd_line = fuzz_target->get_init_cmdline(fuzz_target);
-    g_string_append_printf(cmd_line, " -qtest /dev/null -qtest-log none");
-
-    /* Split the runcmd into an argv and argc */
-    wordexp_t result;
-    wordexp(cmd_line->str, &result, 0);
-    g_string_free(cmd_line, true);
-
-    vbox_init(result.we_wordc, result.we_wordv, NULL);
-
-    /* re-enable the rcu atfork, which was previously disabled in vbox_init */
-    rcu_enable_atfork();
-
-    /*
-     * Disable vbox's signal handlers, since we manually control the main_loop,
-     * and don't check for main_loop_should_exit
-     */
-    signal(SIGINT, SIG_DFL);
-    signal(SIGHUP, SIG_DFL);
-    signal(SIGTERM, SIG_DFL);
-
-    return 0;
-}
 
 //
-// vbox specific initialization - Register all targets
+// VBox specific initialization - Register all targets
 //
-static QGuestAllocator *get_vbox_alloc(QTestState *qts) {
-    QOSGraphNode *node;
-    QOSGraphObject *obj;
-
-    // TARGET_NAME=i386 -> i386/pc
-    // TARGET_NAME=arm  -> arm/raspi2b
-    if (strcmp(TARGET_NAME, "i386") == 0) {
-        node = qos_graph_get_node("i386/pc");
-    } else if (strcmp(TARGET_NAME, "arm") == 0) {
-        node = qos_graph_get_node("arm/raspi2b");
-    } else {
-        g_assert(1 == 0);
-    }
-
-    g_assert(node->type == QNODE_MACHINE);
-
-    obj = qos_machine_new(node, qts);
-    qos_object_queue_destroy(obj);
-    return obj->get_driver(obj, "memory");
-}
 
 // This is called in LLVMFuzzerTestOneInput
 static void videzzo_vbox_pre(void *opaque) {
-    QTestState *s = opaque;
-    GHashTableIter iter;
-    MemoryRegion *mr;
-    QPCIBus *pcibus;
-    char **mrnames;
-
-    fuzzable_memoryregions = g_hash_table_new(NULL, NULL);
-    fuzzable_pci_devices = g_ptr_array_new();
-
-    mrnames = g_strsplit(getenv("vbox_FUZZ_MRNAME"), ",", -1);
-    for (int i = 0; mrnames[i] != NULL; i++) {
-        if (strncmp("*doorbell*", mrnames[i], strlen(mrnames[i])) == 0)
-            xhci = true;
-        if (strncmp("*pcnet-mmio*", mrnames[i], strlen(mrnames[i])) == 0)
-            pcnet = true;
-        if (strncmp("*e1000e-mmio*", mrnames[i], strlen(mrnames[i])) == 0)
-            e1000e = true;
-        if (strncmp("*vmxnet3-b1*", mrnames[i], strlen(mrnames[i])) == 0)
-            vmxnet3 = true;
-        if (strncmp("*dwc2-io*", mrnames[i], strlen(mrnames[i])) == 0)
-            dwc2 = true;
-        locate_fuzzable_objects(qdev_get_machine(), mrnames[i]);
-    }
-
-    if (strcmp(TARGET_NAME, "i386") == 0) {
-        pcibus = qpci_new_pc(s, NULL);
-        g_ptr_array_foreach(fuzzable_pci_devices, pci_enum, pcibus);
-        qpci_free_pc(pcibus);
-    }
-
-    fprintf(stderr, "Matching objects by name ");
-    for (int i = 0; mrnames[i] != NULL; i++) {
-        fprintf(stderr, ", %s", mrnames[i]);
-        locate_fuzzable_objects(qdev_get_machine(), mrnames[i]);
-    }
-    fprintf(stderr, "\n");
-    g_strfreev(mrnames);
-
-    fprintf(stderr, "This process will fuzz the following MemoryRegions:\n");
-    g_hash_table_iter_init(&iter, fuzzable_memoryregions);
-    while (g_hash_table_iter_next(&iter, (gpointer)&mr, NULL)) {
-        printf("  * %s (size %lx)\n",
-               object_get_canonical_path_component(&(mr->parent_obj)),
-               (uint64_t)mr->size);
-    }
-    if (!g_hash_table_size(fuzzable_memoryregions)) {
-        printf("No fuzzable memory regions found ...\n");
-        exit(1);
-    }
-
-    fprintf(stderr, "This process will fuzz through the following interfaces:\n");
-    if (get_number_of_interfaces() == 0) {
-        printf("No fuzzable interfaces found ...\n");
-        exit(2);
-    } else {
-        print_interfaces();
-    }
-
-    vbox_alloc = get_vbox_alloc(s);
-
 #ifdef CLANG_COV_DUMP
     llvm_profile_initialize_file(true);
 #endif
 }
+
+static void videzzo_vbox_init_pre(void) { }
 
 // This is called in LLVMFuzzerInitialize
 static GString *videzzo_vbox_cmdline(ViDeZZoFuzzTarget *t) {
@@ -770,7 +476,7 @@ static GString *videzzo_vbox_predefined_config_cmdline(ViDeZZoFuzzTarget *t) {
     g_assert(t->opaque);
     int port = 0;
 
-    config = t->opaque;
+    config = (ViDeZZoFuzzTargetConfig *)t->opaque;
     if (config->socket && !sockfds_initialized) {
         init_sockets(sockfds);
         sockfds_initialized = true;
@@ -792,35 +498,6 @@ static GString *videzzo_vbox_predefined_config_cmdline(ViDeZZoFuzzTarget *t) {
 
     setenv("vbox_FUZZ_MRNAME", config->mrnames, 1);
     return videzzo_vbox_cmdline(t);
-}
-
-extern "C" static void register_videzzo_vbox_targets(void) {
-    videzzo_add_fuzz_target(&(ViDeZZoFuzzTarget){
-            .name = "videzzo-fuzz",
-            .description = "Fuzz based on any vbox command-line args. ",
-            .get_init_cmdline = videzzo_vbox_cmdline,
-            .pre_fuzz = videzzo_vbox_pre,
-            .fuzz = videzzo_vbox,
-    });
-
-    GString *name;
-    const ViDeZZoFuzzTargetConfig *config;
-
-    for (int i = 0; i < sizeof(predefined_configs) / sizeof(ViDeZZoFuzzTargetConfig); i++) {
-        config = predefined_configs + i;
-        if (strcmp(TARGET_NAME, config->arch) != 0)
-            continue;
-        name = g_string_new("videzzo-fuzz");
-        g_string_append_printf(name, "-%s", config->name);
-        videzzo_add_fuzz_target(&(ViDeZZoFuzzTarget){
-                .name = name->str,
-                .description = "Predefined videzzo-fuzz config.",
-                .get_init_cmdline = videzzo_vbox_predefined_config_cmdline,
-                .pre_fuzz = videzzo_vbox_pre,
-                .fuzz = videzzo_vbox,
-                .opaque = (void *)config
-        });
-    }
 }
 
 /**
@@ -1138,30 +815,6 @@ HandleSignal(int sig)
     g_fTerminateFE = true;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-
-static void show_usage()
-{
-    RTPrintf("Usage:\n"
-             "   -s, -startvm, --startvm <name|uuid>   Start given VM (required argument)\n"
-             "   -v, -vrde, --vrde on|off|config       Enable or disable the VRDE server\n"
-             "                                           or don't change the setting (default)\n"
-             "   -e, -vrdeproperty, --vrdeproperty <name=[value]> Set a VRDE property:\n"
-             "                                     \"TCP/Ports\" - comma-separated list of\n"
-             "                                       ports the VRDE server can bind to; dash\n"
-             "                                       between two port numbers specifies range\n"
-             "                                     \"TCP/Address\" - interface IP the VRDE\n"
-             "                                       server will bind to\n"
-             "   --settingspw <pw>                 Specify the VirtualBox settings password\n"
-             "   --settingspwfile <file>           Specify a file containing the\n"
-             "                                       VirtualBox settings password\n"
-             "   --password <file>|-               Specify the VM password. Either file containing\n"
-             "                                     the VM password or \"-\" to read it from console\n"
-             "   --password-id <id>                Specify the password id for the VM password\n"
-             "   -start-paused, --start-paused     Start the VM in paused state\n"
-             "\n");
-}
-
 /*
  * Simplified version of showProgress() borrowed from VBoxManage.
  * Note that machine power up/down operations are not cancelable, so
@@ -1237,10 +890,8 @@ showProgress(const ComPtr<IProgress> &progress)
 }
 
 
-/**
- *  Entry point.
- */
-extern "C" DECLEXPORT(int) TrustedMain(int argc, char **argv, char **envp)
+// This is called in LLVMFuzzerInitialize
+static int VBoxViDeZZoMain(int argc, char **argv, char **envp)
 {
     RT_NOREF(envp);
     const char *vrdePort = NULL;
@@ -1251,115 +902,23 @@ extern "C" DECLEXPORT(int) TrustedMain(int argc, char **argv, char **envp)
     unsigned fPaused = 0;
 
     LogFlow(("VBoxViDeZZo STARTED.\n"));
-    RTPrintf(VBOX_PRODUCT " ViDeZZo Interface " VBOX_VERSION_STRING "\n"
-             "(C) 2008-" VBOX_C_YEAR " " VBOX_VENDOR "\n"
-             "All rights reserved.\n\n");
-
-    enum eViDeZZoOptions
-    {
-        OPT_SETTINGSPW = 0x100,
-        OPT_SETTINGSPW_FILE,
-        OPT_COMMENT,
-        OPT_PAUSED,
-        OPT_VMPW,
-        OPT_VMPWID
-    };
 
     static const RTGETOPTDEF s_aOptions[] =
     {
         { "-startvm", 's', RTGETOPT_REQ_STRING },
         { "--startvm", 's', RTGETOPT_REQ_STRING },
-        { "-vrdpport", 'p', RTGETOPT_REQ_STRING },     /* VRDE: deprecated. */
-        { "--vrdpport", 'p', RTGETOPT_REQ_STRING },    /* VRDE: deprecated. */
-        { "-vrdpaddress", 'a', RTGETOPT_REQ_STRING },  /* VRDE: deprecated. */
-        { "--vrdpaddress", 'a', RTGETOPT_REQ_STRING }, /* VRDE: deprecated. */
-        { "-vrdp", 'v', RTGETOPT_REQ_STRING },         /* VRDE: deprecated. */
-        { "--vrdp", 'v', RTGETOPT_REQ_STRING },        /* VRDE: deprecated. */
-        { "-vrde", 'v', RTGETOPT_REQ_STRING },
-        { "--vrde", 'v', RTGETOPT_REQ_STRING },
-        { "-vrdeproperty", 'e', RTGETOPT_REQ_STRING },
-        { "--vrdeproperty", 'e', RTGETOPT_REQ_STRING },
-        { "--settingspw", OPT_SETTINGSPW, RTGETOPT_REQ_STRING },
-        { "--settingspwfile", OPT_SETTINGSPW_FILE, RTGETOPT_REQ_STRING },
-        { "--password", OPT_VMPW, RTGETOPT_REQ_STRING },
-        { "--password-id", OPT_VMPWID, RTGETOPT_REQ_STRING },
-        { "-comment", OPT_COMMENT, RTGETOPT_REQ_STRING },
-        { "--comment", OPT_COMMENT, RTGETOPT_REQ_STRING },
-        { "-start-paused", OPT_PAUSED, 0 },
-        { "--start-paused", OPT_PAUSED, 0 }
     };
-
     const char *pcszNameOrUUID = NULL;
 
     // parse the command line
     int ch;
-    const char *pcszSettingsPw = NULL;
-    const char *pcszSettingsPwFile = NULL;
-    const char *pcszVmPassword = NULL;
-    const char *pcszVmPasswordId = NULL;
     RTGETOPTUNION ValueUnion;
     RTGETOPTSTATE GetState;
-    RTGetOptInit(&GetState, argc, argv, s_aOptions, RT_ELEMENTS(s_aOptions), 1, 0 /* fFlags */);
-    while ((ch = RTGetOpt(&GetState, &ValueUnion)))
-    {
-        switch(ch)
-        {
-            case 's':
-                pcszNameOrUUID = ValueUnion.psz;
-                break;
-            case 'p':
-                RTPrintf("Warning: '-p' or '-vrdpport' are deprecated. Use '-e \"TCP/Ports=%s\"'\n", ValueUnion.psz);
-                vrdePort = ValueUnion.psz;
-                break;
-            case 'a':
-                RTPrintf("Warning: '-a' or '-vrdpaddress' are deprecated. Use '-e \"TCP/Address=%s\"'\n", ValueUnion.psz);
-                vrdeAddress = ValueUnion.psz;
-                break;
-            case 'v':
-                vrdeEnabled = ValueUnion.psz;
-                break;
-            case 'e':
-                if (cVRDEProperties < RT_ELEMENTS(aVRDEProperties))
-                    aVRDEProperties[cVRDEProperties++] = ValueUnion.psz;
-                else
-                     RTPrintf("Warning: too many VRDE properties. Ignored: '%s'\n", ValueUnion.psz);
-                break;
-            case OPT_SETTINGSPW:
-                pcszSettingsPw = ValueUnion.psz;
-                break;
-            case OPT_SETTINGSPW_FILE:
-                pcszSettingsPwFile = ValueUnion.psz;
-                break;
-            case OPT_VMPW:
-                pcszVmPassword = ValueUnion.psz;
-                break;
-            case OPT_VMPWID:
-                pcszVmPasswordId = ValueUnion.psz;
-                break;
-            case OPT_PAUSED:
-                fPaused = true;
-                break;
-            case 'h':
-                show_usage();
-                return 0;
-            case OPT_COMMENT:
-                /* nothing to do */
-                break;
-            case 'V':
-                RTPrintf("%sr%s\n", RTBldCfgVersion(), RTBldCfgRevisionStr());
-                return 0;
-            default:
-                ch = RTGetOptPrintError(ch, &ValueUnion);
-                show_usage();
-                return ch;
-        }
-    }
-
-    if (!pcszNameOrUUID)
-    {
-        show_usage();
-        return 1;
-    }
+    RTGetOptInit(&GetState, argc, argv, s_aOptions, RT_ELEMENTS(s_aOptions), 1, /*fFlags=*/0);
+    ch = RTGetOpt(&GetState, &ValueUnion);
+    Assert(ch == 's');
+    pcszNameOrUUID = ValueUnion.psz;
+    if (!pcszNameOrUUID) return 1;
 
     HRESULT rc;
     int irc;
@@ -1419,19 +978,6 @@ extern "C" DECLEXPORT(int) TrustedMain(int argc, char **argv, char **envp)
             break;
         }
 
-        if (pcszSettingsPw)
-        {
-            CHECK_ERROR(virtualBox, SetSettingsSecret(Bstr(pcszSettingsPw).raw()));
-            if (FAILED(rc))
-                break;
-        }
-        else if (pcszSettingsPwFile)
-        {
-            int rcExit = settingsPasswordFile(virtualBox, pcszSettingsPwFile);
-            if (rcExit != RTEXITCODE_SUCCESS)
-                break;
-        }
-
         ComPtr<IMachine> m;
 
         rc = virtualBox->FindMachine(Bstr(pcszNameOrUUID).raw(), m.asOutParam());
@@ -1441,26 +987,6 @@ extern "C" DECLEXPORT(int) TrustedMain(int argc, char **argv, char **envp)
             break;
         }
 
-        /* add VM password if required */
-        if (pcszVmPassword && pcszVmPasswordId)
-        {
-            com::Utf8Str strPassword;
-            if (!RTStrCmp(pcszVmPassword, "-"))
-            {
-                /* Get password from console. */
-                RTEXITCODE rcExit = readPasswordFromConsole(&strPassword, "Enter the password:");
-                if (rcExit == RTEXITCODE_FAILURE)
-                    break;
-            }
-            else
-            {
-                RTEXITCODE rcExit = readPasswordFile(pcszVmPassword, &strPassword);
-                if (rcExit != RTEXITCODE_SUCCESS)
-                    break;
-            }
-            CHECK_ERROR_BREAK(m, AddEncryptionPassword(Bstr(pcszVmPasswordId).raw(),
-                                                       Bstr(strPassword).raw()));
-        }
         Bstr bstrVMId;
         rc = m->COMGETTER(Id)(bstrVMId.asOutParam());
         AssertComRC(rc);
@@ -1479,7 +1005,7 @@ extern "C" DECLEXPORT(int) TrustedMain(int argc, char **argv, char **envp)
              g_strVMUUID.c_str()));
 
         // set session name
-        CHECK_ERROR_BREAK(session, COMSETTER(Name)(Bstr("headless").raw()));
+        CHECK_ERROR_BREAK(session, COMSETTER(Name)(Bstr("ViDeZZo").raw()));
         // open a session
         CHECK_ERROR_BREAK(m, LockMachine(session, LockType_VM));
         fSessionOpened = true;
@@ -1527,113 +1053,10 @@ extern "C" DECLEXPORT(int) TrustedMain(int argc, char **argv, char **envp)
             CHECK_ERROR(es, RegisterListener(consoleListener, ComSafeArrayAsInParam(eventTypes), true));
         }
 
-        /* Default is to use the VM setting for the VRDE server. */
-        enum VRDEOption
-        {
-            VRDEOption_Config,
-            VRDEOption_Off,
-            VRDEOption_On
-        };
-        VRDEOption enmVRDEOption = VRDEOption_Config;
-        BOOL fVRDEEnabled;
-        ComPtr <IVRDEServer> vrdeServer;
-        CHECK_ERROR_BREAK(machine, COMGETTER(VRDEServer)(vrdeServer.asOutParam()));
-        CHECK_ERROR_BREAK(vrdeServer, COMGETTER(Enabled)(&fVRDEEnabled));
-
-        if (vrdeEnabled != NULL)
-        {
-            /* -vrde on|off|config */
-            if (!strcmp(vrdeEnabled, "off") || !strcmp(vrdeEnabled, "disable"))
-                enmVRDEOption = VRDEOption_Off;
-            else if (!strcmp(vrdeEnabled, "on") || !strcmp(vrdeEnabled, "enable"))
-                enmVRDEOption = VRDEOption_On;
-            else if (strcmp(vrdeEnabled, "config"))
-            {
-                RTPrintf("-vrde requires an argument (on|off|config)\n");
-                break;
-            }
-        }
-
-        Log(("VBoxViDeZZo: enmVRDE %d, fVRDEEnabled %d\n", enmVRDEOption, fVRDEEnabled));
-
-        if (enmVRDEOption != VRDEOption_Off)
-        {
-            /* Set other specified options. */
-
-            /* set VRDE port if requested by the user */
-            if (vrdePort != NULL)
-            {
-                Bstr bstr = vrdePort;
-                CHECK_ERROR_BREAK(vrdeServer, SetVRDEProperty(Bstr("TCP/Ports").raw(), bstr.raw()));
-            }
-            /* set VRDE address if requested by the user */
-            if (vrdeAddress != NULL)
-            {
-                CHECK_ERROR_BREAK(vrdeServer, SetVRDEProperty(Bstr("TCP/Address").raw(), Bstr(vrdeAddress).raw()));
-            }
-
-            /* Set VRDE properties. */
-            if (cVRDEProperties > 0)
-            {
-                for (unsigned i = 0; i < cVRDEProperties; i++)
-                {
-                    /* Parse 'name=value' */
-                    char *pszProperty = RTStrDup(aVRDEProperties[i]);
-                    if (pszProperty)
-                    {
-                        char *pDelimiter = strchr(pszProperty, '=');
-                        if (pDelimiter)
-                        {
-                            *pDelimiter = '\0';
-
-                            Bstr bstrName = pszProperty;
-                            Bstr bstrValue = &pDelimiter[1];
-                            CHECK_ERROR_BREAK(vrdeServer, SetVRDEProperty(bstrName.raw(), bstrValue.raw()));
-                        }
-                        else
-                        {
-                            RTPrintf("Error: Invalid VRDE property '%s'\n", aVRDEProperties[i]);
-                            RTStrFree(pszProperty);
-                            rc = E_INVALIDARG;
-                            break;
-                        }
-                        RTStrFree(pszProperty);
-                    }
-                    else
-                    {
-                        RTPrintf("Error: Failed to allocate memory for VRDE property '%s'\n", aVRDEProperties[i]);
-                        rc = E_OUTOFMEMORY;
-                        break;
-                    }
-                }
-                if (FAILED(rc))
-                    break;
-            }
-
-        }
-
-        if (enmVRDEOption == VRDEOption_On)
-        {
-            /* enable VRDE server (only if currently disabled) */
-            if (!fVRDEEnabled)
-            {
-                CHECK_ERROR_BREAK(vrdeServer, COMSETTER(Enabled)(TRUE));
-            }
-        }
-        else if (enmVRDEOption == VRDEOption_Off)
-        {
-            /* disable VRDE server (only if currently enabled */
-            if (fVRDEEnabled)
-            {
-                CHECK_ERROR_BREAK(vrdeServer, COMSETTER(Enabled)(FALSE));
-            }
-        }
-
         /* Disable the host clipboard before powering up */
         console->COMSETTER(UseHostClipboard)(false);
 
         Log(("VBoxViDeZZo: Powering up the machine...\n"));
-
 
         /**
          * @todo We should probably install handlers earlier so that
@@ -1653,10 +1076,7 @@ extern "C" DECLEXPORT(int) TrustedMain(int argc, char **argv, char **envp)
         /* Don't touch SIGUSR2 as IPRT could be using it for RTThreadPoke(). */
 
         ComPtr <IProgress> progress;
-        if (!fPaused)
-            CHECK_ERROR_BREAK(console, PowerUp(progress.asOutParam()));
-        else
-            CHECK_ERROR_BREAK(console, PowerUpPaused(progress.asOutParam()));
+        CHECK_ERROR_BREAK(console, PowerUp(progress.asOutParam()));
 
         rc = showProgress(progress);
         if (FAILED(rc))
@@ -1672,154 +1092,82 @@ extern "C" DECLEXPORT(int) TrustedMain(int argc, char **argv, char **envp)
             }
             break;
         }
-
-        /*
-         * Pump vbox events forever
-         */
-        LogRel(("VBoxViDeZZo: starting event loop\n"));
-        for (;;)
-        {
-            irc = gEventQ->processEventQueue(RT_INDEFINITE_WAIT);
-
-            /*
-             * interruptEventQueueProcessing from another thread is
-             * reported as VERR_INTERRUPTED, so check the flag first.
-             */
-            if (g_fTerminateFE)
-            {
-                LogRel(("VBoxViDeZZo: processEventQueue: %Rrc, termination requested\n", irc));
-                break;
-            }
-
-            if (RT_FAILURE(irc))
-            {
-                LogRel(("VBoxViDeZZo: processEventQueue: %Rrc\n", irc));
-                RTMsgError("event loop: %Rrc", irc);
-                break;
-            }
-        }
-
-        Log(("VBoxViDeZZo: event loop has terminated...\n"));
-
-        /* we don't have to disable VRDE here because we don't save the settings of the VM */
     }
     while (0);
-
-    /*
-     * Get the machine state.
-     */
-    MachineState_T machineState = MachineState_Aborted;
-    if (!machine.isNull())
-    {
-        rc = machine->COMGETTER(State)(&machineState);
-        if (SUCCEEDED(rc))
-            Log(("machine state = %RU32\n", machineState));
-        else
-            Log(("IMachine::getState: %Rhrc\n", rc));
-    }
-    else
-    {
-        Log(("machine == NULL\n"));
-    }
-
-    /*
-     * Turn off the VM if it's running
-     */
-    if (   gConsole
-        && (   machineState == MachineState_Running
-            || machineState == MachineState_Teleporting
-            || machineState == MachineState_LiveSnapshotting
-            /** @todo power off paused VMs too? */
-           )
-       )
-    do
-    {
-        consoleListener->getWrapped()->ignorePowerOffEvents(true);
-
-        ComPtr<IProgress> pProgress;
-        if (!machine.isNull())
-            CHECK_ERROR_BREAK(machine, SaveState(pProgress.asOutParam()));
-        else
-            CHECK_ERROR_BREAK(gConsole, PowerDown(pProgress.asOutParam()));
-
-        rc = showProgress(pProgress);
-        if (FAILED(rc))
-        {
-            com::ErrorInfo info;
-            if (!info.isFullAvailable() && !info.isBasicAvailable())
-                com::GluePrintRCMessage(rc);
-            else
-                com::GluePrintErrorInfo(info);
-            break;
-        }
-    } while (0);
-
-    /* VirtualBox callback unregistration. */
-    if (vboxListener)
-    {
-        ComPtr<IEventSource> es;
-        CHECK_ERROR(virtualBox, COMGETTER(EventSource)(es.asOutParam()));
-        if (!es.isNull())
-            CHECK_ERROR(es, UnregisterListener(vboxListener));
-        vboxListener.setNull();
-    }
-
-    /* Console callback unregistration. */
-    if (consoleListener)
-    {
-        ComPtr<IEventSource> es;
-        CHECK_ERROR(gConsole, COMGETTER(EventSource)(es.asOutParam()));
-        if (!es.isNull())
-            CHECK_ERROR(es, UnregisterListener(consoleListener));
-        consoleListener.setNull();
-    }
-
-    /* VirtualBoxClient callback unregistration. */
-    if (vboxClientListener)
-    {
-        ComPtr<IEventSource> pES;
-        CHECK_ERROR(pVirtualBoxClient, COMGETTER(EventSource)(pES.asOutParam()));
-        if (!pES.isNull())
-            CHECK_ERROR(pES, UnregisterListener(vboxClientListener));
-        vboxClientListener.setNull();
-    }
-
-    /* No more access to the 'console' object, which will be uninitialized by the next session->Close call. */
-    gConsole = NULL;
-
-    if (fSessionOpened)
-    {
-        /*
-         * Close the session. This will also uninitialize the console and
-         * unregister the callback we've registered before.
-         */
-        Log(("VBoxViDeZZo: Closing the session...\n"));
-        session->UnlockMachine();
-    }
-
-    /* Must be before com::Shutdown */
-    session.setNull();
-    virtualBox.setNull();
-    pVirtualBoxClient.setNull();
-    machine.setNull();
-
-    com::Shutdown();
-
-    LogRel(("VBoxViDeZZo: exiting\n"));
-    return FAILED(rc) ? 1 : 0;
+    return 0;
 }
 
-#ifndef VBOX_WITH_HARDENING
+ViDeZZoFuzzTarget generic_target = {
+    .name = "videzzo-fuzz",
+    .description = "Fuzz based on any VBox command-line args. ",
+    .get_init_cmdline = videzzo_vbox_cmdline,
+    .pre_vm_init = videzzo_vbox_init_pre,
+    .pre_fuzz = videzzo_vbox_pre,
+    .fuzz = videzzo_vbox,
+};
+
+// This is called in LLVMFuzzerInitialize
+static void register_videzzo_vbox_targets(void) {
+    videzzo_add_fuzz_target(&generic_target);
+    GString *name;
+    ViDeZZoFuzzTarget *target;
+    const ViDeZZoFuzzTargetConfig *config;
+
+    for (int i = 0; i < sizeof(predefined_configs) / sizeof(ViDeZZoFuzzTargetConfig); i++) {
+        config = predefined_configs + i;
+        if (strcmp(TARGET_NAME, config->arch) != 0)
+            continue;
+        name = g_string_new("videzzo-fuzz");
+        g_string_append_printf(name, "-%s", config->name);
+        target = (ViDeZZoFuzzTarget *)calloc(sizeof(ViDeZZoFuzzTarget), 1);
+        target->name = name->str;
+        target->description = "Predefined videzzo-fuzz config.";
+        target->get_init_cmdline = videzzo_vbox_predefined_config_cmdline;
+        target->pre_vm_init = videzzo_vbox_init_pre;
+        target->pre_fuzz = videzzo_vbox_pre;
+        target->fuzz = videzzo_vbox;
+        target->opaque = (void *)config;
+        videzzo_add_fuzz_target(target);
+    }
+}
+ 
 int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
 {
-    int rc = RTR3InitExe(*argc, argv, RTR3INIT_FLAGS_TRY_SUPLIB);
+    char *target_name = nullptr;
+    int rc;
+
+    // step 1: initialize fuzz targets
+    register_videzzo_vbox_targets();
+
+    // step 2: find which fuzz target to run
+    rc = parse_fuzz_target_name(argc, argv, target_name);
+    if (rc == NAME_INVALID)
+        usage();
+
+    // step 3: get the fuzz target
+    fuzz_target = videzzo_get_fuzz_target(target_name);
+    if (!fuzz_target) {
+        usage();
+    }
+    
+    // step 4: run callback before VBox init
+    if (fuzz_target->pre_vm_init) {
+        fuzz_target->pre_vm_init();
+    }
+
+    // step 5: construct VBox init cmds and init VBox
+    // TODO: any cmds construction
+    rc = RTR3InitExe(*argc, argv, RTR3INIT_FLAGS_TRY_SUPLIB);
     if (RT_SUCCESS(rc)) {
-        rc = TrustedMain(argc, argv, envp);
-        if 
+        rc = VBoxViDeZZoMain(*argc, *argv, *envp);
+        if (RT_FAILURE(rc)) {
+            RTPrintf("VBoxViDeZZo: VBoxViDeZZoMain failed: %Rrc - %Rrf\n", rc, rc);
+            return 1;
+        }
+        // TODO: any signal hooking
         return 0;
     } else {
         RTPrintf("VBoxViDeZZo: Runtime initialization failed: %Rrc - %Rrf\n", rc, rc);
         return 1;
     }
 }
-#endif /* !VBOX_WITH_HARDENING */

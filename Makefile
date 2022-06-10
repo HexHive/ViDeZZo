@@ -45,19 +45,37 @@ videzzo-qemu:
 	CFLAGS="${CFLAGS} ${SANITIZERS}"                 HYPERVISOR=qemu make videzzo-core
 	make -C videzzo_qemu qemu clusterfuzz
 
+videzzo-vbox:
+	CFLAGS="${CFLAGS} ${SANITIZERS}"                 HYPERVISOR=vbox make videzzo-core
+	make -C videzzo_vbox vbox clusterfuzz
+
 videzzo-qemu-coverage:
 	CFLAGS="${CFLAGS}"                               HYPERVISOR=qemu make videzzo-core
 	make -C videzzo_qemu qemu-coverage clusterfuzz-coverage
+
+videzzo-vbox-coverage:
+	CFLAGS="${CFLAGS}"                               HYPERVISOR=vbox make videzzo-core
+	make -C videzzo_vbox vbox-coverage clusterfuzz-coverage
 
 videzzo-qemu-debug:
 	CFLAGS="${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG" HYPERVISOR=qemu make videzzo-core
 	make -C videzzo_qemu qemu-debug clusterfuzz-debug
 
+videzzo-vbox-debug:
+	CFLAGS="${CFLAGS}               -DVIDEZZO_DEBUG" HYPERVISOR=vbox make videzzo-core
+	make -C videzzo_vbox vbox-debug clusterfuzz-debug
+
 qemu: videzzo-qemu
+
+vbox: videzzo-vbox
 
 qemu-coverage: videzzo-qemu-coverage
 
+vbox-coverage: videzzo-vbox-coverage
+
 qemu-debug: videzzo-qemu-debug
+
+vbox-debug: videzzo-vbox-debug
 
 clean:
 	rm -rf *.o *.a *.i videzzo-merge
