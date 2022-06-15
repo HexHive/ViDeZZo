@@ -3,7 +3,7 @@
 # This script is derived from QEMU/scripts/oss-fuzz/build.sh
 
 # let's assume we've compiled VirtualBox
-# so we have qemu/build-[san|cov]-6/qemu-videzzo-[i386|arm]
+# so we have vbox/out-[san|cov]/linux.amd64/debug
 CONTROL=$1 # san or cov
 DEST_DIR=$PWD/out-$1
 mkdir -p $DEST_DIR
@@ -16,7 +16,13 @@ for target in $(echo "$targets" | head -n -1); do
         ln -f ./VBoxViDeZZo "$DEST_DIR/vbox-videzzo-i386-target-$target"
     fi
 done
+cp ./VBoxHeadless $DEST_DIR
+cp ./VBoxViDeZZo $DEST_DIR
+cp ./VBoxVMM.so $DEST_DIR
+cp ./VBoxRT.so $DEST_DIR
+cp ./VBoxXPCOM.so $DEST_DIR
 popd
+cp ./createVM.sh $DEST_DIR
 pushd $DEST_DIR
 # zip -r ../vbox-address-$(date '+%Y%m%d%H%M%S').zip *
 popd

@@ -42,6 +42,8 @@
 
 using namespace com;
 
+#define LOG_GROUP LOG_GROUP_GUI
+
 #include <VBox/log.h>
 #include <VBox/version.h>
 #include <iprt/buildconfig.h>
@@ -100,12 +102,12 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     {
         .arch = "i386",
         .name = "pcnet",
-        .args = "-machine q35 -nodefaults "
-        "-device pcnet,netdev=net0 -netdev user,id=net0",
-        .mrnames = "*pcnet-mmio*,*pcnet-io*",
+        .args = "--startvm vm-test",
         .file = "srv/VBox/Devices/Network/DevPCNet.cpp",
-        .socket = true,
+        .mrnames = "*PCnet*,*PCnet APROM*",
         .byte_address = true,
+        .socket = true,
+        .display = false,
     }
 };
 
@@ -1140,7 +1142,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     register_videzzo_vbox_targets();
 
     // step 2: find which fuzz target to run
-    rc = parse_fuzz_target_name(argc, argv, target_name);
+    rc = parse_fuzz_target_name(argc, argv, &target_name);
     if (rc == NAME_INVALID)
         usage();
 

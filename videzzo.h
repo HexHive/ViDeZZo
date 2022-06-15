@@ -291,12 +291,12 @@ typedef LIST_HEAD(, ViDeZZoFuzzTargetState) ViDeZZoFuzzTargetList;
 
 #ifdef __cplusplus
 extern "C" void videzzo_usage(void);
-extern "C" int parse_fuzz_target_name(int *argc, char ***argv, char *target_name);
+extern "C" int parse_fuzz_target_name(int *argc, char ***argv, char **target_name);
 extern "C" void videzzo_add_fuzz_target(ViDeZZoFuzzTarget *target);
 extern "C" ViDeZZoFuzzTarget *videzzo_get_fuzz_target(char* name);
 #else
 void videzzo_usage(void);
-int parse_fuzz_target_name(int *argc, char ***argv, char *target_name);
+int parse_fuzz_target_name(int *argc, char ***argv, char **target_name);
 void videzzo_add_fuzz_target(ViDeZZoFuzzTarget *target);
 ViDeZZoFuzzTarget *videzzo_get_fuzz_target(char* name);
 #endif
