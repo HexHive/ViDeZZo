@@ -16,13 +16,16 @@ for target in $(echo "$targets" | head -n -1); do
         ln -f ./VBoxViDeZZo "$DEST_DIR/vbox-videzzo-i386-target-$target"
     fi
 done
-cp ./VBoxHeadless $DEST_DIR
+cp ./VBoxManage $DEST_DIR
 cp ./VBoxViDeZZo $DEST_DIR
+cp ./VBoxSVC $DEST_DIR
 cp ./VBoxVMM.so $DEST_DIR
 cp ./VBoxRT.so $DEST_DIR
 cp ./VBoxXPCOM.so $DEST_DIR
+cp -r components $DEST_DIR
 popd
-cp ./createVM.sh $DEST_DIR
 pushd $DEST_DIR
+chmod -x *.so
+pushd components && chmod -x *.so && pushd
 # zip -r ../vbox-address-$(date '+%Y%m%d%H%M%S').zip *
 popd

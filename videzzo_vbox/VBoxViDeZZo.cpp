@@ -57,13 +57,13 @@ using namespace com;
 #include <iprt/getopt.h>
 #include <iprt/env.h>
 #include <iprt/errcore.h>
-#include <VBoxVideo.h>
 
 #include <signal.h>
 static void HandleSignal(int sig);
 
-#include "PasswordInput.h"
+#include "VBoxManage.h"
 
+#include <wordexp.h>
 #include "videzzo.h"
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -83,8 +83,11 @@ static NativeEventQueue *gEventQ = NULL;
 static com::Utf8Str g_strVMName;
 static com::Utf8Str g_strVMUUID;
 
-/* flag whether frontend should terminate */
-static volatile bool g_fTerminateFE = false;
+bool g_fDetailedProgress = false;
+HRESULT showProgress(ComPtr<IProgress> progress, uint32_t fFlags)
+{
+    fprintf(stderr, "VBoxViDeZZo doesn't support showProcess");
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -95,18 +98,22 @@ static volatile bool g_fTerminateFE = false;
 #include "clangcovdump.h"
 #endif
 
+static RTUUID uuid;
+static char uuid_str[64];
+
 //
 // Fuzz Target Configs
+// https://www.virtualbox.org/manual/ch08.html#vboxmanage-modifyvm
 //
 static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     {
         .arch = "i386",
         .name = "pcnet",
-        .args = "--startvm vm-test",
+        .args = "--nic1 nat --nictype1 Am79C970A",
         .file = "srv/VBox/Devices/Network/DevPCNet.cpp",
         .mrnames = "*PCnet*,*PCnet APROM*",
         .byte_address = true,
-        .socket = true,
+        .socket = false,
         .display = false,
     }
 };
@@ -405,14 +412,6 @@ static void videzzo_vbox(void *opaque, uint8_t *Data, size_t Size) {
 }
 
 //
-// call into videzzo from vbox
-//
-size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size,
-        size_t MaxSize, unsigned int Seed) {
-    return ViDeZZoCustomMutator(Data, Size, MaxSize, Seed);
-}
-
-//
 // VBox specific initialization - Usage
 //
 static void usage(void) {
@@ -421,30 +420,6 @@ static void usage(void) {
     videzzo_usage();
     exit(0);
 }
-
-//
-// VBox specific initialization - LibFuzzer entries
-//
-static ViDeZZoFuzzTarget *fuzz_target;
-int LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size) {
-    /*
-     * Do the pre-fuzz-initialization before the first fuzzing iteration,
-     * instead of before the actual fuzz loop. This is needed since libfuzzer
-     * may fork off additional workers, prior to the fuzzing loop, and if
-     * pre_fuzz() sets up e.g. shared memory, this should be done for the
-     * individual worker processes
-     */
-    static int pre_fuzz_done;
-    if (!pre_fuzz_done && fuzz_target->pre_fuzz) {
-        fuzz_target->pre_fuzz(NULL);
-        pre_fuzz_done = true;
-    }
-
-    fuzz_target->fuzz(NULL, Data, Size);
-    return 0;
-}
-
-static const char *fuzz_arch = TARGET_NAME;
 
 //
 // VBox specific initialization - Register all targets
@@ -457,17 +432,18 @@ static void videzzo_vbox_pre(void *opaque) {
 #endif
 }
 
-static void videzzo_vbox_init_pre(void) { }
+// This is called in LLVMFuzzerTestOneInput
+static void videzzo_vbox_post(void *opaque) {
+}
 
 // This is called in LLVMFuzzerInitialize
 static GString *videzzo_vbox_cmdline(ViDeZZoFuzzTarget *t) {
-    GString *cmd_line = g_string_new(TARGET_NAME);
-    if (!getenv("vbox_FUZZ_ARGS")) {
+    if (!getenv("VBOX_FUZZ_ARGS")) {
         usage();
     }
-    g_string_append_printf(cmd_line, " -display none \
-                                      -machine accel=qtest, \
-                                      -m 512M %s ", getenv("vbox_FUZZ_ARGS"));
+    GString *cmd_line = g_string_new("modifyvm");
+    g_string_append_printf(cmd_line, " %s", uuid_str);
+    g_string_append_printf(cmd_line, " %s", getenv("VBOX_FUZZ_ARGS"));
     return cmd_line;
 }
 
@@ -495,621 +471,25 @@ static GString *videzzo_vbox_predefined_config_cmdline(ViDeZZoFuzzTarget *t) {
     g_assert_nonnull(config->args);
     g_string_append_printf(args, config->args, port);
     gchar *args_str = g_string_free(args, FALSE);
-    setenv("vbox_FUZZ_ARGS", args_str, 1);
+    setenv("VBOX_FUZZ_ARGS", args_str, 1);
     g_free(args_str);
 
-    setenv("vbox_FUZZ_MRNAME", config->mrnames, 1);
+    setenv("VBOX_FUZZ_MRNAME", config->mrnames, 1);
     return videzzo_vbox_cmdline(t);
-}
-
-/**
- *  Handler for VirtualBoxClient events.
- */
-class VirtualBoxClientEventListener
-{
-public:
-    VirtualBoxClientEventListener()
-    {
-    }
-
-    virtual ~VirtualBoxClientEventListener()
-    {
-    }
-
-    HRESULT init()
-    {
-        return S_OK;
-    }
-
-    void uninit()
-    {
-    }
-
-    STDMETHOD(HandleEvent)(VBoxEventType_T aType, IEvent *aEvent)
-    {
-        switch (aType)
-        {
-            case VBoxEventType_OnVBoxSVCAvailabilityChanged:
-            {
-                ComPtr<IVBoxSVCAvailabilityChangedEvent> pVSACEv = aEvent;
-                Assert(pVSACEv);
-                BOOL fAvailable = FALSE;
-                pVSACEv->COMGETTER(Available)(&fAvailable);
-                if (!fAvailable)
-                {
-                    LogRel(("VBoxViDeZZo: VBoxSVC became unavailable, exiting.\n"));
-                    RTPrintf("VBoxSVC became unavailable, exiting.\n");
-                    /* Terminate the VM as cleanly as possible given that VBoxSVC
-                     * is no longer present. */
-                    g_fTerminateFE = true;
-                    gEventQ->interruptEventQueueProcessing();
-                }
-                break;
-            }
-            default:
-                AssertFailed();
-        }
-
-        return S_OK;
-    }
-
-private:
-};
-
-/**
- *  Handler for machine events.
- */
-class ConsoleEventListener
-{
-public:
-    ConsoleEventListener() :
-        mLastVRDEPort(-1),
-        m_fIgnorePowerOffEvents(false),
-        m_fNoLoggedInUsers(true)
-    {
-    }
-
-    virtual ~ConsoleEventListener()
-    {
-    }
-
-    HRESULT init()
-    {
-        return S_OK;
-    }
-
-    void uninit()
-    {
-    }
-
-    STDMETHOD(HandleEvent)(VBoxEventType_T aType, IEvent *aEvent)
-    {
-        switch (aType)
-        {
-            case VBoxEventType_OnMouseCapabilityChanged:
-            {
-
-                ComPtr<IMouseCapabilityChangedEvent> mccev = aEvent;
-                Assert(!mccev.isNull());
-
-                BOOL fSupportsAbsolute = false;
-                mccev->COMGETTER(SupportsAbsolute)(&fSupportsAbsolute);
-
-                /* Emit absolute mouse event to actually enable the host mouse cursor. */
-                if (fSupportsAbsolute && gConsole)
-                {
-                    ComPtr<IMouse> mouse;
-                    gConsole->COMGETTER(Mouse)(mouse.asOutParam());
-                    if (mouse)
-                    {
-                        mouse->PutMouseEventAbsolute(-1, -1, 0, 0 /* Horizontal wheel */, 0);
-                    }
-                }
-                break;
-            }
-            case VBoxEventType_OnStateChanged:
-            {
-                ComPtr<IStateChangedEvent> scev = aEvent;
-                Assert(scev);
-
-                MachineState_T machineState;
-                scev->COMGETTER(State)(&machineState);
-
-                /* Terminate any event wait operation if the machine has been
-                 * PoweredDown/Saved/Aborted. */
-                if (machineState < MachineState_Running && !m_fIgnorePowerOffEvents)
-                {
-                    g_fTerminateFE = true;
-                    gEventQ->interruptEventQueueProcessing();
-                }
-
-                break;
-            }
-            case VBoxEventType_OnVRDEServerInfoChanged:
-            {
-                ComPtr<IVRDEServerInfoChangedEvent> rdicev = aEvent;
-                Assert(rdicev);
-
-                if (gConsole)
-                {
-                    ComPtr<IVRDEServerInfo> info;
-                    gConsole->COMGETTER(VRDEServerInfo)(info.asOutParam());
-                    if (info)
-                    {
-                        LONG port;
-                        info->COMGETTER(Port)(&port);
-                        if (port != mLastVRDEPort)
-                        {
-                            if (port == -1)
-                                RTPrintf("VRDE server is inactive.\n");
-                            else if (port == 0)
-                                RTPrintf("VRDE server failed to start.\n");
-                            else
-                                RTPrintf("VRDE server is listening on port %d.\n", port);
-
-                            mLastVRDEPort = port;
-                        }
-                    }
-                }
-                break;
-            }
-            case VBoxEventType_OnCanShowWindow:
-            {
-                ComPtr<ICanShowWindowEvent> cswev = aEvent;
-                Assert(cswev);
-                cswev->AddVeto(NULL);
-                break;
-            }
-            case VBoxEventType_OnShowWindow:
-            {
-                ComPtr<IShowWindowEvent> swev = aEvent;
-                Assert(swev);
-                /* Ignore the event, WinId is either still zero or some other listener assigned it. */
-                NOREF(swev); /* swev->COMSETTER(WinId)(0); */
-                break;
-            }
-            case VBoxEventType_OnGuestPropertyChanged:
-            {
-                ComPtr<IGuestPropertyChangedEvent> pChangedEvent = aEvent;
-                Assert(pChangedEvent);
-
-                HRESULT hrc;
-
-                ComPtr <IMachine> pMachine;
-                if (gConsole)
-                {
-                    hrc = gConsole->COMGETTER(Machine)(pMachine.asOutParam());
-                    if (FAILED(hrc) || !pMachine)
-                        hrc = VBOX_E_OBJECT_NOT_FOUND;
-                }
-                else
-                    hrc = VBOX_E_INVALID_VM_STATE;
-
-                if (SUCCEEDED(hrc))
-                {
-                    Bstr strKey;
-                    hrc = pChangedEvent->COMGETTER(Name)(strKey.asOutParam());
-                    AssertComRC(hrc);
-
-                    Bstr strValue;
-                    hrc = pChangedEvent->COMGETTER(Value)(strValue.asOutParam());
-                    AssertComRC(hrc);
-
-                    Utf8Str utf8Key = strKey;
-                    Utf8Str utf8Value = strValue;
-                    LogRelFlow(("Guest property \"%s\" has been changed to \"%s\"\n",
-                                utf8Key.c_str(), utf8Value.c_str()));
-
-                    if (utf8Key.equals("/VirtualBox/GuestInfo/OS/NoLoggedInUsers"))
-                    {
-                        LogRelFlow(("Guest indicates that there %s logged in users\n",
-                                    utf8Value.equals("true") ? "are no" : "are"));
-
-                        /* Check if this is our machine and the "disconnect on logout feature" is enabled. */
-                        BOOL fProcessDisconnectOnGuestLogout = FALSE;
-
-                        /* Does the machine handle VRDP disconnects? */
-                        Bstr strDiscon;
-                        hrc = pMachine->GetExtraData(Bstr("VRDP/DisconnectOnGuestLogout").raw(),
-                                                    strDiscon.asOutParam());
-                        if (SUCCEEDED(hrc))
-                        {
-                            Utf8Str utf8Discon = strDiscon;
-                            fProcessDisconnectOnGuestLogout = utf8Discon.equals("1")
-                                                            ? TRUE : FALSE;
-                        }
-
-                        LogRelFlow(("VRDE: hrc=%Rhrc: Host %s disconnecting clients (current host state known: %s)\n",
-                                    hrc, fProcessDisconnectOnGuestLogout ? "will handle" : "does not handle",
-                                    m_fNoLoggedInUsers ? "No users logged in" : "Users logged in"));
-
-                        if (fProcessDisconnectOnGuestLogout)
-                        {
-                            bool fDropConnection = false;
-                            if (!m_fNoLoggedInUsers) /* Only if the property really changes. */
-                            {
-                                if (   utf8Value == "true"
-                                    /* Guest property got deleted due to reset,
-                                     * so it has no value anymore. */
-                                    || utf8Value.isEmpty())
-                                {
-                                    m_fNoLoggedInUsers = true;
-                                    fDropConnection = true;
-                                }
-                            }
-                            else if (utf8Value == "false")
-                                m_fNoLoggedInUsers = false;
-                            /* Guest property got deleted due to reset,
-                             * take the shortcut without touching the m_fNoLoggedInUsers
-                             * state. */
-                            else if (utf8Value.isEmpty())
-                                fDropConnection = true;
-
-                            LogRelFlow(("VRDE: szNoLoggedInUsers=%s, m_fNoLoggedInUsers=%RTbool, fDropConnection=%RTbool\n",
-                                        utf8Value.c_str(), m_fNoLoggedInUsers, fDropConnection));
-
-                            if (fDropConnection)
-                            {
-                                /* If there is a connection, drop it. */
-                                ComPtr<IVRDEServerInfo> info;
-                                hrc = gConsole->COMGETTER(VRDEServerInfo)(info.asOutParam());
-                                if (SUCCEEDED(hrc) && info)
-                                {
-                                    ULONG cClients = 0;
-                                    hrc = info->COMGETTER(NumberOfClients)(&cClients);
-
-                                    LogRelFlow(("VRDE: connected clients=%RU32\n", cClients));
-                                    if (SUCCEEDED(hrc) && cClients > 0)
-                                    {
-                                        ComPtr <IVRDEServer> vrdeServer;
-                                        hrc = pMachine->COMGETTER(VRDEServer)(vrdeServer.asOutParam());
-                                        if (SUCCEEDED(hrc) && vrdeServer)
-                                        {
-                                            LogRel(("VRDE: the guest user has logged out, disconnecting remote clients.\n"));
-                                            hrc = vrdeServer->COMSETTER(Enabled)(FALSE);
-                                            AssertComRC(hrc);
-                                            HRESULT hrc2 = vrdeServer->COMSETTER(Enabled)(TRUE);
-                                            if (SUCCEEDED(hrc))
-                                                hrc = hrc2;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (FAILED(hrc))
-                        LogRelFlow(("VRDE: returned error=%Rhrc\n", hrc));
-                }
-
-                break;
-            }
-
-            default:
-                AssertFailed();
-        }
-        return S_OK;
-    }
-
-    void ignorePowerOffEvents(bool fIgnore)
-    {
-        m_fIgnorePowerOffEvents = fIgnore;
-    }
-
-private:
-
-    long mLastVRDEPort;
-    bool m_fIgnorePowerOffEvents;
-    bool m_fNoLoggedInUsers;
-};
-
-typedef ListenerImpl<VirtualBoxClientEventListener> VirtualBoxClientEventListenerImpl;
-typedef ListenerImpl<ConsoleEventListener> ConsoleEventListenerImpl;
-
-VBOX_LISTENER_DECLARE(VirtualBoxClientEventListenerImpl)
-VBOX_LISTENER_DECLARE(ConsoleEventListenerImpl)
-
-static void
-HandleSignal(int sig)
-{
-    RT_NOREF(sig);
-    LogRel(("VBoxViDeZZo: received singal %d\n", sig));
-    g_fTerminateFE = true;
-}
-
-/*
- * Simplified version of showProgress() borrowed from VBoxManage.
- * Note that machine power up/down operations are not cancelable, so
- * we don't bother checking for signals.
- */
-HRESULT
-showProgress(const ComPtr<IProgress> &progress)
-{
-    BOOL fCompleted = FALSE;
-    ULONG ulLastPercent = 0;
-    ULONG ulCurrentPercent = 0;
-    HRESULT hrc;
-
-    com::Bstr bstrDescription;
-    hrc = progress->COMGETTER(Description(bstrDescription.asOutParam()));
-    if (FAILED(hrc))
-    {
-        RTStrmPrintf(g_pStdErr, "Failed to get progress description: %Rhrc\n", hrc);
-        return hrc;
-    }
-
-    RTStrmPrintf(g_pStdErr, "%ls: ", bstrDescription.raw());
-    RTStrmFlush(g_pStdErr);
-
-    hrc = progress->COMGETTER(Completed(&fCompleted));
-    while (SUCCEEDED(hrc))
-    {
-        progress->COMGETTER(Percent(&ulCurrentPercent));
-
-        /* did we cross a 10% mark? */
-        if (ulCurrentPercent / 10  >  ulLastPercent / 10)
-        {
-            /* make sure to also print out missed steps */
-            for (ULONG curVal = (ulLastPercent / 10) * 10 + 10; curVal <= (ulCurrentPercent / 10) * 10; curVal += 10)
-            {
-                if (curVal < 100)
-                {
-                    RTStrmPrintf(g_pStdErr, "%u%%...", curVal);
-                    RTStrmFlush(g_pStdErr);
-                }
-            }
-            ulLastPercent = (ulCurrentPercent / 10) * 10;
-        }
-
-        if (fCompleted)
-            break;
-
-        gEventQ->processEventQueue(500);
-        hrc = progress->COMGETTER(Completed(&fCompleted));
-    }
-
-    /* complete the line. */
-    LONG iRc = E_FAIL;
-    hrc = progress->COMGETTER(ResultCode)(&iRc);
-    if (SUCCEEDED(hrc))
-    {
-        if (SUCCEEDED(iRc))
-            RTStrmPrintf(g_pStdErr, "100%%\n");
-        else
-        {
-            RTStrmPrintf(g_pStdErr, "\n");
-            RTStrmPrintf(g_pStdErr, "Operation failed: %Rhrc\n", iRc);
-        }
-        hrc = iRc;
-    }
-    else
-    {
-        RTStrmPrintf(g_pStdErr, "\n");
-        RTStrmPrintf(g_pStdErr, "Failed to obtain operation result: %Rhrc\n", hrc);
-    }
-    RTStrmFlush(g_pStdErr);
-    return hrc;
-}
-
-
-// This is called in LLVMFuzzerInitialize
-static int VBoxViDeZZoMain(int argc, char **argv, char **envp)
-{
-    RT_NOREF(envp);
-    const char *vrdePort = NULL;
-    const char *vrdeAddress = NULL;
-    const char *vrdeEnabled = NULL;
-    unsigned cVRDEProperties = 0;
-    const char *aVRDEProperties[16];
-    unsigned fPaused = 0;
-
-    LogFlow(("VBoxViDeZZo STARTED.\n"));
-
-    static const RTGETOPTDEF s_aOptions[] =
-    {
-        { "-startvm", 's', RTGETOPT_REQ_STRING },
-        { "--startvm", 's', RTGETOPT_REQ_STRING },
-    };
-    const char *pcszNameOrUUID = NULL;
-
-    // parse the command line
-    int ch;
-    RTGETOPTUNION ValueUnion;
-    RTGETOPTSTATE GetState;
-    RTGetOptInit(&GetState, argc, argv, s_aOptions, RT_ELEMENTS(s_aOptions), 1, /*fFlags=*/0);
-    ch = RTGetOpt(&GetState, &ValueUnion);
-    Assert(ch == 's');
-    pcszNameOrUUID = ValueUnion.psz;
-    if (!pcszNameOrUUID) return 1;
-
-    HRESULT rc;
-    int irc;
-
-    rc = com::Initialize();
-#ifdef VBOX_WITH_XPCOM
-    if (rc == NS_ERROR_FILE_ACCESS_DENIED)
-    {
-        char szHome[RTPATH_MAX] = "";
-        com::GetVBoxUserHomeDirectory(szHome, sizeof(szHome));
-        RTPrintf("Failed to initialize COM because the global settings directory '%s' is not accessible!", szHome);
-        return 1;
-    }
-#endif
-    if (FAILED(rc))
-    {
-        RTPrintf("VBoxViDeZZo: ERROR: failed to initialize COM!\n");
-        return 1;
-    }
-
-    ComPtr<IVirtualBoxClient> pVirtualBoxClient;
-    ComPtr<IVirtualBox> virtualBox;
-    ComPtr<ISession> session;
-    ComPtr<IMachine> machine;
-    bool fSessionOpened = false;
-    ComPtr<IEventListener> vboxClientListener;
-    ComPtr<IEventListener> vboxListener;
-    ComObjPtr<ConsoleEventListenerImpl> consoleListener;
-
-    do
-    {
-        rc = pVirtualBoxClient.createInprocObject(CLSID_VirtualBoxClient);
-        if (FAILED(rc))
-        {
-            RTPrintf("VBoxViDeZZo: ERROR: failed to create the VirtualBoxClient object!\n");
-            com::ErrorInfo info;
-            if (!info.isFullAvailable() && !info.isBasicAvailable())
-            {
-                com::GluePrintRCMessage(rc);
-                RTPrintf("Most likely, the VirtualBox COM server is not running or failed to start.\n");
-            }
-            else
-                GluePrintErrorInfo(info);
-            break;
-        }
-
-        rc = pVirtualBoxClient->COMGETTER(VirtualBox)(virtualBox.asOutParam());
-        if (FAILED(rc))
-        {
-            RTPrintf("Failed to get VirtualBox object (rc=%Rhrc)!\n", rc);
-            break;
-        }
-        rc = pVirtualBoxClient->COMGETTER(Session)(session.asOutParam());
-        if (FAILED(rc))
-        {
-            RTPrintf("Failed to get session object (rc=%Rhrc)!\n", rc);
-            break;
-        }
-
-        ComPtr<IMachine> m;
-
-        rc = virtualBox->FindMachine(Bstr(pcszNameOrUUID).raw(), m.asOutParam());
-        if (FAILED(rc))
-        {
-            LogError("Invalid machine name or UUID!\n", rc);
-            break;
-        }
-
-        Bstr bstrVMId;
-        rc = m->COMGETTER(Id)(bstrVMId.asOutParam());
-        AssertComRC(rc);
-        if (FAILED(rc))
-            break;
-        g_strVMUUID = bstrVMId;
-
-        Bstr bstrVMName;
-        rc = m->COMGETTER(Name)(bstrVMName.asOutParam());
-        AssertComRC(rc);
-        if (FAILED(rc))
-            break;
-        g_strVMName = bstrVMName;
-
-        Log(("VBoxViDeZZo: Opening a session with machine (id={%s})...\n",
-             g_strVMUUID.c_str()));
-
-        // set session name
-        CHECK_ERROR_BREAK(session, COMSETTER(Name)(Bstr("ViDeZZo").raw()));
-        // open a session
-        CHECK_ERROR_BREAK(m, LockMachine(session, LockType_VM));
-        fSessionOpened = true;
-
-        /* get the console */
-        ComPtr<IConsole> console;
-        CHECK_ERROR_BREAK(session, COMGETTER(Console)(console.asOutParam()));
-
-        /* get the mutable machine */
-        CHECK_ERROR_BREAK(console, COMGETTER(Machine)(machine.asOutParam()));
-
-        ComPtr<IDisplay> display;
-        CHECK_ERROR_BREAK(console, COMGETTER(Display)(display.asOutParam()));
-
-        /* initialize global references */
-        gConsole = console;
-        gEventQ = com::NativeEventQueue::getMainEventQueue();
-
-        /* VirtualBoxClient events registration. */
-        {
-            ComPtr<IEventSource> pES;
-            CHECK_ERROR(pVirtualBoxClient, COMGETTER(EventSource)(pES.asOutParam()));
-            ComObjPtr<VirtualBoxClientEventListenerImpl> listener;
-            listener.createObject();
-            listener->init(new VirtualBoxClientEventListener());
-            vboxClientListener = listener;
-            com::SafeArray<VBoxEventType_T> eventTypes;
-            eventTypes.push_back(VBoxEventType_OnVBoxSVCAvailabilityChanged);
-            CHECK_ERROR(pES, RegisterListener(vboxClientListener, ComSafeArrayAsInParam(eventTypes), true));
-        }
-
-        /* Console events registration. */
-        {
-            ComPtr<IEventSource> es;
-            CHECK_ERROR(console, COMGETTER(EventSource)(es.asOutParam()));
-            consoleListener.createObject();
-            consoleListener->init(new ConsoleEventListener());
-            com::SafeArray<VBoxEventType_T> eventTypes;
-            eventTypes.push_back(VBoxEventType_OnMouseCapabilityChanged);
-            eventTypes.push_back(VBoxEventType_OnStateChanged);
-            eventTypes.push_back(VBoxEventType_OnVRDEServerInfoChanged);
-            eventTypes.push_back(VBoxEventType_OnCanShowWindow);
-            eventTypes.push_back(VBoxEventType_OnShowWindow);
-            eventTypes.push_back(VBoxEventType_OnGuestPropertyChanged);
-            CHECK_ERROR(es, RegisterListener(consoleListener, ComSafeArrayAsInParam(eventTypes), true));
-        }
-
-        /* Disable the host clipboard before powering up */
-        console->COMSETTER(UseHostClipboard)(false);
-
-        Log(("VBoxViDeZZo: Powering up the machine...\n"));
-
-        /**
-         * @todo We should probably install handlers earlier so that
-         * we can undo any temporary settings we do above in case of
-         * an early signal and use RAII to ensure proper cleanup.
-         */
-        signal(SIGPIPE, SIG_IGN);
-        signal(SIGTTOU, SIG_IGN);
-
-        struct sigaction sa;
-        RT_ZERO(sa);
-        sa.sa_handler = HandleSignal;
-        sigaction(SIGHUP,  &sa, NULL);
-        sigaction(SIGINT,  &sa, NULL);
-        sigaction(SIGTERM, &sa, NULL);
-        sigaction(SIGUSR1, &sa, NULL);
-        /* Don't touch SIGUSR2 as IPRT could be using it for RTThreadPoke(). */
-
-        ComPtr <IProgress> progress;
-        CHECK_ERROR_BREAK(console, PowerUp(progress.asOutParam()));
-
-        rc = showProgress(progress);
-        if (FAILED(rc))
-        {
-            com::ProgressErrorInfo info(progress);
-            if (info.isBasicAvailable())
-            {
-                RTPrintf("Error: failed to start machine. Error message: %ls\n", info.getText().raw());
-            }
-            else
-            {
-                RTPrintf("Error: failed to start machine. No error message available!\n");
-            }
-            break;
-        }
-    }
-    while (0);
-    return 0;
 }
 
 ViDeZZoFuzzTarget generic_target = {
     .name = "videzzo-fuzz",
     .description = "Fuzz based on any VBox command-line args. ",
     .get_init_cmdline = videzzo_vbox_cmdline,
-    .pre_vm_init = videzzo_vbox_init_pre,
     .pre_fuzz = videzzo_vbox_pre,
     .fuzz = videzzo_vbox,
+    .post_fuzz = videzzo_vbox_post
 };
 
 // This is called in LLVMFuzzerInitialize
-static void register_videzzo_vbox_targets(void) {
+static void register_videzzo_vbox_targets(void)
+{
     videzzo_add_fuzz_target(&generic_target);
     GString *name;
     ViDeZZoFuzzTarget *target;
@@ -1125,18 +505,26 @@ static void register_videzzo_vbox_targets(void) {
         target->name = name->str;
         target->description = "Predefined videzzo-fuzz config.";
         target->get_init_cmdline = videzzo_vbox_predefined_config_cmdline;
-        target->pre_vm_init = videzzo_vbox_init_pre;
         target->pre_fuzz = videzzo_vbox_pre;
         target->fuzz = videzzo_vbox;
+        target->post_fuzz = videzzo_vbox_post;
         target->opaque = (void *)config;
         videzzo_add_fuzz_target(target);
+        free(target);
     }
 }
  
 int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
 {
     char *target_name = nullptr;
+    GString *generic_cmd_line = nullptr, *modifyvm_cmd_line = nullptr;
+    ViDeZZoFuzzTarget *fuzz_target;
     int rc;
+    HRESULT hrc;
+    wordexp_t result;
+    ComPtr<IVirtualBoxClient> virtualBoxClient;
+    ComPtr<IVirtualBox> virtualBox;
+    ComPtr<ISession> session;
 
     // step 1: initialize fuzz targets
     register_videzzo_vbox_targets();
@@ -1151,25 +539,47 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     if (!fuzz_target) {
         usage();
     }
+    save_fuzz_target(fuzz_target);
+    // we make it in advance to avoid any initialization of vbox
+    modifyvm_cmd_line = fuzz_target->get_init_cmdline(fuzz_target);
     
-    // step 4: run callback before VBox init
-    if (fuzz_target->pre_vm_init) {
-        fuzz_target->pre_vm_init();
-    }
+    // step 4: prepare before VBox init
+    RTUuidCreate(&uuid);
+    RTUuidToStr(&uuid, uuid_str, sizeof(uuid_str));
+    // VBoxManage createvm --name UUID --register --basefolder `pwd`
+    generic_cmd_line = g_string_new("createvm");
+    g_string_append_printf(generic_cmd_line, " --name %s --register --basefolder `pwd`", uuid_str);
+    wordexp(generic_cmd_line->str, &result, 0);
+    g_string_free(generic_cmd_line, true);
+    // Prepare RTR3 context
+    RTR3InitExe(result.we_wordc, &result.we_wordv, 0);
+
+    hrc = com::Initialize();
+    hrc = virtualBoxClient.createInprocObject(CLSID_VirtualBoxClient);
+    hrc = virtualBoxClient->COMGETTER(VirtualBox)(virtualBox.asOutParam());
+    hrc = session.createInprocObject(CLSID_Session);
 
     // step 5: construct VBox init cmds and init VBox
-    // TODO: any cmds construction
-    rc = RTR3InitExe(*argc, argv, RTR3INIT_FLAGS_TRY_SUPLIB);
-    if (RT_SUCCESS(rc)) {
-        rc = VBoxViDeZZoMain(*argc, *argv, *envp);
-        if (RT_FAILURE(rc)) {
-            RTPrintf("VBoxViDeZZo: VBoxViDeZZoMain failed: %Rrc - %Rrf\n", rc, rc);
-            return 1;
-        }
-        // TODO: any signal hooking
-        return 0;
-    } else {
-        RTPrintf("VBoxViDeZZo: Runtime initialization failed: %Rrc - %Rrf\n", rc, rc);
-        return 1;
-    }
+    // VBoxManage modifyvm UUID --key1 value1 --key2 value2
+    wordexp(modifyvm_cmd_line->str, &result, 0);
+    g_string_free(modifyvm_cmd_line, true);
+    HandlerArg handlerArg0 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
+    handleModifyVM(&handlerArg0);
+
+    generic_cmd_line = g_string_new("startvm");
+    g_string_append_printf(generic_cmd_line, " %s", uuid_str);
+    wordexp(generic_cmd_line->str, &result, 0);
+    g_string_free(generic_cmd_line, true);
+    HandlerArg handlerArg1 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
+    handleStartVM(&handlerArg1);
+
+    // step 6: clean
+    session->UnlockMachine();
+    NativeEventQueue::getMainEventQueue()->processEventQueue(0);
+    virtualBox.setNull();
+    virtualBoxClient.setNull();
+    NativeEventQueue::getMainEventQueue()->processEventQueue(0);
+    com::Shutdown();
+
+    return 0;
 }
