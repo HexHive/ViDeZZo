@@ -781,14 +781,6 @@ static void videzzo_qemu(void *opaque, uint8_t *Data, size_t Size) {
 }
 
 //
-// call into videzzo from QEMU
-//
-size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size,
-        size_t MaxSize, unsigned int Seed) {
-    return ViDeZZoCustomMutator(Data, Size, MaxSize, Seed);
-}
-
-//
 // QEMU specific initialization - Usage
 //
 static void usage(void) {
@@ -796,36 +788,6 @@ static void usage(void) {
     printf("QEMU_FUZZ_ARGS= the command line arguments passed to qemu\n");
     videzzo_usage();
     exit(0);
-}
-
-//
-// QEMU specific initialization - LibFuzzer entries
-//
-static ViDeZZoFuzzTarget *fuzz_target;
-static QTestState *fuzz_qts;
-int LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size) {
-    /*
-     * Do the pre-fuzz-initialization before the first fuzzing iteration,
-     * instead of before the actual fuzz loop. This is needed since libfuzzer
-     * may fork off additional workers, prior to the fuzzing loop, and if
-     * pre_fuzz() sets up e.g. shared memory, this should be done for the
-     * individual worker processes
-     */
-    static int pre_fuzz_done;
-    if (!pre_fuzz_done && fuzz_target->pre_fuzz) {
-        fuzz_target->pre_fuzz(fuzz_qts);
-        pre_fuzz_done = true;
-    }
-
-    fuzz_target->fuzz(fuzz_qts, Data, Size);
-    return 0;
-}
-
-static const char *fuzz_arch = TARGET_NAME;
-static QTestState *qtest_setup(void) {
-    qtest_server_set_send_handler(&qtest_client_inproc_recv, &fuzz_qts);
-    return qtest_inproc_init(&fuzz_qts, false, fuzz_arch,
-            &qtest_server_inproc_recv);
 }
 
 //
@@ -852,7 +814,7 @@ static QGuestAllocator *get_qemu_alloc(QTestState *qts) {
     return obj->get_driver(obj, "memory");
 }
 
-// This is called in __LLVMFuzzerTestOneInput
+// This is called in LLVMFuzzerTestOneInput
 static void videzzo_qemu_pre(void *opaque) {
     QTestState *s = opaque;
     GHashTableIter iter;
@@ -917,6 +879,15 @@ static void videzzo_qemu_pre(void *opaque) {
 #ifdef CLANG_COV_DUMP
     llvm_profile_initialize_file(true);
 #endif
+}
+
+// This is called in LLVMFuzzerInitialize
+static QTestState *fuzz_qts;
+static const char *fuzz_arch = TARGET_NAME;
+static QTestState *qtest_setup(void) {
+    qtest_server_set_send_handler(&qtest_client_inproc_recv, &fuzz_qts);
+    return qtest_inproc_init(&fuzz_qts, false, fuzz_arch,
+            &qtest_server_inproc_recv);
 }
 
 // This is called in LLVMFuzzerInitialize
@@ -999,6 +970,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp) {
     const char *bindir;
     char *datadir;
     GString *cmd_line;
+    ViDeZZoFuzzTarget *fuzz_target;
 
     // step 1: initialize fuzz targets
     qos_graph_init();
@@ -1008,7 +980,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp) {
 
     qemu_init_exec_dir(**argv);
     // step 2: find which fuzz target to run
-    int rc = parse_fuzz_target_name(argc, argv, target_name);
+    int rc = parse_fuzz_target_name(argc, argv, &target_name);
     if (rc == NAME_INBINARY) {
         /*
          * With oss-fuzz, the executable is kept in the root of a directory (we
@@ -1032,16 +1004,14 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp) {
 
     // step 3: get the fuzz target
     fuzz_target = videzzo_get_fuzz_target(target_name);
+    save_fuzz_target(fuzz_target);
     if (!fuzz_target) {
         usage();
     }
 
     fuzz_qts = qtest_setup();
 
-    // step 4: run callback before QEMU init
-    if (fuzz_target->pre_vm_init) {
-        fuzz_target->pre_vm_init();
-    }
+    // step 4: prepare before QEMU init
 
     // step 5: construct QEMU init cmds and init QEMU
     /* Run QEMU's softmmu main with the fuzz-target dependent arguments */
@@ -1055,6 +1025,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp) {
 
     qemu_init(result.we_wordc, result.we_wordv, NULL);
 
+    // step 6: clean
     /* re-enable the rcu atfork, which was previously disabled in qemu_init */
     rcu_enable_atfork();
 

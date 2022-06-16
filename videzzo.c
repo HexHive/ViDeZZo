@@ -1550,6 +1550,33 @@ size_t reset_data(uint8_t *Data, size_t MaxSize) {
 }
 
 //
+// libFuzzer interfaces
+//
+size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size,
+        size_t MaxSize, unsigned int Seed) {
+    return ViDeZZoCustomMutator(Data, Size, MaxSize, Seed);
+}
+
+ViDeZZoFuzzTarget *fuzz_target;
+void save_fuzz_target(ViDeZZoFuzzTarget *new_fuzz_target) {
+    fuzz_target = new_fuzz_target;
+}
+
+ViDeZZoFuzzTarget *restore_fuzz_target(void) {
+    return fuzz_target;
+}
+
+int LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size) {
+    static int pre_fuzz_done;
+    if (!pre_fuzz_done && fuzz_target->pre_fuzz) {
+        fuzz_target->pre_fuzz(NULL);
+        pre_fuzz_done = true;
+    }
+    fuzz_target->fuzz(NULL, Data, Size);
+    return 0;
+}
+
+//
 // Fuzz Target
 //
 // all targets go here
@@ -1583,8 +1610,6 @@ int parse_fuzz_target_name(int *argc, char ***argv, char **target_name) {
     }
 }
 
-// add a target to videzzo_fuzz_target_list
-// we don't want to expose a videzzo_get_fuzz_target method that is never used
 void videzzo_add_fuzz_target(ViDeZZoFuzzTarget *target) {
     ViDeZZoFuzzTargetState *tmp;
     ViDeZZoFuzzTargetState *target_state;

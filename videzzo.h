@@ -210,16 +210,21 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr);
 extern FeedbackHandler group_mutator_miss_handlers[0xff];
 
 //
-// Open APIs
+// call from videzzo-vmm to videzzo-core: TODO: remove this later
 //
 #ifdef __cplusplus
-extern "C" void __videzzo_execute_one_input(Input *input);
 extern "C" size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush flush);
-extern "C" size_t ViDeZZoCustomMutator(uint8_t *Data, size_t Size, size_t MaxSize, unsigned int Seed);
 #else
-void __videzzo_execute_one_input(Input *input);
 size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush flush);
-size_t ViDeZZoCustomMutator(uint8_t *Data, size_t Size, size_t MaxSize, unsigned int Seed);
+#endif
+
+//
+// help
+//
+#ifdef __cplusplus
+extern "C" void videzzo_usage(void);
+#else
+void videzzo_usage(void);
 #endif
 
 //
@@ -264,17 +269,14 @@ typedef struct ViDeZZoFuzzTarget {
     // Freed by the caller.
     GString *(*get_init_cmdline)(struct ViDeZZoFuzzTarget *);
 
-    // Will run once, after a VM is initialized.
-    // Can be NULL.
-    void (*pre_vm_init)(void);
-
-    // Will run once, after a VM has been initialized, prior to the fuzz-loop.
+    // Will run once, prior to the fuzz-loop.
     void (*pre_fuzz)(void *opaque);
-
     // This is repeatedly executed during the fuzzing loop.
     // Its should handle setup, input execution and cleanup.
     // Cannot be NULL.
     void (*fuzz)(void *opaque, unsigned char *, size_t);
+    // Will run once, after the fuzz-loop.
+    void (*post_fuzz)(void *opaque);
     void *opaque;                           /* ViDeZZoFuzzTargetConfig */
 } ViDeZZoFuzzTarget;
 
@@ -290,15 +292,17 @@ typedef struct ViDeZZoFuzzTargetState {
 typedef LIST_HEAD(, ViDeZZoFuzzTargetState) ViDeZZoFuzzTargetList;
 
 #ifdef __cplusplus
-extern "C" void videzzo_usage(void);
 extern "C" int parse_fuzz_target_name(int *argc, char ***argv, char **target_name);
 extern "C" void videzzo_add_fuzz_target(ViDeZZoFuzzTarget *target);
 extern "C" ViDeZZoFuzzTarget *videzzo_get_fuzz_target(char* name);
+extern "C" ViDeZZoFuzzTarget *restore_fuzz_target(void);
+extern "C" void save_fuzz_target(ViDeZZoFuzzTarget *new_fuzz_target);
 #else
-void videzzo_usage(void);
 int parse_fuzz_target_name(int *argc, char ***argv, char **target_name);
 void videzzo_add_fuzz_target(ViDeZZoFuzzTarget *target);
 ViDeZZoFuzzTarget *videzzo_get_fuzz_target(char* name);
+ViDeZZoFuzzTarget *restore_fuzz_target(void);
+void save_fuzz_target(ViDeZZoFuzzTarget *new_fuzz_target);
 #endif
 
 //
