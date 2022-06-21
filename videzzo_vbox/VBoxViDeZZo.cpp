@@ -441,9 +441,8 @@ static GString *videzzo_vbox_cmdline(ViDeZZoFuzzTarget *t) {
     if (!getenv("VBOX_FUZZ_ARGS")) {
         usage();
     }
-    GString *cmd_line = g_string_new("modifyvm");
-    g_string_append_printf(cmd_line, " %s", uuid_str);
-    g_string_append_printf(cmd_line, " %s", getenv("VBOX_FUZZ_ARGS"));
+    GString *cmd_line = g_string_new(NULL);
+    g_string_append_printf(cmd_line, "%s %s", uuid_str, getenv("VBOX_FUZZ_ARGS"));
     return cmd_line;
 }
 
@@ -540,19 +539,15 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
         usage();
     }
     save_fuzz_target(fuzz_target);
+
     // we make it in advance to avoid any initialization of vbox
+    RTUuidCreate(&uuid);
+    RTUuidToStr(&uuid, uuid_str, sizeof(uuid_str));
     modifyvm_cmd_line = fuzz_target->get_init_cmdline(fuzz_target);
     
     // step 4: prepare before VBox init
-    RTUuidCreate(&uuid);
-    RTUuidToStr(&uuid, uuid_str, sizeof(uuid_str));
-    // VBoxManage createvm --name UUID --register --basefolder `pwd`
-    generic_cmd_line = g_string_new("createvm");
-    g_string_append_printf(generic_cmd_line, " --name %s --register --basefolder `pwd`", uuid_str);
-    wordexp(generic_cmd_line->str, &result, 0);
-    g_string_free(generic_cmd_line, true);
     // Prepare RTR3 context
-    RTR3InitExe(result.we_wordc, &result.we_wordv, 0);
+    RTR3InitExe(0, nullptr, 0);
 
     hrc = com::Initialize();
     hrc = virtualBoxClient.createInprocObject(CLSID_VirtualBoxClient);
@@ -560,18 +555,27 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     hrc = session.createInprocObject(CLSID_Session);
 
     // step 5: construct VBox init cmds and init VBox
+    // VBoxManage createvm --name UUID --uuid UUID --register --basefolder `pwd`
+    generic_cmd_line = g_string_new(NULL);
+    g_string_append_printf(generic_cmd_line, "--name vbox_vm_%s --uuid %s --register --basefolder `pwd`", uuid_str, uuid_str);
+    wordexp(generic_cmd_line->str, &result, 0);
+    g_string_free(generic_cmd_line, true);
+    HandlerArg handlerArg0 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
+    handleCreateVM(&handlerArg0);
+
     // VBoxManage modifyvm UUID --key1 value1 --key2 value2
     wordexp(modifyvm_cmd_line->str, &result, 0);
     g_string_free(modifyvm_cmd_line, true);
-    HandlerArg handlerArg0 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
-    handleModifyVM(&handlerArg0);
+    HandlerArg handlerArg1 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
+    handleModifyVM(&handlerArg1);
 
-    generic_cmd_line = g_string_new("startvm");
-    g_string_append_printf(generic_cmd_line, " %s", uuid_str);
+    // VBoxManage startvm UUID
+    generic_cmd_line = g_string_new(NULL);
+    g_string_append_printf(generic_cmd_line, "%s --type headless", uuid_str);
     wordexp(generic_cmd_line->str, &result, 0);
     g_string_free(generic_cmd_line, true);
-    HandlerArg handlerArg1 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
-    handleStartVM(&handlerArg1);
+    HandlerArg handlerArg2 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
+    handleStartVM(&handlerArg2);
 
     // step 6: clean
     session->UnlockMachine();
