@@ -19,6 +19,7 @@ done
 cp ./VBoxManage $DEST_DIR
 cp ./VBoxViDeZZo $DEST_DIR
 cp ./VBoxSVC $DEST_DIR
+cp ./VBoxXPCOMIPCD $DEST_DIR
 cp ./VBoxVMM.so $DEST_DIR
 cp ./VBoxRT.so $DEST_DIR
 cp ./VBoxXPCOM.so $DEST_DIR
