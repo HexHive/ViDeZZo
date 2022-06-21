@@ -10,6 +10,9 @@ CFLAGS ?=
 
 patch:
 	echo "nothing to patch"
+	cp 0001-Update-VBOX-to-support-ViDeZZo-as-a-library.patch vbox
+	cd vbox && patch -p 0 < 0001-Update-VBOX-to-support-ViDeZZo-as-a-library.patch && \
+		cd $(OLDPWD)
 
 compile:
 	bash -x 0002-copy-to-vbox.sh
