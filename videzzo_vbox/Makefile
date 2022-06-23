@@ -33,7 +33,7 @@ vbox-dep:
 	# svn might fail due to network issues
 	# please run `svn cleanup && svn update` to finish
 	if [ ! -d "vbox" ]; then \
-		git svn clone https://www.virtualbox.org/svn/vbox/trunk vbox; make patch; fi
+		svn co https://www.virtualbox.org/svn/vbox/trunk vbox; make patch; fi
 
 vbox: vbox-dep
 	make compile

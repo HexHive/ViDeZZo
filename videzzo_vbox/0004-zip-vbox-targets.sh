@@ -17,12 +17,18 @@ for target in $(echo "$targets" | head -n -1); do
     fi
 done
 cp ./VBoxManage $DEST_DIR
+cp ./VBoxHeadless $DEST_DIR
 cp ./VBoxViDeZZo $DEST_DIR
 cp ./VBoxSVC $DEST_DIR
 cp ./VBoxXPCOMIPCD $DEST_DIR
 cp ./VBoxVMM.so $DEST_DIR
 cp ./VBoxRT.so $DEST_DIR
 cp ./VBoxXPCOM.so $DEST_DIR
+cp ./VBoxDDU.so $DEST_DIR
+cp ./VBoxDDR0.debug $DEST_DIR
+cp ./VBoxDDR0.r0 $DEST_DIR
+cp ./VMMR0.debug $DEST_DIR
+cp ./VMMR0.r0 $DEST_DIR
 cp -r components $DEST_DIR
 popd
 pushd $DEST_DIR

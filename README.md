@@ -1,15 +1,20 @@
 # ViDeZZo: Virtual Device Fuzzing Framework
 
-ViDeZZo is a virtual device fuzzing framwork. Now, it supports the latest QEMU.
+ViDeZZo is a virtual device fuzzing framwork. Now, it supports the latest QEMU
+and VirtualBox.
+
+Tested on Ubuntu 20.04.
 
 ## Build and Run
 
-[Optional] Please build the docker image and run the container.
+Please build the docker image and run the container,
 
 ```
 sudo docker build -t videzzo:latest .
 sudo docker run --rm -it -v $PWD:/root/videzzo videzzo:latest /bin/bash
 ```
+
+or follow the Docker to install all necessary packages.
 
 + VMM (a generic VMM for tests)
 
@@ -20,8 +25,14 @@ debug information.
 + QEMU
 
 To build it, please `cd videzzo && make qemu`. To run it, please go to
-`videzzo_qemu/out` and run binary there. If to check virtual device messages,
-please run `make qemu-debug`.
+`videzzo_qemu/out-san` and run binary there. If to check virtual device
+messages, please run `make qemu-debug`.
+
++ VirtualBox
+
+To build it, please `cd videzzo && make vbox`. To run it, please go to
+`videzzo_vbox/out-san` and run binary with `sudo` there. If to check virtual
+device messages, please run `make vbox-debug`.
 
 ## Reprocuder
 
