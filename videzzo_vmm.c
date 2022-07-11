@@ -13,6 +13,8 @@
 // This small VM has one main memory, one robot virtual device with one PIO
 // region and two MMIO regions.
 //
+// TODO: this is outdated, please update it
+//
 
 //
 // Memory
@@ -118,7 +120,6 @@ static void trap_write(uint64_t addr, uint32_t size, uint64_t valu)  {
     mr->write(addr - mr->base, size, valu);
 }
 
-
 //
 // VM Specific Bindings
 //
@@ -155,22 +156,6 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp) {
         }
     }
     return 0;
-}
-
-//
-// Call into videzzo from QEMU
-//
-int __LLVMFuzzerTestOneInput(uint8_t *Data, size_t Size) {
-    videzzo_execute_one_input(Data, Size, NULL, NULL);
-    return 0;
-}
-
-//
-// Call into videzzo from QEMU
-//
-size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size,
-        size_t MaxSize, unsigned int Seed) {
-    return ViDeZZoCustomMutator(Data, Size, MaxSize, Seed);
 }
 
 //
@@ -218,6 +203,8 @@ static int mem_index = 0;
 uint64_t AroundInvalidAddress(uint64_t physaddr) { return physaddr; }
 
 void flush_events(void *opaque) {};
+
+void *get_vmm_state() { return NULL; }
 
 uint64_t dispatch_mem_alloc(Event *event) {
     // a small allocator

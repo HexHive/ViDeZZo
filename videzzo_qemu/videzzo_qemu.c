@@ -768,11 +768,13 @@ static void locate_fuzzable_objects(Object *obj, char *mrname) {
      g_array_free(children, TRUE);
 }
 
+static QTestState *fuzz_qts;
+
 //
 // call into videzzo from QEMU
 //
-static void videzzo_qemu(void *opaque, uint8_t *Data, size_t Size) {
-    QTestState *s = opaque;
+static void videzzo_qemu(uint8_t *Data, size_t Size) {
+    QTestState *s = fuzz_qts;
     if (vnc_client_needed && !vnc_client_initialized) {
         init_vnc_client(s, vnc_port);
         vnc_client_initialized = true;
@@ -815,8 +817,8 @@ static QGuestAllocator *get_qemu_alloc(QTestState *qts) {
 }
 
 // This is called in LLVMFuzzerTestOneInput
-static void videzzo_qemu_pre(void *opaque) {
-    QTestState *s = opaque;
+static void videzzo_qemu_pre() {
+    QTestState *s = fuzz_qts;
     GHashTableIter iter;
     MemoryRegion *mr;
     QPCIBus *pcibus;
@@ -882,12 +884,15 @@ static void videzzo_qemu_pre(void *opaque) {
 }
 
 // This is called in LLVMFuzzerInitialize
-static QTestState *fuzz_qts;
 static const char *fuzz_arch = TARGET_NAME;
 static QTestState *qtest_setup(void) {
     qtest_server_set_send_handler(&qtest_client_inproc_recv, &fuzz_qts);
     return qtest_inproc_init(&fuzz_qts, false, fuzz_arch,
             &qtest_server_inproc_recv);
+}
+
+void *get_vmm_state() {
+    return fuzz_qts;
 }
 
 // This is called in LLVMFuzzerInitialize

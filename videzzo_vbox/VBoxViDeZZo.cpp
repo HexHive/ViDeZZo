@@ -17,15 +17,6 @@
  * Authors: Qiang Liu <cyruscyliu@gmail.com>
  */
 
-/* without this, include/VBox/vmm/pdmtask.h does not import PDMTASKTYPE enum */
-#define VBOX_IN_VMM 1
-
-#include "PDMInternal.h"
-
-/* needed by machineDebugger COM VM getter */
-#include <VBox/vmm/vm.h>
-#include <VBox/vmm/uvm.h>
-
 #include <VBox/vmm/iem.h>
 #include <VBox/vmm/pgm.h>
 #include <VBox/vmm/iom.h>
@@ -65,6 +56,18 @@ static void HandleSignal(int sig);
 
 #include <wordexp.h>
 #include "videzzo.h"
+
+/* without this, include/VBox/vmm/pdmtask.h does not import PDMTASKTYPE enum */
+#define VBOX_IN_VMM 1
+
+#include "PDMInternal.h"
+
+/* needed by machineDebugger COM VM getter */
+#include <VBox/vmm/vm.h>
+#include <VBox/vmm/uvm.h>
+#include <VBox/vmm/vmmr3vtable.h>
+#include <VBox/vmm/vmcc.h>
+
 ////////////////////////////////////////////////////////////////////////////////
 
 #define LogError(m,rc) \
@@ -72,22 +75,6 @@ static void HandleSignal(int sig);
         Log(("VBoxViDeZZo: ERROR: " m " [rc=0x%08X]\n", rc)); \
         RTPrintf("%s\n", m); \
     } while (0)
-
-////////////////////////////////////////////////////////////////////////////////
-
-/* global weak references (for event handlers) */
-static IConsole *gConsole = NULL;
-static NativeEventQueue *gEventQ = NULL;
-
-/* keep this handy for messages */
-static com::Utf8Str g_strVMName;
-static com::Utf8Str g_strVMUUID;
-
-bool g_fDetailedProgress = false;
-HRESULT showProgress(ComPtr<IProgress> progress, uint32_t fFlags)
-{
-    fprintf(stderr, "VBoxViDeZZo doesn't support showProcess");
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -100,6 +87,9 @@ HRESULT showProgress(ComPtr<IProgress> progress, uint32_t fFlags)
 
 static RTUUID uuid;
 static char uuid_str[64];
+
+static PVM pVM;
+static PVMCPUCC pVCpu;
 
 //
 // Fuzz Target Configs
@@ -124,9 +114,6 @@ int sockfds[2];
 static int vnc_port;
 bool vnc_client_needed = false;
 bool vnc_client_initialized = false;
-
-PVMCC pVM;
-PVMCPUCC pVCpu;
 
 //
 // vbox Dispatcher
@@ -400,7 +387,7 @@ uint64_t dispatch_mem_free(Event *event) {
 //
 // call into videzzo from vbox
 //
-static void videzzo_vbox(void *opaque, uint8_t *Data, size_t Size) {
+static void videzzo_vbox(uint8_t *Data, size_t Size) {
     /*
     QTestState *s = opaque;
     if (vnc_client_needed && !vnc_client_initialized) {
@@ -408,7 +395,7 @@ static void videzzo_vbox(void *opaque, uint8_t *Data, size_t Size) {
         vnc_client_initialized = true;
     }
     */
-    videzzo_execute_one_input(Data, Size, opaque, &flush_events);
+    videzzo_execute_one_input(Data, Size, pVM, &flush_events);
 }
 
 //
@@ -424,9 +411,49 @@ static void usage(void) {
 //
 // VBox specific initialization - Register all targets
 //
+static GHashTable *fuzzable_memoryregions;
 
 // This is called in LLVMFuzzerTestOneInput
-static void videzzo_vbox_pre(void *opaque) {
+static void videzzo_vbox_pre() {
+    GHashTableIter iter;
+    // void *mr;
+    char **mrnames;
+
+    fuzzable_memoryregions = g_hash_table_new(NULL, NULL);
+
+    // step 1: find target memory regions
+    fprintf(stderr, "Matching objects by name ");
+    mrnames = g_strsplit(getenv("VBOX_FUZZ_MRNAME"), ",", -1);
+    for (int i = 0; mrnames[i] != NULL; i++) {
+        fprintf(stderr, ", %s", mrnames[i]);
+        // locate_fuzzable_objects(pVM, mrnames[i]);
+    }
+    fprintf(stderr, "\n");
+    g_strfreev(mrnames);
+
+    fprintf(stderr, "This process will fuzz the following MemoryRegions:\n");
+    g_hash_table_iter_init(&iter, fuzzable_memoryregions);
+    // while (g_hash_table_iter_next(&iter, (gpointer)&mr, NULL)) {
+        // printf("  * %s (size %lx)\n",
+               // object_get_canonical_path_component(&(mr->parent_obj)),
+               // (uint64_t)mr->size);
+    // }
+    if (!g_hash_table_size(fuzzable_memoryregions)) {
+        printf("No fuzzable memory regions found ...\n");
+        exit(1);
+    }
+
+    fprintf(stderr, "This process will fuzz through the following interfaces:\n");
+    if (get_number_of_interfaces() == 0) {
+        printf("No fuzzable interfaces found ...\n");
+        exit(2);
+    } else {
+        print_interfaces();
+    }
+    
+    // step 2: get allocator
+    // vbox_alloc = get_vbox_alloc(s);
+
 #ifdef CLANG_COV_DUMP
     llvm_profile_initialize_file(true);
 #endif
@@ -436,7 +463,6 @@ static ComPtr<IVirtualBoxClient> virtualBoxClient;
 static ComPtr<IVirtualBox> virtualBox;
 static ComPtr<ISession> session;
 
-// This is called in LLVMFuzzerTestOneInput
 // static void videzzo_vbox_post(void *opaque) {
 //     session->UnlockMachine();
 //     virtualBox.setNull();
@@ -519,6 +545,68 @@ static void register_videzzo_vbox_targets(void)
     }
 }
  
+// This is called in LLVMFuzzerInitialize
+bool g_fDetailedProgress = false;
+// we have to override this: defined in VBoxManage.h
+HRESULT showProgress(ComPtr<IProgress> progress, uint32_t fFlags) {
+    fprintf(stderr, "VBoxViDeZZo doesn't support showProcess");
+}
+// we are going to tuse this: copyed from VBoxHeadless
+HRESULT showProgress1(const ComPtr<IProgress> &progress) {
+    BOOL fCompleted = FALSE;
+    ULONG ulLastPercent = 0;
+    ULONG ulCurrentPercent = 0;
+    HRESULT hrc;
+
+    com::Bstr bstrDescription;
+    hrc = progress->COMGETTER(Description(bstrDescription.asOutParam()));
+
+    RTStrmPrintf(g_pStdErr, "%ls: ", bstrDescription.raw());
+    RTStrmFlush(g_pStdErr);
+
+    hrc = progress->COMGETTER(Completed(&fCompleted));
+    while (SUCCEEDED(hrc)) {
+        progress->COMGETTER(Percent(&ulCurrentPercent));
+
+        /* did we cross a 10% mark? */
+        if (ulCurrentPercent / 10  >  ulLastPercent / 10) {
+            /* make sure to also print out missed steps */
+            for (ULONG curVal = (ulLastPercent / 10) * 10 + 10; curVal <= (ulCurrentPercent / 10) * 10; curVal += 10) {
+                if (curVal < 100) {
+                    RTStrmPrintf(g_pStdErr, "%u%%...", curVal);
+                    RTStrmFlush(g_pStdErr);
+                }
+            }
+            ulLastPercent = (ulCurrentPercent / 10) * 10;
+        }
+
+        if (fCompleted)
+            break;
+
+        // gEventQ->processEventQueue(500);
+        hrc = progress->COMGETTER(Completed(&fCompleted));
+    }
+
+    /* complete the line. */
+    LONG iRc = E_FAIL;
+    hrc = progress->COMGETTER(ResultCode)(&iRc);
+    if (SUCCEEDED(hrc)) {
+        if (SUCCEEDED(iRc))
+            RTStrmPrintf(g_pStdErr, "100%%\n");
+        else {
+            RTStrmPrintf(g_pStdErr, "\n");
+            RTStrmPrintf(g_pStdErr, "Operation failed: %Rhrc\n", iRc);
+        }
+        hrc = iRc;
+    } else {
+        RTStrmPrintf(g_pStdErr, "\n");
+        RTStrmPrintf(g_pStdErr, "Failed to obtain operation result: %Rhrc\n", hrc);
+    }
+    RTStrmFlush(g_pStdErr);
+    return hrc;
+}
+
+
 int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
 {
     char *target_name = nullptr;
@@ -527,6 +615,10 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     int rc;
     HRESULT hrc;
     wordexp_t result;
+    ComPtr<IMachine> m, machine;
+    ComPtr<IConsole> console;
+    ComPtr<IMachineDebugger> machineDebugger;
+    ComPtr<IProgress> progress;
 
     // put it in advance
     setenv("VBOX_LOG_DEST", "nofile stdout", 1);
@@ -559,7 +651,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     hrc = com::Initialize();
     hrc = virtualBoxClient.createInprocObject(CLSID_VirtualBoxClient);
     hrc = virtualBoxClient->COMGETTER(VirtualBox)(virtualBox.asOutParam());
-    hrc = session.createInprocObject(CLSID_Session);
+    hrc = virtualBoxClient->COMGETTER(Session)(session.asOutParam());
 
     // step 5: construct VBox init cmds and init VBox
     // VBoxManage createvm --name UUID --uuid UUID --register --basefolder `pwd`
@@ -576,13 +668,37 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     HandlerArg handlerArg1 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
     handleModifyVM(&handlerArg1);
 
-    // VBoxManage startvm UUID --type headless --putenv VBOX_LOG_DEST="nofile stdout" --putenv VBOX_LOG="+gui.e.l.f"
-    generic_cmd_line = g_string_new(NULL);
-    g_string_append_printf(generic_cmd_line, "%s --type headless", uuid_str);
-    wordexp(generic_cmd_line->str, &result, 0);
-    g_string_free(generic_cmd_line, true);
-    HandlerArg handlerArg2 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
-    handleStartVM(&handlerArg2);
+    // console and debugger
+    // refer to src/VBox/Frontends/VBoxHeadless/VBoxHeadless.cpp
+    hrc = virtualBox->FindMachine(Bstr(uuid_str).raw(), m.asOutParam());
+    // set session name
+    hrc = session->COMSETTER(Name)(Bstr("videzzo").raw());
+    // open a session
+    hrc = m->LockMachine(session, LockType_VM);
+    // get the console
+    hrc = session->COMGETTER(Console)(console.asOutParam());
+    // get the mutatble machine
+    hrc = console->COMGETTER(Machine)(machine.asOutParam());
+    // get the machine debugger
+    hrc = console->COMGETTER(Debugger)(machineDebugger.asOutParam());
+
+    // or VBoxManage startvm UUID --type headless
+    hrc = console->PowerUp(progress.asOutParam());
+    hrc = showProgress1(progress);
+
+    // src/VBox/Debugger/VBoxDbgGui.cpp
+    // More: https://blog.doyensec.com/2022/04/26/vbox-fuzzing.html
+    LONG64 llUVM = 0;
+    LONG64 llVMMFunctionTable = 0;
+    PUVM pUVM;
+    PCVMMR3VTABLE pVMM;
+
+    hrc = machineDebugger->GetUVMAndVMMFunctionTable(
+        (int64_t)VMMR3VTABLE_MAGIC_VERSION, &llVMMFunctionTable, &llUVM);
+    pUVM = (PUVM)(intptr_t)llUVM;
+    pVMM = (PCVMMR3VTABLE)(intptr_t)llVMMFunctionTable;
+    pVM = pUVM->pVM;
+    pVCpu = VMCC_GET_CPU_0(pVM);
 
     return 0;
 }

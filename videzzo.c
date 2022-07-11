@@ -1569,10 +1569,10 @@ ViDeZZoFuzzTarget *restore_fuzz_target(void) {
 int LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size) {
     static int pre_fuzz_done;
     if (!pre_fuzz_done && fuzz_target->pre_fuzz) {
-        fuzz_target->pre_fuzz(NULL);
+        fuzz_target->pre_fuzz();
         pre_fuzz_done = true;
     }
-    fuzz_target->fuzz(NULL, Data, Size);
+    fuzz_target->fuzz(Data, Size);
     return 0;
 }
 

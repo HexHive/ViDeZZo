@@ -82,6 +82,10 @@ typedef struct EventOps {
     void (*deep_copy)(Event *orig, Event *copy);
 } EventOps;
 
+enum Sizes {ViDeZZo_Empty, ViDeZZo_Byte=1, ViDeZZo_Word=2, ViDeZZo_Long=4, ViDeZZo_Quad=8};
+extern EventOps event_ops[N_EVENT_TYPES];
+void videzzo_dispatch_event(Event *event);
+
 //
 // Weak VMM specific
 //
@@ -97,10 +101,6 @@ uint64_t dispatch_mem_alloc(Event *event) __attribute__((weak));
 uint64_t dispatch_mem_free(Event *event) __attribute__((weak));
 uint64_t AroundInvalidAddress(uint64_t physaddr) __attribute__((weak));
 void flush_events(void *opaque) __attribute__((weak));
-
-enum Sizes {ViDeZZo_Empty, ViDeZZo_Byte=1, ViDeZZo_Word=2, ViDeZZo_Long=4, ViDeZZo_Quad=8};
-extern EventOps event_ops[N_EVENT_TYPES];
-void videzzo_dispatch_event(Event *event);
 
 //
 // Input
@@ -162,12 +162,19 @@ typedef struct {
     bool dynamic;
 } InterfaceDescription;
 
-// InterfaceDescription Id_Description[INTERFACE_END];
-// uint32_t n_interfaces;
+extern InterfaceDescription Id_Description[INTERFACE_END];
+#ifdef __cplusplus
+extern "C" void add_interface(EventType type, uint64_t addr, uint32_t size,
+    const char *name, uint8_t min_access_size, uint8_t max_access_size, bool dynamic);
+extern "C" int get_number_of_interfaces(void);
+extern "C" void print_interfaces(void);
+#else
 void add_interface(EventType type, uint64_t addr, uint32_t size,
-        const char *name, uint8_t min_access_size, uint8_t max_access_size, bool dynamic);
+    const char *name, uint8_t min_access_size, uint8_t max_access_size, bool dynamic);
 int get_number_of_interfaces(void);
 void print_interfaces(void);
+#endif
+
 //
 // mutators
 //
@@ -272,11 +279,11 @@ typedef struct ViDeZZoFuzzTarget {
     GString *(*get_init_cmdline)(struct ViDeZZoFuzzTarget *);
 
     // Will run once, prior to the fuzz-loop.
-    void (*pre_fuzz)(void *opaque);
+    void (*pre_fuzz)(void);
     // This is repeatedly executed during the fuzzing loop.
     // Its should handle setup, input execution and cleanup.
     // Cannot be NULL.
-    void (*fuzz)(void *opaque, unsigned char *, size_t);
+    void (*fuzz)(unsigned char *, size_t);
     void *opaque;                           /* ViDeZZoFuzzTargetConfig */
 } ViDeZZoFuzzTarget;
 
