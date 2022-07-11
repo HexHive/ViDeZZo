@@ -82,7 +82,9 @@ typedef struct EventOps {
     void (*deep_copy)(Event *orig, Event *copy);
 } EventOps;
 
-// Weak VM specific
+//
+// Weak VMM specific
+//
 uint64_t dispatch_mmio_read(Event *event) __attribute__((weak));
 uint64_t dispatch_mmio_write(Event *event) __attribute__((weak));
 uint64_t dispatch_pio_read(Event *event) __attribute__((weak));
@@ -142,7 +144,7 @@ size_t reset_data(uint8_t *Data, size_t MaxSize);
 #define INTERFACE_SOCKET_WRITE  4
 #define INTERFACE_MEM_ALLOC     5
 #define INTERFACE_MEM_FREE      6
-// dynamic interfaces are shared with VM
+// dynamic interfaces are shared with VMM
 #define INTERFACE_DYNAMIC       7
 #define INTERFACE_END           256
 
@@ -175,8 +177,8 @@ extern size_t (*CustomMutators[N_MUTATORS])(Input *input);
 extern const char *CustomMutatorNames[N_MUTATORS];
 
 //
-// Feedback from VM
-// Given a generic feedback from VM, we want to leverage this feedback to
+// Feedback from VMM
+// Given a generic feedback from VMM, we want to leverage this feedback to
 // manipulate the current input; sometimes, the whole corpus, which is not
 // difficult, but not impossible.
 //
