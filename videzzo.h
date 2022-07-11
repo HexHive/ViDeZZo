@@ -275,8 +275,6 @@ typedef struct ViDeZZoFuzzTarget {
     // Its should handle setup, input execution and cleanup.
     // Cannot be NULL.
     void (*fuzz)(void *opaque, unsigned char *, size_t);
-    // Will run once, after the fuzz-loop.
-    void (*post_fuzz)(void *opaque);
     void *opaque;                           /* ViDeZZoFuzzTargetConfig */
 } ViDeZZoFuzzTarget;
 

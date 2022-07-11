@@ -27,6 +27,8 @@ cp ./VBoxXPCOM.so $DEST_DIR
 cp ./VBoxDDU.so $DEST_DIR
 cp ./VBoxDDR0.debug $DEST_DIR
 cp ./VBoxDDR0.r0 $DEST_DIR
+cp ./VBoxDD2.so $DEST_DIR
+cp ./VBoxDD.so $DEST_DIR
 cp ./VMMR0.debug $DEST_DIR
 cp ./VMMR0.r0 $DEST_DIR
 cp -r components $DEST_DIR

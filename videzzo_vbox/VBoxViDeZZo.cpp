@@ -432,9 +432,17 @@ static void videzzo_vbox_pre(void *opaque) {
 #endif
 }
 
+static ComPtr<IVirtualBoxClient> virtualBoxClient;
+static ComPtr<IVirtualBox> virtualBox;
+static ComPtr<ISession> session;
+
 // This is called in LLVMFuzzerTestOneInput
-static void videzzo_vbox_post(void *opaque) {
-}
+// static void videzzo_vbox_post(void *opaque) {
+//     session->UnlockMachine();
+//     virtualBox.setNull();
+//     virtualBoxClient.setNull();
+//     com::Shutdown();
+// }
 
 // This is called in LLVMFuzzerInitialize
 static GString *videzzo_vbox_cmdline(ViDeZZoFuzzTarget *t) {
@@ -483,7 +491,6 @@ ViDeZZoFuzzTarget generic_target = {
     .get_init_cmdline = videzzo_vbox_cmdline,
     .pre_fuzz = videzzo_vbox_pre,
     .fuzz = videzzo_vbox,
-    .post_fuzz = videzzo_vbox_post
 };
 
 // This is called in LLVMFuzzerInitialize
@@ -506,7 +513,6 @@ static void register_videzzo_vbox_targets(void)
         target->get_init_cmdline = videzzo_vbox_predefined_config_cmdline;
         target->pre_fuzz = videzzo_vbox_pre;
         target->fuzz = videzzo_vbox;
-        target->post_fuzz = videzzo_vbox_post;
         target->opaque = (void *)config;
         videzzo_add_fuzz_target(target);
         free(target);
@@ -521,9 +527,10 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     int rc;
     HRESULT hrc;
     wordexp_t result;
-    ComPtr<IVirtualBoxClient> virtualBoxClient;
-    ComPtr<IVirtualBox> virtualBox;
-    ComPtr<ISession> session;
+
+    // put it in advance
+    setenv("VBOX_LOG_DEST", "nofile stdout", 1);
+    setenv("VBOX_LOG", "+gui.e.l.f", 1);
 
     // step 1: initialize fuzz targets
     register_videzzo_vbox_targets();
@@ -569,21 +576,13 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     HandlerArg handlerArg1 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
     handleModifyVM(&handlerArg1);
 
-    // VBoxManage startvm UUID
+    // VBoxManage startvm UUID --type headless --putenv VBOX_LOG_DEST="nofile stdout" --putenv VBOX_LOG="+gui.e.l.f"
     generic_cmd_line = g_string_new(NULL);
     g_string_append_printf(generic_cmd_line, "%s --type headless", uuid_str);
     wordexp(generic_cmd_line->str, &result, 0);
     g_string_free(generic_cmd_line, true);
     HandlerArg handlerArg2 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
     handleStartVM(&handlerArg2);
-
-    // step 6: clean
-    session->UnlockMachine();
-    NativeEventQueue::getMainEventQueue()->processEventQueue(0);
-    virtualBox.setNull();
-    virtualBoxClient.setNull();
-    NativeEventQueue::getMainEventQueue()->processEventQueue(0);
-    com::Shutdown();
 
     return 0;
 }
