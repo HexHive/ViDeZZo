@@ -510,13 +510,6 @@ static ComPtr<IVirtualBoxClient> virtualBoxClient;
 static ComPtr<IVirtualBox> virtualBox;
 static ComPtr<ISession> session;
 
-// static void videzzo_vbox_post(void *opaque) {
-//     session->UnlockMachine();
-//     virtualBox.setNull();
-//     virtualBoxClient.setNull();
-//     com::Shutdown();
-// }
-
 // This is called in LLVMFuzzerInitialize
 static GString *videzzo_vbox_cmdline(ViDeZZoFuzzTarget *t) {
     if (!getenv("VBOX_FUZZ_ARGS")) {
