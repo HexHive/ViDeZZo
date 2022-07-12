@@ -62,7 +62,7 @@ videzzo-qemu-debug:
 	make -C videzzo_qemu qemu-debug clusterfuzz-debug
 
 videzzo-vbox-debug:
-	CFLAGS="${CFLAGS}               -DVIDEZZO_DEBUG" HYPERVISOR=vbox make videzzo-core
+	CFLAGS="${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG" HYPERVISOR=vbox make videzzo-core
 	make -C videzzo_vbox vbox-debug clusterfuzz-debug
 
 qemu: videzzo-qemu

@@ -8,7 +8,7 @@ CONTROL=$1 # san or cov
 DEST_DIR=$PWD/out-$1
 mkdir -p $DEST_DIR
 
-pushd vbox/out-san/linux.amd64/debug/bin/
+pushd vbox/out-$CONTROL/linux.amd64/debug/bin/
 targets=$(./VBoxViDeZZo | awk '$1 ~ /\*/  {print $2}')
 for target in $(echo "$targets" | head -n -1); do
     if [ "$target" != "videzzo-fuzz" ]; then
