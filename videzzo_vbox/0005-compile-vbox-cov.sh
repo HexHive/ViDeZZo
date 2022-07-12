@@ -10,7 +10,7 @@ kmk VBOX_FUZZ=1 KBUILD_TYPE=debug VBOX_GCC_TOOL=CLANG \
     PATH_OUT_BASE=$PWD/out-cov \
     TOOL_CLANG_CFLAGS="-fsanitize=fuzzer-no-link -DCLANG_COV_DUMP -DVIDEZZO_LESS_CRASHES ${COVERAGE} -fPIE" \
     TOOL_CLANG_CXXFLAGS="-fsanitize=fuzzer-no-link -DCLANG_COV_DUMP -DVIDEZZO_LESS_CRASHES ${COVERAGE} -fPIE" \
-    TOOL_CLANG_LDFLAGS="-fsanitize=fuzzer-no-link" \
+    TOOL_CLANG_LDFLAGS="-fsanitize=fuzzer-no-link ${COVERAGE}" \
     VBOX_FUZZ_LDFLAGS="-fsanitize=fuzzer ${COVERAGE}"
 
 # 1. compile kernel drivers

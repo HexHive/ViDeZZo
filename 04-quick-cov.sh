@@ -1,15 +1,16 @@
 #!/bin/bash
 
-# usage: bash -x 04-qemu-quick-cov.sh i386 ac97
-arch=$1
-target=$2
+# usage: bash -x 04-quick-cov.sh qemu|vbox i386|x86_64|arm|aarch64 ac97
+vmm=$1
+arch=$2
+target=$3
 
 # stage 1
-pushd videzzo_qemu/out-cov
+pushd videzzo_${vmm}/out-cov
 
 # stage 2
 rm -rf clangcovdump.profraw*
-bin=./qemu-fuzz-${arch}-target-videzzo-fuzz-${target}
+bin=./${vmm}-videzzo-${arch}-target-videzzo-fuzz-${target}
 $bin -max_total_time=300
 
 # stage 3
