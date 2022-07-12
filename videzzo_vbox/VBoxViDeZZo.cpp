@@ -61,6 +61,7 @@ static void HandleSignal(int sig);
 #define VBOX_IN_VMM 1
 
 #include "PDMInternal.h"
+#include "IOMInternal.h" // must be in front of vm.h
 
 /* needed by machineDebugger COM VM getter */
 #include <VBox/vmm/vm.h>
@@ -411,34 +412,80 @@ static void usage(void) {
 //
 // VBox specific initialization - Register all targets
 //
-static GHashTable *fuzzable_memoryregions;
+static GHashTable *fuzzable_pioregions;
+static GHashTable *fuzzable_mmioregions;
+
+void locate_fuzzable_objects(char *mrname) {
+    PPDMDEVINS pDevIns;
+    PVM internalPVM;
+    int i;
+    uint64_t addr;
+    uint32_t size;
+    uint8_t min, max;
+
+    for (pDevIns = pVM->pdm.s.pDevInstances;
+            pDevIns; pDevIns = pDevIns->Internal.s.pNextR3) {
+        internalPVM = pDevIns->Internal.s.pVMR3;
+        // PIO
+        for (i = 0; i < internalPVM->iom.s.cIoPortRegs; i++) {
+            PIOMIOPORTENTRYR3 pRegEntry_PIO = &(internalPVM->iom.s.paIoPortRegs[i]);
+            if (g_pattern_match_simple(mrname, pRegEntry_PIO->pszDesc)) {
+                g_hash_table_insert(fuzzable_pioregions, pRegEntry_PIO, (gpointer)true);
+                g_assert(pRegEntry_PIO->fMapped);
+                addr = pRegEntry_PIO->uPort;
+                size = pRegEntry_PIO->cPorts;
+                add_interface(EVENT_TYPE_PIO_READ, addr, size, pRegEntry_PIO->pszDesc, 1, 4, true);
+                add_interface(EVENT_TYPE_PIO_WRITE, addr, size, pRegEntry_PIO->pszDesc, 1, 4, true);
+            }
+        }
+        // MMIO
+        for (i = 0; i < internalPVM->iom.s.cMmioRegs; i++) {
+            PIOMMMIOENTRYR3 pRegEntry_MMIO = &(internalPVM->iom.s.paMmioRegs[i]);
+            if (g_pattern_match_simple(mrname, pRegEntry_MMIO->pszDesc)) {
+                g_hash_table_insert(fuzzable_mmioregions, pRegEntry_MMIO, (gpointer)true);
+                g_assert(pRegEntry_MMIO->fMapped);
+                addr = pRegEntry_MMIO->GCPhysMapping;
+                size = pRegEntry_MMIO->cbRegion;
+                add_interface(EVENT_TYPE_MMIO_READ, addr, size, pRegEntry_MMIO->pszDesc, 1, 4, true);
+                add_interface(EVENT_TYPE_MMIO_WRITE, addr, size, pRegEntry_MMIO->pszDesc, 1, 4, true);
+            }
+        }
+    }
+}
+
 
 // This is called in LLVMFuzzerTestOneInput
 static void videzzo_vbox_pre() {
     GHashTableIter iter;
-    // void *mr;
     char **mrnames;
 
-    fuzzable_memoryregions = g_hash_table_new(NULL, NULL);
+    fuzzable_pioregions = g_hash_table_new(NULL, NULL);
+    fuzzable_mmioregions = g_hash_table_new(NULL, NULL);
 
     // step 1: find target memory regions
     fprintf(stderr, "Matching objects by name ");
     mrnames = g_strsplit(getenv("VBOX_FUZZ_MRNAME"), ",", -1);
     for (int i = 0; mrnames[i] != NULL; i++) {
         fprintf(stderr, ", %s", mrnames[i]);
-        // locate_fuzzable_objects(pVM, mrnames[i]);
+        locate_fuzzable_objects(mrnames[i]);
     }
     fprintf(stderr, "\n");
     g_strfreev(mrnames);
 
     fprintf(stderr, "This process will fuzz the following MemoryRegions:\n");
-    g_hash_table_iter_init(&iter, fuzzable_memoryregions);
-    // while (g_hash_table_iter_next(&iter, (gpointer)&mr, NULL)) {
-        // printf("  * %s (size %lx)\n",
-               // object_get_canonical_path_component(&(mr->parent_obj)),
-               // (uint64_t)mr->size);
-    // }
-    if (!g_hash_table_size(fuzzable_memoryregions)) {
+    g_hash_table_iter_init(&iter, fuzzable_pioregions);
+    PIOMIOPORTENTRYR3 pRegEntry_PIO;
+    while (g_hash_table_iter_next(&iter, (gpointer *)&pRegEntry_PIO, NULL)) {
+        printf("  * %s (size %lx)\n", pRegEntry_PIO->pDevIns->pReg->szName, (uint64_t)pRegEntry_PIO->cPorts);
+    }
+    g_hash_table_iter_init(&iter, fuzzable_mmioregions);
+    PIOMMMIOENTRYR3 pRegEntry_MMIO;
+    while (g_hash_table_iter_next(&iter, (gpointer *)&pRegEntry_MMIO, NULL)) {
+        printf("  * %s (size %lx)\n", pRegEntry_MMIO->pDevIns->pReg->szName, (uint64_t)pRegEntry_MMIO->cbRegion);
+    }
+
+    if (g_hash_table_size(fuzzable_pioregions) == 0 &&
+            g_hash_table_size(fuzzable_mmioregions) == 0) {
         printf("No fuzzable memory regions found ...\n");
         exit(1);
     }
