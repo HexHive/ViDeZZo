@@ -62,6 +62,7 @@ static void HandleSignal(int sig);
 
 #include "PDMInternal.h"
 #include "IOMInternal.h" // must be in front of vm.h
+#include "VMInternal.h" // must be in front of uvm.h
 
 /* needed by machineDebugger COM VM getter */
 #include <VBox/vmm/vm.h>
@@ -78,6 +79,8 @@ static void HandleSignal(int sig);
     } while (0)
 
 ////////////////////////////////////////////////////////////////////////////////
+
+static NativeEventQueue *gEventQ = NULL;
 
 #define TARGET_NAME "i386"
 
@@ -103,6 +106,24 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .args = "--nic1 nat --nictype1 Am79C970A",
         .file = "srv/VBox/Devices/Network/DevPCNet.cpp",
         .mrnames = "*PCnet*,*PCnet APROM*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "ohci",
+        .args = "--usb-ohci=on",
+        .file = "src/VBox/Devices/USB/DevOHCI.cpp",
+        .mrnames = "*USB OHCI*",
+        .byte_address = false,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "sb16",
+        .args = "--audio-controller=ac97",
+        .file = "src/VBox/Devices/Audio/DevSB16.cpp",
+        .mrnames = "*SB16 - Mixer*,SB16 - DSP",
         .byte_address = true,
         .socket = false,
         .display = false,
@@ -381,9 +402,9 @@ uint64_t dispatch_mem_free(Event *event) {
     return videzzo_free(event->valu);
 }
 
-//
-// VBox specific initialization - Set up interfaces
-//
+void flush_events(void *opaque) {
+    gEventQ->processEventQueue(0);
+}
 
 //
 // call into videzzo from vbox
@@ -410,6 +431,7 @@ static void usage(void) {
 }
 
 //
+// VBox specific initialization - Set up interfaces
 // VBox specific initialization - Register all targets
 //
 static GHashTable *fuzzable_pioregions;
@@ -464,6 +486,16 @@ static void videzzo_vbox_pre() {
 
     // step 1: find target memory regions
     fprintf(stderr, "Matching objects by name ");
+
+    // enumeration: we have to implement a small BIOS to
+    // enumerate all devicess as we choose PowerUpPaused
+    // !!!pretend to be EMT!!!
+    PUVMCPU pUVCpu = pVCpu->pUVCpu;
+    PUVM pUVM = pUVCpu->pUVM;
+    int rc = RTTlsSet(pUVM->vm.s.idxTLS, pUVCpu);
+    // pci_bios_init_device
+    IOMIOPortWrite(pVM, pVCpu, 0x0410, 19200509, 4);
+
     mrnames = g_strsplit(getenv("VBOX_FUZZ_MRNAME"), ",", -1);
     for (int i = 0; mrnames[i] != NULL; i++) {
         fprintf(stderr, ", %s", mrnames[i]);
@@ -591,7 +623,7 @@ bool g_fDetailedProgress = false;
 HRESULT showProgress(ComPtr<IProgress> progress, uint32_t fFlags) {
     fprintf(stderr, "VBoxViDeZZo doesn't support showProcess");
 }
-// we are going to tuse this: copyed from VBoxHeadless
+// we are going to use this: copyed from VBoxHeadless
 HRESULT showProgress1(const ComPtr<IProgress> &progress) {
     BOOL fCompleted = FALSE;
     ULONG ulLastPercent = 0;
@@ -623,7 +655,7 @@ HRESULT showProgress1(const ComPtr<IProgress> &progress) {
         if (fCompleted)
             break;
 
-        // gEventQ->processEventQueue(500);
+        gEventQ->processEventQueue(500);
         hrc = progress->COMGETTER(Completed(&fCompleted));
     }
 
@@ -721,9 +753,12 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     hrc = console->COMGETTER(Machine)(machine.asOutParam());
     // get the machine debugger
     hrc = console->COMGETTER(Debugger)(machineDebugger.asOutParam());
+    // get the event queue
+    gEventQ = com::NativeEventQueue::getMainEventQueue();
 
     // or VBoxManage startvm UUID --type headless
-    hrc = console->PowerUp(progress.asOutParam());
+    hrc = console->PowerUpPaused(progress.asOutParam());
+
     hrc = showProgress1(progress);
 
     // src/VBox/Debugger/VBoxDbgGui.cpp
