@@ -50,7 +50,6 @@ using namespace com;
 #include <iprt/errcore.h>
 
 #include <signal.h>
-static void HandleSignal(int sig);
 
 #include "VBoxManage.h"
 
@@ -94,6 +93,8 @@ static char uuid_str[64];
 
 static PVM pVM;
 static PVMCPUCC pVCpu;
+static ComPtr<IMachine> machine;
+static ComPtr<IConsole> console;
 
 //
 // Fuzz Target Configs
@@ -678,6 +679,42 @@ HRESULT showProgress1(const ComPtr<IProgress> &progress) {
     return hrc;
 }
 
+// refer to src/VBox/Frontends/VBoxHeadless/VBoxHeadless.cpp
+static void cleanup(int sig) {
+    HRESULT hrc;
+    RT_NOREF(sig);
+    LogRel(("VBoxViDeZZo: received singal %d\n", sig));
+
+    MachineState_T machineState = MachineState_Aborted;
+    hrc = machine->COMGETTER(State)(&machineState);
+    if (SUCCEEDED(hrc))
+        Log(("machine state = %RU32\n", machineState));
+    else
+        Log(("IMachine::getState: %Rhrc\n", hrc));
+
+    if (console && (machineState == MachineState_Running
+            || machineState == MachineState_Teleporting
+            || machineState == MachineState_LiveSnapshotting
+            /** @todo power off paused VMs too? */)) {
+        do {
+            ComPtr<IProgress> progress;
+            hrc = console->PowerDown(progress.asOutParam());
+            hrc = showProgress1(progress);
+        } while (0);
+    }
+
+    console = NULL;
+    session->UnlockMachine();
+
+    session.setNull();
+    virtualBox.setNull();
+    virtualBoxClient.setNull();
+    machine.setNull();
+
+    com::Shutdown();
+
+    exit(0);
+}
 
 int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
 {
@@ -687,8 +724,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     int rc;
     HRESULT hrc;
     wordexp_t result;
-    ComPtr<IMachine> m, machine;
-    ComPtr<IConsole> console;
+    ComPtr<IMachine> m;
     ComPtr<IMachineDebugger> machineDebugger;
     ComPtr<IProgress> progress;
 
@@ -770,6 +806,17 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     pVMM = (PCVMMR3VTABLE)(intptr_t)llVMMFunctionTable;
     pVM = pUVM->pVM;
     pVCpu = VMCC_GET_CPU_0(pVM);
+
+    // signals
+    // refer to src/VBox/Frontends/VBoxHeadless/VBoxHeadless.cpp
+    // not necessary
+    // signal(SIGPIPE, SIG_IGN);
+    // signal(SIGTTOU, SIG_IGN);
+
+    // signal(SIGHUP,  SIG_DFL);
+    // signal(SIGINT,  SIG_DFL);
+    // signal(SIGTERM, SIG_DFL);
+    // signal(SIGUSR1, SIG_DFL);
 
     return 0;
 }
