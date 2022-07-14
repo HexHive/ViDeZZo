@@ -534,6 +534,14 @@ static void videzzo_vbox_pre() {
     // step 2: get allocator
     // vbox_alloc = get_vbox_alloc(s);
 
+    // step 3: enable source coverage collection
+    // this main thread musked SIGALRM in rtThreadPosixBlockSignals
+    // for timer-posix.cpp, but I have to unmusk this to receive SIGALRM
+    // any side effects? no idea
+    sigset_t SigSet;
+    sigemptyset(&SigSet);
+    sigaddset(&SigSet, SIGALRM);
+    sigprocmask(SIG_UNBLOCK, &SigSet, NULL);
 #ifdef CLANG_COV_DUMP
     llvm_profile_initialize_file(true);
 #endif
