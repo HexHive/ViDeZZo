@@ -7,8 +7,8 @@ mkdir -p out-deb
 pushd out-deb && source ./env.sh && popd
 kmk VBOX_FUZZ=1 KBUILD_TYPE=debug VBOX_GCC_TOOL=CLANG \
     PATH_OUT_BASE=$PWD/out-deb \
-    TOOL_CLANG_CFLAGS="-fsanitize=fuzzer-no-link -fPIE" \
-    TOOL_CLANG_CXXFLAGS="-fsanitize=fuzzer-no-link -fPIE" \
+    TOOL_CLANG_CFLAGS="-fsanitize=fuzzer-no-link -fPIE -DRT_NO_STRICT" \
+    TOOL_CLANG_CXXFLAGS="-fsanitize=fuzzer-no-link -fPIE -DRT_NO_STRICT" \
     TOOL_CLANG_LDFLAGS="-fsanitize=fuzzer-no-link,address,undefined" \
     VBOX_FUZZ_LDFLAGS="-fsanitize=fuzzer,address,undefined"
 
