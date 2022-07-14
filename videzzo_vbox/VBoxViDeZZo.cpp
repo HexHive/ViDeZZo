@@ -692,10 +692,6 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     ComPtr<IMachineDebugger> machineDebugger;
     ComPtr<IProgress> progress;
 
-    // put it in advance
-    setenv("VBOX_LOG_DEST", "nofile stdout", 1);
-    setenv("VBOX_LOG", "+gui.e.l.f", 1);
-
     // step 1: initialize fuzz targets
     register_videzzo_vbox_targets();
 
