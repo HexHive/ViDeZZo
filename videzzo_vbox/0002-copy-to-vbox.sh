@@ -1,8 +1,8 @@
 #!/bin/bash
 
-target=vbox/src/VBox/Frontends/VBoxManage
-cp ../clangcovdump.h $target/
-cp ../videzzo.h $target/
-cp ../libvidezzo.a $target/
-cp VBoxViDeZZo.cpp $target/
+target=vbox/src/VBox
+cp ../clangcovdump.h $target/Devices/build
+cp ../videzzo.h $target/Frontends/VBoxManage
+cp ../libvidezzo.a $target/Frontends/VBoxManage
+cp VBoxViDeZZo.cpp $target/Frontends/VBoxManage
 cp CLANG.kmk vbox/kBuild/tools

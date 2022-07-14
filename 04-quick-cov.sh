@@ -20,7 +20,12 @@ $bin -max_total_time=${timeout}
 
 # stage 3
 llvm-profdata merge -output=clangcovdump.profraw $(ls clangcovdump.profraw-* | tail -n 1)
-llvm-cov show -format=html -output-dir=./coverage-reports/${target} -instr-profile clangcovdump.profraw $bin
-rm -f default.profraw
+if [ "$vmm" = "vbox" ]; then
+    llvm-cov show -format=html -output-dir=./coverage-reports/${target} -instr-profile clangcovdump.profraw \
+        ./VBoxDD.so
+else
+    llvm-cov show -format=html -output-dir=./coverage-reports/${target} -instr-profile clangcovdump.profraw $bin
+fi
+rm default.profraw
 echo "please check $PWD/coverage-reports/${target}"
 popd

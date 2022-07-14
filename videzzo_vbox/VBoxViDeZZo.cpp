@@ -84,9 +84,6 @@ static NativeEventQueue *gEventQ = NULL;
 #define TARGET_NAME "i386"
 
 #include "videzzo.h"
-#ifdef CLANG_COV_DUMP
-#include "clangcovdump.h"
-#endif
 
 static RTUUID uuid;
 static char uuid_str[64];
@@ -476,7 +473,6 @@ void locate_fuzzable_objects(char *mrname) {
     }
 }
 
-
 // This is called in LLVMFuzzerTestOneInput
 static void videzzo_vbox_pre() {
     GHashTableIter iter;
@@ -542,9 +538,6 @@ static void videzzo_vbox_pre() {
     sigemptyset(&SigSet);
     sigaddset(&SigSet, SIGALRM);
     sigprocmask(SIG_UNBLOCK, &SigSet, NULL);
-#ifdef CLANG_COV_DUMP
-    llvm_profile_initialize_file(true);
-#endif
 }
 
 static ComPtr<IVirtualBoxClient> virtualBoxClient;
@@ -691,7 +684,7 @@ HRESULT showProgress1(const ComPtr<IProgress> &progress) {
 static void cleanup(int sig) {
     HRESULT hrc;
     RT_NOREF(sig);
-    LogRel(("VBoxViDeZZo: received singal %d\n", sig));
+    LogRel(("VBoxViDeZZo: received signal %d\n", sig));
 
     MachineState_T machineState = MachineState_Aborted;
     hrc = machine->COMGETTER(State)(&machineState);

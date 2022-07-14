@@ -537,6 +537,33 @@ Index: src/VBox/Devices/Makefile.kmk
   include $(PATH_SUB_CURRENT)/Audio/testcase/Makefile.kmk
   include $(PATH_SUB_CURRENT)/Input/testcase/Makefile.kmk
   ifdef VBOX_WITH_TESTCASES
+Index: src/VBox/Devices/build/VBoxDD.cpp
+===================================================================
+--- src/VBox/Devices/build/VBoxDD.cpp	(revision 95063)
++++ src/VBox/Devices/build/VBoxDD.cpp	(working copy)
+@@ -29,6 +29,9 @@
+ #include <iprt/assert.h>
+ 
+ #include "VBoxDD.h"
++#ifdef CLANG_COV_DUMP
++#include "clangcovdump.h"
++#endif
+ 
+ 
+ /*********************************************************************************************************************************
+@@ -49,6 +52,12 @@
+  */
+ extern "C" DECLEXPORT(int) VBoxDevicesRegister(PPDMDEVREGCB pCallbacks, uint32_t u32Version)
+ {
++    // HACK
++    // we want to dump the coverage in VBoxDD.so
++#ifdef CLANG_COV_DUMP
++    llvm_profile_initialize_file(true);
++#endif
++
+     LogFlow(("VBoxDevicesRegister: u32Version=%#x\n", u32Version));
+     AssertReleaseMsg(u32Version == VBOX_VERSION, ("u32Version=%#x VBOX_VERSION=%#x\n", u32Version, VBOX_VERSION));
+     int rc;
 Index: src/VBox/ExtPacks/VBoxDTrace/include/VBoxDTraceLibCWrappers.h
 ===================================================================
 --- src/VBox/ExtPacks/VBoxDTrace/include/VBoxDTraceLibCWrappers.h	(revision 95063)
@@ -564,7 +591,7 @@ Index: src/VBox/Frontends/VBoxManage/Makefile.kmk
  	VBoxManageUtils.cpp \
   	VBoxInternalManage.cpp \
   	VBoxManageAppliance.cpp \
-@@ -100,10 +99,33 @@
+@@ -100,6 +99,9 @@
   	VBoxManageCloud.cpp \
   	VBoxManageCloudMachine.cpp \
   	../Common/PasswordInput.cpp
@@ -574,7 +601,11 @@ Index: src/VBox/Frontends/VBoxManage/Makefile.kmk
   VBoxManage_SOURCES.win = \
   	VBoxManage.rc
   VBoxManage_LIBS      += $(LIB_DDU)
+@@ -400,4 +402,26 @@
  
+ endif
+ 
++ifndef VBOX_ONLY_DOCS
 +ifdef VBOX_WITH_VIDEZZO
 + PROGRAMS += VBoxViDeZZo
 + VBoxViDeZZo_TEMPLATE   = VBOXMAINCLIENTEXE
@@ -594,10 +625,9 @@ Index: src/VBox/Frontends/VBoxManage/Makefile.kmk
 +    videzzo vncclient gmodule-2.0 glib-2.0 $(LIB_VMM) \
 +    $(LIB_DDU)
 +endif
++endif # VBOX_ONLY_DOCS
 +
- ifdef VBOX_WITH_VBOXMANAGE_NLS
-  VBOX_PATH_VBOXMANAGE_SRC := $(PATH_SUB_CURRENT)
-  include $(PATH_SUB_CURRENT)/nls/ApprovedLanguages.kmk
+ include $(FILE_KBUILD_SUB_FOOTER)
 Index: src/VBox/HostServices/SharedFolders/Makefile.kmk
 ===================================================================
 --- src/VBox/HostServices/SharedFolders/Makefile.kmk	(revision 95063)
@@ -616,12 +646,14 @@ Index: src/VBox/Runtime/Makefile.kmk
 ===================================================================
 --- src/VBox/Runtime/Makefile.kmk	(revision 95063)
 +++ src/VBox/Runtime/Makefile.kmk	(working copy)
-@@ -4301,6 +4301,8 @@
+@@ -4301,6 +4301,10 @@
  			\
  			-e '/^VBoxHost_/d'\
  			-e '/^VBoxGuest_/d'\
 +			\
 +			-e '/^_ZT[IS]F/d' \
++			\
++			-e '/__covrec_/d' \
  		| $(SED) -nf "$@"
    endif
  	$(call MSG_L1,IPRT: Testing mangling using nm...)
