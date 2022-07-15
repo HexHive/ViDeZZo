@@ -18,8 +18,7 @@ videzzo-poc-gen
 videzzo_types.c
 videzzo_vmm-00.h
 videzzo_qemu/*.h
-videzzo_qemu/*.h
-videzzo_qemu/*.h
+videzzo_vbox/*.h
 out
 out-*
 *.zip

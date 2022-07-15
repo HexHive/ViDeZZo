@@ -5,10 +5,11 @@ mkdir -p out-san
 ./configure --disable-hardening --disable-docs \
     --disable-java --disable-qt -d --out-base-dir=out-san
 pushd out-san && source ./env.sh && popd
+ANNOTATION="-videzzo-instrumentation=$PWD/videzzo_vbox_types.yaml -flegacy-pass-manager"
 kmk VBOX_FUZZ=1 KBUILD_TYPE=debug VBOX_GCC_TOOL=CLANG \
     PATH_OUT_BASE=$PWD/out-san \
-    TOOL_CLANG_CFLAGS="-fsanitize=fuzzer-no-link -fPIE -DRT_NO_STRICT" \
-    TOOL_CLANG_CXXFLAGS="-fsanitize=fuzzer-no-link -fPIE -DRT_NO_STRICT" \
+    TOOL_CLANG_CFLAGS="-fsanitize=fuzzer-no-link -fPIE -DRT_NO_STRICT ${ANNOTATION}" \
+    TOOL_CLANG_CXXFLAGS="-fsanitize=fuzzer-no-link -fPIE -DRT_NO_STRICT ${ANNOTATION}" \
     TOOL_CLANG_LDFLAGS="-fsanitize=fuzzer-no-link,address,undefined" \
     VBOX_FUZZ_LDFLAGS="-fsanitize=fuzzer,address,undefined"
 

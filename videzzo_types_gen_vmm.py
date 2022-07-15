@@ -218,7 +218,7 @@ pcnet_21.add_flag('PCNET_INITBLK32.ladrf2', {0: 8, 8: 8})
 pcnet_21.add_flag('PCNET_INITBLK32.ladrf3', {0: 8, 8: 8})
 pcnet_21.add_head(['PCNET_INITBLK32'])
 pcnet_21.add_instrumentation_point('pcnet.c', ['pcnet_init', 'phys_mem_read', 0, 1])
-pcnet_21.add_instrumentation_point('DevPCNet.cpp', ['pcnetR3Init', 'pcnetPhysRead', 0, 2])
+pcnet_21.add_instrumentation_point('DevPCNet.cpp', ['_ZL11pcnetR3InitP11PDMDEVINSR3P10PCNETSTATEP12PCNETSTATER3', '_ZL13pcnetPhysReadP11PDMDEVINSR3P10PCNETSTATEmPvm', 0, 2])
 ###################################################################################################################
 pcnet_22 = Model('pcnet', 22)
 pcnet_22.add_struct('PCNET_INITBLK16', {
@@ -227,8 +227,8 @@ pcnet_22.add_struct('PCNET_INITBLK16', {
     'rdra#0x4': FIELD_FLAG, 'tdra#0x4': FIELD_FLAG})
 pcnet_22.add_flag('PCNET_INITBLK16.mode', {0: 1, 1: 1, 2: 1, 3: 1, 4: 2, 6: 1, 7: 6, 13: 1, 14: 1, 15: 1})
 # 4.1.1 we replace 29, 3 with 24, 5, 3 (rdra and tdra).
-pcnet_22.add_flag('PCNET_INITBLK16.rdra', {0: 24, 24: 5, 3})
-pcnet_22.add_flag('PCNET_INITBLK16.tdra', {0: 24, 24: 5, 3})
+pcnet_22.add_flag('PCNET_INITBLK16.rdra', {0: 24, 24: 5, 29: 3})
+pcnet_22.add_flag('PCNET_INITBLK16.tdra', {0: 24, 24: 5, 29: 3})
 # 4.1.2 we keep the existing more precise results
 pcnet_22.add_flag('PCNET_INITBLK16.padrf0', {0: 8, 8: 8})
 pcnet_22.add_flag('PCNET_INITBLK16.padrf1', {0: 8, 8: 8})
@@ -239,7 +239,7 @@ pcnet_22.add_flag('PCNET_INITBLK16.ladrf2', {0: 8, 8: 8})
 pcnet_22.add_flag('PCNET_INITBLK16.ladrf3', {0: 8, 8: 8})
 pcnet_22.add_head(['PCNET_INITBLK16'])
 pcnet_22.add_instrumentation_point('pcnet.c', ['pcnet_init', 'phys_mem_read', 1, 1])
-pcnet_22.add_instrumentation_point('DevPCNet.cpp', ['pcnetR3Init', 'pcnetPhysRead', 1, 2])
+pcnet_21.add_instrumentation_point('DevPCNet.cpp', ['_ZL11pcnetR3InitP11PDMDEVINSR3P10PCNETSTATEP12PCNETSTATER3', '_ZL13pcnetPhysReadP11PDMDEVINSR3P10PCNETSTATEmPvm', 1, 2])
 ###################################################################################################################
 pcnet_23 = Model('pcnet', 23)
 pcnet_23.add_struct('PCNET_BUF4', {'buf#0x1000': FIELD_RANDOM})
