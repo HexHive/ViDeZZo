@@ -64,3 +64,13 @@ which is difficult to model.
 internal-unions (we can regard multiple object types as exgernal-unions), we do
 a under-approximation. We try to use a more concrete type (pointer, flag, or
 constant) for a field.
+
+4. Merge results from multiple VMMs
+
+4.1 FIELD_FLAG
+
+4.1.1 If we could extract more precise bit-aware information from other VMMs, we
+try to merge this information to be more precise. An extreme case would be "each
+bit are independent".
+
+4.1.2 We keep the more precise existing results.
