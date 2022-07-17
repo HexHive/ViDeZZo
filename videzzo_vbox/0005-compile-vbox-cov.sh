@@ -7,11 +7,13 @@ mkdir -p out-cov
 pushd out-cov && source ./env.sh && popd
 COVERAGE="-fprofile-instr-generate -fcoverage-mapping"
 ANNOTATION="-videzzo-instrumentation=$PWD/videzzo_vbox_types.yaml -flegacy-pass-manager"
+EXPORT_SYMBOL_LIST="$PWD/export_symbol_list.txt"
+EXPORT_SYMBOL="-Wl,--export-dynamic -Wl,--export-dynamic-symbol-list=$EXPORT_SYMBOL_LIST"
 kmk VBOX_FUZZ=1 KBUILD_TYPE=debug VBOX_GCC_TOOL=CLANG \
     PATH_OUT_BASE=$PWD/out-cov \
     TOOL_CLANG_CFLAGS="-fsanitize=fuzzer-no-link -DCLANG_COV_DUMP -DRT_NO_STRICT ${COVERAGE} ${ANNOTATION} -fPIE" \
     TOOL_CLANG_CXXFLAGS="-fsanitize=fuzzer-no-link -DCLANG_COV_DUMP -DRT_NO_STRICT ${COVERAGE} ${ANNOTATION} -fPIE" \
-    TOOL_CLANG_LDFLAGS="-fsanitize=fuzzer-no-link ${COVERAGE}" \
+    TOOL_CLANG_LDFLAGS="-fsanitize=fuzzer-no-link ${COVERAGE} ${EXPORT_SYMBOL}" \
     VBOX_FUZZ_LDFLAGS="-fsanitize=fuzzer ${COVERAGE}"
 
 # 1. compile kernel drivers

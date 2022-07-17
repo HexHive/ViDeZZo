@@ -188,7 +188,6 @@ __flush gfctx_get_flush(void);
 // the index of the event just issued as parameters and udpate the current input
 typedef void (* FeedbackHandler)(uint64_t physaddr);
 
-void GroupMutatorMiss(uint8_t id, uint64_t physaddr);
 extern FeedbackHandler group_mutator_miss_handlers[0xff];
 
 //
@@ -267,7 +266,6 @@ uint64_t dispatch_clock_step(Event *event) __attribute__((weak));
 uint64_t dispatch_socket_write(Event *event) __attribute__((weak));
 uint64_t dispatch_mem_alloc(Event *event) __attribute__((weak));
 uint64_t dispatch_mem_free(Event *event) __attribute__((weak));
-uint64_t AroundInvalidAddress(uint64_t physaddr) __attribute__((weak));
 void flush_events(void *opaque) __attribute__((weak));
 
 //
@@ -283,6 +281,11 @@ void print_interfaces(void);
 //
 size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush flush);
 
+//
+// Feecback From VMM
+//
+uint64_t AroundInvalidAddress(uint64_t physaddr);
+void GroupMutatorMiss(uint8_t id, uint64_t physaddr);
 //
 // help
 //

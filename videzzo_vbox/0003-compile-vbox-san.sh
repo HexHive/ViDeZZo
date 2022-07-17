@@ -6,11 +6,13 @@ mkdir -p out-san
     --disable-java --disable-qt -d --out-base-dir=out-san
 pushd out-san && source ./env.sh && popd
 ANNOTATION="-videzzo-instrumentation=$PWD/videzzo_vbox_types.yaml -flegacy-pass-manager"
+EXPORT_SYMBOL_LIST="$PWD/export_symbol_list.txt"
+EXPORT_SYMBOL="-Wl,--export-dynamic -Wl,--export-dynamic-symbol-list=$EXPORT_SYMBOL_LIST"
 kmk VBOX_FUZZ=1 KBUILD_TYPE=debug VBOX_GCC_TOOL=CLANG \
     PATH_OUT_BASE=$PWD/out-san \
     TOOL_CLANG_CFLAGS="-fsanitize=fuzzer-no-link -fPIE -DRT_NO_STRICT ${ANNOTATION}" \
     TOOL_CLANG_CXXFLAGS="-fsanitize=fuzzer-no-link -fPIE -DRT_NO_STRICT ${ANNOTATION}" \
-    TOOL_CLANG_LDFLAGS="-fsanitize=fuzzer-no-link,address,undefined" \
+    TOOL_CLANG_LDFLAGS="-fsanitize=fuzzer-no-link,address,undefined ${EXPORT_SYMBOL}" \
     VBOX_FUZZ_LDFLAGS="-fsanitize=fuzzer,address,undefined"
 
 # 1. compile kernel drivers

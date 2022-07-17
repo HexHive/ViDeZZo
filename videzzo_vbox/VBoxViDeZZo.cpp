@@ -372,7 +372,7 @@ uint64_t dispatch_socket_write(Event *event) {
 #define RASPI2_RAM_LOW  (1 << 20)
 #define RASPI2_RAM_HIGH (0x20000000)
 
-uint64_t AroundInvalidAddress(uint64_t physaddr) {
+__attribute__ ((visibility ("default"))) uint64_t AroundInvalidAddress(uint64_t physaddr) {
     // TARGET_NAME=i386 -> i386/pc
     if (physaddr < I386_MEM_HIGH - I386_MEM_LOW)
         return physaddr + I386_MEM_LOW;

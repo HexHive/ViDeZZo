@@ -688,8 +688,6 @@ uint64_t dispatch_socket_write(Event *event) { return 0; }
 uint64_t dispatch_mem_alloc(Event *event) { return 0; }
 uint64_t dispatch_mem_free(Event *event) { return 0; }
 
-uint64_t AroundInvalidAddress(uint64_t physaddr) { return physaddr; }
-
 EventOps event_ops[] = {
     [EVENT_TYPE_MMIO_READ] = {
         .change_addr = change_addr_generic, .change_size = change_size_generic,
