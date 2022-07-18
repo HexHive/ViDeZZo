@@ -537,6 +537,18 @@ Index: src/VBox/Devices/Makefile.kmk
   include $(PATH_SUB_CURRENT)/Audio/testcase/Makefile.kmk
   include $(PATH_SUB_CURRENT)/Input/testcase/Makefile.kmk
   ifdef VBOX_WITH_TESTCASES
+@@ -148,6 +149,11 @@
+  else
+   VBoxDD_TEMPLATE         = VBoxR3DllWarnNoPic
+  endif
++ ifdef VBOXDD_SANITIZER
++  VBoxDD_CFLAGS         += -fsanitize=address,undefined
++  VBoxDD_CXXFLAGS       += -fsanitize=address,undefined
++  VboxDD_LDFLAGS        += -fsanitize=address,undefined
++ endif
+  VBoxDD_SDKS.win         = ReorderCompilerIncs $(VBOX_WINPSDK) $(VBOX_WINDDK) VBOX_NTDLL
+  Storage/DrvHostDVD.cpp_SDKS.win = ReorderCompilerIncs $(VBOX_WINDDK)
+  VBoxDD_INCS             = \
 Index: src/VBox/Devices/build/VBoxDD.cpp
 ===================================================================
 --- src/VBox/Devices/build/VBoxDD.cpp	(revision 95063)
@@ -646,7 +658,7 @@ Index: src/VBox/Runtime/Makefile.kmk
 ===================================================================
 --- src/VBox/Runtime/Makefile.kmk	(revision 95063)
 +++ src/VBox/Runtime/Makefile.kmk	(working copy)
-@@ -4301,6 +4301,10 @@
+@@ -4301,6 +4301,12 @@
  			\
  			-e '/^VBoxHost_/d'\
  			-e '/^VBoxGuest_/d'\
@@ -654,6 +666,8 @@ Index: src/VBox/Runtime/Makefile.kmk
 +			-e '/^_ZT[IS]F/d' \
 +			\
 +			-e '/__covrec_/d' \
++			-e '/RTLogDefaultInit/d' \
++			-e '/rtstrFormatRt/d' \
  		| $(SED) -nf "$@"
    endif
  	$(call MSG_L1,IPRT: Testing mangling using nm...)
