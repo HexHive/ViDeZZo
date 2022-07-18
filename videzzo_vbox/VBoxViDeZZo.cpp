@@ -97,10 +97,113 @@ static ComPtr<IConsole> console;
 // Fuzz Target Configs
 // https://www.virtualbox.org/manual/ch08.html#vboxmanage-modifyvm
 //
+// Unhandled DMA channels
+// - DevSB16.cpp, Dev3C501.cpp, DevDP8390.cpp, DevFdc.cpp
+// Skipped devices
+// - PDMDEVREG g_DeviceIommuAmd
+// - PDMDEVREG g_DevicePCI
+// - PDMDEVREG g_DevicePCIBridge
+// - PDMDEVREG g_DevicePciIch9
+// - PDMDEVREG g_DevicePciIch9Bridge
+// - PDMDEVREG g_DeviceEFI
+// - PDMDEVREG g_DeviceFlash
+// - PDMDEVREG g_DeviceSmc (Apple System Management Controller)
+// - PDMDEVREG g_DeviceGIMDev (Guest Interface Manager Device)
+// - PDMDEVREG g_DeviceVirtualKD (Device stub/loader for fast Windows kernel-mode debugging)
+// - PDMDEVREG g_DeviceINIP (Internal Network IP stack device/service)
+// - PDMDEVREG g_DevicePlayground
+// - PDMDEVREG g_DeviceSample
+// Confusing devices
+// - PDMDEVREG g_DeviceVga
+// - PDMDEVREG g_DeviceVirtioNet
+// - PDMDEVREG g_DeviceOxPcie958
+// - PDMDEVREG g_DeviceVirtioSCSI
+// - PDMDEVREG g_DeviceBusMouse
 static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     {
         .arch = "i386",
-        .name = "pcnet",
+        .name = "hda",
+        .args = "--audio-controller=hda",
+        .file = "src/VBox/Devices/Audio/DevHda.cpp",
+        .mrnames = "*HDA*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "ac97",
+        .args = "--audio-controller=ac97",
+        .file = "src/VBox/Devices/Audio/DevIchAc97.cpp",
+        .mrnames = "*ICHAC97 NAM*,*ICHAC97 NABM*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "sb16",
+        .args = "--audio-controller=sb16",
+        .file = "src/VBox/Devices/Audio/DevSB16.cpp",
+        .mrnames = "*SB16 - Mixer*,*SB16 - DSP*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "pckbd",
+        .args = "--keyboard ps2",
+        .file = "src/VBox/Devices/Input/DevPS2.cpp",
+        .mrnames = "*PC Keyboard - Data*,*PC Keyboard - Command / Status*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "3c501",
+        .args = "--nic1 nat --nictype1 3C501",
+        .file = "src/VBox/Devices/Network/Dev3C501.cpp",
+        .mrnames = "*3C501*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "ne2000", // ne1000 and ne2000 share this
+        .args = "--nic1 nat --nictype1 NE2000",
+        .file = "src/VBox/Devices/Network/DevDP8390.cpp",
+        .mrnames = "*DP8390-Core*,*DPNIC-NE*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "wd8013", // wd8003 and wd8013 share this
+        .args = "--nic1 nat --nictype1 WD8013",
+        .file = "src/VBox/Devices/Network/DevDP8390.cpp",
+        .mrnames = "*DPNIC-WD*,*DP8390-Core*,*DPNIC - WD Shared RAM*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "3c503",
+        .args = "--nic1 nat --nictype1 3C503",
+        .file = "src/VBox/Devices/Network/DevDP8390.cpp",
+        .mrnames = "*DP8390-Core*,*DPNIC-EL*,*DPNIC - 3C503 Shared RAM*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "e1000", // 82540EM, 82543GC, and 82545EM share this
+        .args = "--nic1 nat --nictype1 82540EM",
+        .file = "src/VBox/Devices/Network/DevE1000.cpp",
+        .mrnames = "*E1000*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "pcnet", // Am79C970A, Am79C973, and Am79C960 share this
         .args = "--nic1 nat --nictype1 Am79C970A",
         .file = "srv/VBox/Devices/Network/DevPCNet.cpp",
         .mrnames = "*PCnet*,*PCnet APROM*",
@@ -109,8 +212,188 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .display = false,
     }, {
         .arch = "i386",
+        .name = "parallel",
+        .args = "",
+        .file = "src/VBox/Devices/Parallel/DevParallel.cpp",
+        .mrnames = "*Parallel*,*Parallel ECP*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "acpi",
+        .args = "--acpi on",
+        .file = "src/VBox/Devices/PC/DevACPI.cpp",
+        .mrnames = "*ACPI*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "dma",
+        .args = "",
+        .file = "src/VBox/Devices/PC/DevDMA.cpp",
+        .mrnames = "*DMA*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "hpet",
+        .args = "--hpet on",
+        .file = "src/VBox/Devices/PC/DevHPET.cpp",
+        .mrnames = "*HPET Memory*",
+        .byte_address = false,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "ioapic",
+        .args = "--ioapic on",
+        .file = "src/VBox/Devices/PC/DevIoApic.cpp",
+        .mrnames = "*APIC*",
+        .byte_address = false,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "lpc",
+        .args = "",
+        .file = "src/VBox/Devices/PC/DevLpc.cpp",
+        .mrnames = "*LPC Memory*",
+        .byte_address = false,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "pcarch",
+        .args = "",
+        .file = "src/VBox/Devices/PC/DevPcArch.cpp",
+        .mrnames = "*Math Co-Processor (DOS/OS2 mode)*,*PS/2 system control port A (A20 and more)*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "pcbios",
+        .args = "",
+        .file = "src/VBox/Devices/PC/DevPcBios.cpp",
+        .mrnames = "*Bochs PC BIOS*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "i8259",
+        .args = "",
+        .file = "src/VBox/Devices/PC/DevPIC.cpp",
+        .mrnames = "*i8259*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "i8254",
+        .args = "",
+        .file = "src/VBox/Devices/PC/DevPit-i8254.cpp",
+        .mrnames = "*i8254*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "qemu_fw_cfg",
+        .args = "",
+        .file = "src/VBox/Devices/PC/DevQemuFwCfg.cpp",
+        .mrnames = "*QEMU firmware configuration*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "rtc",
+        .args = "",
+        .file = "src/VBox/Devices/PC/DevRTC.cpp",
+        .mrnames = "*MC146818*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "tpm",
+        .args = "",
+        .file = "src/VBox/Devices/Security/DevTpm.cpp",
+        .mrnames = "*TPM MMIO*",
+        .byte_address = false,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "serial",
+        .args = "--uarttype1 16550A", // 16450, 16550A, and 16750 share this
+        .file = "src/VBox/Devices/Serial/DevSerial.cpp",
+        .mrnames = "*SERIAL*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "ahci",
+        .args = "--controller IntelAHCI",
+        .file = "src/VBox/Devices/Storage/DevAHCI.cpp",
+        .mrnames = "*AHCI*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "piix3ide",
+        .args = "--controller PIIX3",
+        .file = "src/VBox/Devices/Storage/DevATA.cpp",
+        .mrnames = "*ATA*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "buslogic",
+        .args = "--controller BusLogic",
+        .file = "src/VBox/Devices/Storage/DevBusLogic.cpp",
+        .mrnames = "*BusLogic*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "floppy",
+        .args = "--controller I82078",
+        .file = "src/VBox/Devices/Storage/DevFdc.cpp",
+        .mrnames = "*FDC*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "lsilogicscsi",
+        .args = "--controller LSILogic",
+        .file = "src/VBox/Devices/Storage/DevLsiLogicSCSI.cpp",
+        .mrnames = "*LsiLogic*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "lsilogicsas",
+        .args = "--controller LSILogicSAS",
+        .file = "src/VBox/Devices/Storage/DevLsiLogicSCSI.cpp",
+        .mrnames = "*LsiLogicSas*",
+        .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
         .name = "ohci",
-        .args = "--usb-ohci=on",
+        .args = "--usbohci on",
         .file = "src/VBox/Devices/USB/DevOHCI.cpp",
         .mrnames = "*USB OHCI*",
         .byte_address = false,
@@ -118,11 +401,20 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .display = false,
     }, {
         .arch = "i386",
-        .name = "sb16",
-        .args = "--audio-controller=ac97",
-        .file = "src/VBox/Devices/Audio/DevSB16.cpp",
-        .mrnames = "*SB16 - Mixer*,SB16 - DSP",
+        .name = "vboxvmm",
+        .args = "",
+        .file = "src/VBox/Devices/VMMDev/VMMDev.cpp",
+        .mrnames = "*VMMDev*",
         .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "apic",
+        .args = "",
+        .file = "src/VBox/VMM/VMMAll/APICAll.cpp",
+        .mrnames = "*APIC*",
+        .byte_address = false,
         .socket = false,
         .display = false,
     }
