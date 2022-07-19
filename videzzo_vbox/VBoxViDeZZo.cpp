@@ -105,16 +105,17 @@ static ComPtr<IConsole> console;
 // - PDMDEVREG g_DevicePCIBridge
 // - PDMDEVREG g_DevicePciIch9
 // - PDMDEVREG g_DevicePciIch9Bridge
+// - PDMDEVREG g_DeviceLPC
 // - PDMDEVREG g_DeviceEFI
 // - PDMDEVREG g_DeviceFlash
 // - PDMDEVREG g_DeviceSmc (Apple System Management Controller)
 // - PDMDEVREG g_DeviceGIMDev (Guest Interface Manager Device)
 // - PDMDEVREG g_DeviceVirtualKD (Device stub/loader for fast Windows kernel-mode debugging)
 // - PDMDEVREG g_DeviceINIP (Internal Network IP stack device/service)
-// - PDMDEVREG g_DevicePlayground
-// - PDMDEVREG g_DeviceSample
+// - PDMDEVREG g_DevicePlayground (debug purpose)
+// - PDMDEVREG g_DeviceSample (debug purpose)
+// - PDMDEVREG g_DeviceQemuFwCfg (debug purpose)
 // Confusing devices
-// - PDMDEVREG g_DeviceVga
 // - PDMDEVREG g_DeviceVirtioNet
 // - PDMDEVREG g_DeviceOxPcie958
 // - PDMDEVREG g_DeviceVirtioSCSI
@@ -145,6 +146,15 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .file = "src/VBox/Devices/Audio/DevSB16.cpp",
         .mrnames = "*SB16 - Mixer*,*SB16 - DSP*",
         .byte_address = true,
+        .socket = false,
+        .display = false,
+    }, {
+        .arch = "i386",
+        .name = "vga",
+        .args = "--graphicscontroller=vmsvga", // vboxvga, vmsvga, and vboxsvga share this
+        .file = "src/VBox/Devices/Audio/DevVGA.cpp",
+        .mrnames = "*VRam*,*VGA*", // *VMSVGA*
+        .byte_address = false, // TODO: PIO and MMIO should be seperated!
         .socket = false,
         .display = false,
     }, {
@@ -210,16 +220,16 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .byte_address = true,
         .socket = false,
         .display = false,
-    }, {
+    }, /* { // I do not have a parallel port ...
         .arch = "i386",
         .name = "parallel",
-        .args = "",
+        .args = "--lptmode1 \"/dev/parport3\" --lpt1 0x378 7",
         .file = "src/VBox/Devices/Parallel/DevParallel.cpp",
         .mrnames = "*Parallel*,*Parallel ECP*",
         .byte_address = true,
         .socket = false,
         .display = false,
-    }, {
+    }, */ {
         .arch = "i386",
         .name = "acpi",
         .args = "--acpi on",
@@ -231,7 +241,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "dma",
-        .args = "",
+        .args = nullptr,
         .file = "src/VBox/Devices/PC/DevDMA.cpp",
         .mrnames = "*DMA*",
         .byte_address = true,
@@ -257,17 +267,8 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .display = false,
     }, {
         .arch = "i386",
-        .name = "lpc",
-        .args = "",
-        .file = "src/VBox/Devices/PC/DevLpc.cpp",
-        .mrnames = "*LPC Memory*",
-        .byte_address = false,
-        .socket = false,
-        .display = false,
-    }, {
-        .arch = "i386",
         .name = "pcarch",
-        .args = "",
+        .args = nullptr,
         .file = "src/VBox/Devices/PC/DevPcArch.cpp",
         .mrnames = "*Math Co-Processor (DOS/OS2 mode)*,*PS/2 system control port A (A20 and more)*",
         .byte_address = true,
@@ -276,7 +277,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "pcbios",
-        .args = "",
+        .args = nullptr,
         .file = "src/VBox/Devices/PC/DevPcBios.cpp",
         .mrnames = "*Bochs PC BIOS*",
         .byte_address = true,
@@ -285,7 +286,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "i8259",
-        .args = "",
+        .args = nullptr,
         .file = "src/VBox/Devices/PC/DevPIC.cpp",
         .mrnames = "*i8259*",
         .byte_address = true,
@@ -294,7 +295,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "i8254",
-        .args = "",
+        .args = nullptr,
         .file = "src/VBox/Devices/PC/DevPit-i8254.cpp",
         .mrnames = "*i8254*",
         .byte_address = true,
@@ -302,17 +303,8 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .display = false,
     }, {
         .arch = "i386",
-        .name = "qemu_fw_cfg",
-        .args = "",
-        .file = "src/VBox/Devices/PC/DevQemuFwCfg.cpp",
-        .mrnames = "*QEMU firmware configuration*",
-        .byte_address = true,
-        .socket = false,
-        .display = false,
-    }, {
-        .arch = "i386",
         .name = "rtc",
-        .args = "",
+        .args = nullptr,
         .file = "src/VBox/Devices/PC/DevRTC.cpp",
         .mrnames = "*MC146818*",
         .byte_address = true,
@@ -321,7 +313,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "tpm",
-        .args = "",
+        .args = "--tpm-type 2.0", // 1.2, 2.0, host and swtpm share this
         .file = "src/VBox/Devices/Security/DevTpm.cpp",
         .mrnames = "*TPM MMIO*",
         .byte_address = false,
@@ -330,63 +322,60 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "serial",
-        .args = "--uarttype1 16550A", // 16450, 16550A, and 16750 share this
+        .args = "--uart1 0x3f8 4 --uartmode1 disconnected --uarttype1 16550A", // 16450, 16550A, and 16750 share this
         .file = "src/VBox/Devices/Serial/DevSerial.cpp",
         .mrnames = "*SERIAL*",
         .byte_address = true,
         .socket = false,
         .display = false,
     }, {
+        // for those storage devices
+        // this makes it clear
+        // BUS TYPE: ide, sata, scsi, floppy, sas, usb, and pcie
+        // CONTROLLER CHIPSET TYPE:
+        // LSILogic, LSILogicSAS, BusLogic, IntelAhci, PIIX3, PIIX4, ICH6, I82078, USB, NVMe, and VirtIO
+        // however, a usb is mapped to a certain controller
         .arch = "i386",
         .name = "ahci",
-        .args = "--controller IntelAHCI",
+        .args = "--sata on", // sata: IntelAhci
         .file = "src/VBox/Devices/Storage/DevAHCI.cpp",
         .mrnames = "*AHCI*",
         .byte_address = true,
         .socket = false,
         .display = false,
-    }, {
+    }, /* { // TODO
         .arch = "i386",
         .name = "piix3ide",
-        .args = "--controller PIIX3",
+        .args = "--hda --idecontroller PIIX3", // ide: PIIX3, PIIX4 and ICH6
         .file = "src/VBox/Devices/Storage/DevATA.cpp",
         .mrnames = "*ATA*",
         .byte_address = true,
         .socket = false,
         .display = false,
-    }, {
+    }, */ {
         .arch = "i386",
         .name = "buslogic",
-        .args = "--controller BusLogic",
+        .args = "--scsi on --scsitype BusLogic", // scsi: BusLogic
         .file = "src/VBox/Devices/Storage/DevBusLogic.cpp",
         .mrnames = "*BusLogic*",
         .byte_address = true,
         .socket = false,
         .display = false,
-    }, {
+    }, /* { // TODO
         .arch = "i386",
         .name = "floppy",
-        .args = "--controller I82078",
+        .args = "--floppy none",
         .file = "src/VBox/Devices/Storage/DevFdc.cpp",
         .mrnames = "*FDC*",
         .byte_address = true,
         .socket = false,
         .display = false,
-    }, {
+    }, */ {
         .arch = "i386",
         .name = "lsilogicscsi",
-        .args = "--controller LSILogic",
+        .args = "--scsi on --scsitype LsiLogic", // scsi: LsiLogic; LsiLogic and siLogicSAS share this
         .file = "src/VBox/Devices/Storage/DevLsiLogicSCSI.cpp",
         .mrnames = "*LsiLogic*",
-        .byte_address = true,
-        .socket = false,
-        .display = false,
-    }, {
-        .arch = "i386",
-        .name = "lsilogicsas",
-        .args = "--controller LSILogicSAS",
-        .file = "src/VBox/Devices/Storage/DevLsiLogicSCSI.cpp",
-        .mrnames = "*LsiLogicSas*",
         .byte_address = true,
         .socket = false,
         .display = false,
@@ -411,7 +400,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "apic",
-        .args = "",
+        .args = nullptr,
         .file = "src/VBox/VMM/VMMAll/APICAll.cpp",
         .mrnames = "*APIC*",
         .byte_address = false,
@@ -743,7 +732,8 @@ void locate_fuzzable_objects(char *mrname) {
             PIOMIOPORTENTRYR3 pRegEntry_PIO = &(internalPVM->iom.s.paIoPortRegs[i]);
             if (g_pattern_match_simple(mrname, pRegEntry_PIO->pszDesc)) {
                 g_hash_table_insert(fuzzable_pioregions, pRegEntry_PIO, (gpointer)true);
-                g_assert(pRegEntry_PIO->fMapped);
+                if (!pRegEntry_PIO->fMapped)
+                    continue;
                 addr = pRegEntry_PIO->uPort;
                 size = pRegEntry_PIO->cPorts;
                 add_interface(EVENT_TYPE_PIO_READ, addr, size, pRegEntry_PIO->pszDesc, 1, 4, true);
@@ -755,7 +745,8 @@ void locate_fuzzable_objects(char *mrname) {
             PIOMMMIOENTRYR3 pRegEntry_MMIO = &(internalPVM->iom.s.paMmioRegs[i]);
             if (g_pattern_match_simple(mrname, pRegEntry_MMIO->pszDesc)) {
                 g_hash_table_insert(fuzzable_mmioregions, pRegEntry_MMIO, (gpointer)true);
-                g_assert(pRegEntry_MMIO->fMapped);
+                if (!pRegEntry_MMIO->fMapped)
+                    continue;
                 addr = pRegEntry_MMIO->GCPhysMapping;
                 size = pRegEntry_MMIO->cbRegion;
                 add_interface(EVENT_TYPE_MMIO_READ, addr, size, pRegEntry_MMIO->pszDesc, 1, 4, true);
@@ -854,6 +845,10 @@ static GString *videzzo_vbox_predefined_config_cmdline(ViDeZZoFuzzTarget *t) {
     int port = 0;
 
     config = (ViDeZZoFuzzTargetConfig *)t->opaque;
+    setenv("VBOX_FUZZ_MRNAME", config->mrnames, 1);
+    if (config->byte_address) {
+        setenv("VIDEZZO_BYTE_ALIGNED_ADDRESS", "1", 1);
+    }
     if (config->socket && !sockfds_initialized) {
         init_sockets(sockfds);
         sockfds_initialized = true;
@@ -864,8 +859,9 @@ static GString *videzzo_vbox_predefined_config_cmdline(ViDeZZoFuzzTarget *t) {
         vnc_client_needed = true;
         port = remove_offset_from_vnc_port(vnc_port);
     }
-    if (config->byte_address) {
-        setenv("VIDEZZO_BYTE_ALIGNED_ADDRESS", "1", 1);
+    if (config->args == nullptr) {
+        g_string_free(args, true);
+        return nullptr;
     }
     g_assert_nonnull(config->args);
     g_string_append_printf(args, config->args, port);
@@ -873,7 +869,6 @@ static GString *videzzo_vbox_predefined_config_cmdline(ViDeZZoFuzzTarget *t) {
     setenv("VBOX_FUZZ_ARGS", args_str, 1);
     g_free(args_str);
 
-    setenv("VBOX_FUZZ_MRNAME", config->mrnames, 1);
     return videzzo_vbox_cmdline(t);
 }
 
@@ -1059,11 +1054,13 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     HandlerArg handlerArg0 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
     handleCreateVM(&handlerArg0);
 
-    // VBoxManage modifyvm UUID --key1 value1 --key2 value2
-    wordexp(modifyvm_cmd_line->str, &result, 0);
-    g_string_free(modifyvm_cmd_line, true);
-    HandlerArg handlerArg1 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
-    handleModifyVM(&handlerArg1);
+    if (modifyvm_cmd_line) {
+        // VBoxManage modifyvm UUID --key1 value1 --key2 value2
+        wordexp(modifyvm_cmd_line->str, &result, 0);
+        g_string_free(modifyvm_cmd_line, true);
+        HandlerArg handlerArg1 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
+        handleModifyVM(&handlerArg1);
+    }
 
     // console and debugger
     // refer to src/VBox/Frontends/VBoxHeadless/VBoxHeadless.cpp

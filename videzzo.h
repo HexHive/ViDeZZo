@@ -130,7 +130,7 @@ size_t reset_data(uint8_t *Data, size_t MaxSize);
 #define INTERFACE_MEM_FREE      6
 // dynamic interfaces are shared with VMM
 #define INTERFACE_DYNAMIC       7
-#define INTERFACE_END           256
+#define INTERFACE_END           512
 
 typedef struct {
     uint64_t addr;
