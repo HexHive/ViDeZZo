@@ -542,9 +542,9 @@ Index: src/VBox/Devices/Makefile.kmk
    VBoxDD_TEMPLATE         = VBoxR3DllWarnNoPic
   endif
 + ifdef VBOXDD_SANITIZER
-+  VBoxDD_CFLAGS         += -fsanitize=address,undefined
-+  VBoxDD_CXXFLAGS       += -fsanitize=address,undefined
-+  VboxDD_LDFLAGS        += -fsanitize=address,undefined
++  VBoxDD_CFLAGS         += -fsanitize=address,undefined -fno-sanitize=alignment
++  VBoxDD_CXXFLAGS       += -fsanitize=address,undefined -fno-sanitize=alignment
++  VboxDD_LDFLAGS        += -fsanitize=address,undefined -fno-sanitize=alignment
 + endif
   VBoxDD_SDKS.win         = ReorderCompilerIncs $(VBOX_WINPSDK) $(VBOX_WINDDK) VBOX_NTDLL
   Storage/DrvHostDVD.cpp_SDKS.win = ReorderCompilerIncs $(VBOX_WINDDK)
