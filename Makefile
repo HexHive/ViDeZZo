@@ -83,4 +83,3 @@ clean:
 distclean: clean
 	make -C videzzo_qemu clean
 	make -C videzzo_vbox clean
-	make -C videzzo_bhyve clean
