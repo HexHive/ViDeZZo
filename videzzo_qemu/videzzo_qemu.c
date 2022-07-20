@@ -250,7 +250,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "qxl",
         .args = "-machine q35 -nodefaults -device qxl "
         "-display vnc=localhost:%d -L ../pc-bios/",
-        .objects = "*qxl-ioports*",
         .mrnames = "*qxl-ioports*",
         .file = "hw/display/qxl.c",
         .socket = false,
@@ -260,7 +259,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "vmware-svga",
         .args = "-machine q35 -nodefaults -device vmware-svga "
         "-display vnc=localhost:%d -L ../pc-bios/",
-        .objects = "*vmsvga-io*",
         .mrnames = "*vmsvga-io*",
         .file = "hw/display/vmware-svga.c",
         .socket = false,
@@ -271,7 +269,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "std-vga",
         .args = "-machine q35 -nodefaults -device VGA "
         "-display vnc=localhost:%d -L ../pc-bios/",
-        .objects = "*vga-lowmem*,*vga ioports remapped*,"
         "*bochs dispi interface*,*qemu extended regs*,*vga.mmio*",
         .mrnames = "*vga-lowmem*,*vga ioports remapped*,"
         "*bochs dispi interface*,*qemu extended regs*,*vga.mmio*",
@@ -283,7 +280,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "secondary-vga",
         .args = "-machine q35 -nodefaults -device secondary-vga "
         "-display vnc=localhost:%d -L ../pc-bios/",
-        .objects = "*vga-lowmem*,*vga ioports remapped*,"
         "*bochs dispi interface*,*qemu extended regs*,*vga.mmio*",
         .mrnames = "*vga-lowmem*,*vga ioports remapped*,"
         "*bochs dispi interface*,*qemu extended regs*,*vga.mmio*",
@@ -295,7 +291,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "bochs-display",
         .args = "-machine q35 -nodefaults -device bochs-display "
         "-display vnc=localhost:%d -L ../pc-bios/",
-        .objects = "*bochs dispi interface*,*qemu extended regs*,*bochs-display-mmio*",
         .mrnames = "*bochs dispi interface*,*qemu extended regs*,*bochs-display-mmio*",
         .file = "hw/display/bochs-display.c",
         .socket = false,
@@ -305,7 +300,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "parallel",
         .args = "-machine q35 -nodefaults "
         "-parallel file:/dev/null",
-        .objects = "parallel*",
         .mrnames = "*parallel*",
         .file = "hw/char/parallel.c",
         .socket = false,
@@ -315,7 +309,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .args = "-machine q35 -nodefaults "
         "-object can-bus,id=canbus0 -device kvaser_pci,canbus=canbus0",
         // "-object can-host-socketcan,id=canhost0,if=can0,canbus=canbus0",
-        .objects = "*kvaser_pci-s5920*,*kvaser_pci-sja*,*kvaser_pci-xilinx*",
         .mrnames = "*kvaser_pci-s5920*,*kvaser_pci-sja*,*kvaser_pci-xilinx*",
         .socket = true,
     },{
@@ -325,7 +318,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         "-object can-bus,id=canbus "
         "-device pcm3680_pci,canbus0=canbus,canbus1=canbus",
         // "-object can-host-socketcan,id=canhost0,if=can0,canbus=canbus0",
-        .objects = "*pcm3680i_pci-sja1*,*pcm3680i_pci-sja2*",
         .mrnames = "*pcm3680i_pci-sja1*,*pcm3680i_pci-sja2*",
         .socket = true,
     },/*{
@@ -335,7 +327,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         "-object can-bus,id=canbus "
         "-device mioe3680_pci,canbus0=canbus",
         // "-object can-host-socketcan,id=canhost0,if=can0,canbus=canbus0",
-        .objects = "*mioe3680_pci-sja1*,*mioe3680_pci-sja2*",
         .mrnames = "*mioe3680_pci-sja1*,*mioe3680_pci-sja2*",
         .socket = false,
     },*/{
@@ -345,7 +336,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         "-object can-bus,id=canbus0-bus "
         "-device ctucan_pci,canbus0=canbus0-bus,canbus1=canbus0-bus",
         // "-object can-host-socketcan,if=can0,canbus=canbus0-bus,id=canbus0-socketcan",
-        .objects = "*ctucan_pci-core0*,*ctucan_pci-core1*",
         .mrnames = "*ctucan_pci-core0*,*ctucan_pci-core1*",
         .socket = true,
     },{
@@ -358,7 +348,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         "-netdev socket,udp=127.0.0.1:1205,localaddr=127.0.0.1:1219,id=dev1 "
         "-netdev socket,udp=127.0.0.1:1206,localaddr=127.0.0.1:1211,id=dev2 "
         "-netdev socket,udp=127.0.0.1:1207,localaddr=127.0.0.1:1223,id=dev3",
-        .objects = "*rocker-mmio*",
         .mrnames = "*rocker-mmio*",
         .file = "hw/net/rocker/rocker.c",
         .socket = true,
@@ -366,62 +355,51 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "virtio-net-pci-slirp",
         .args = "-M q35 -nodefaults "
         "-device virtio-net,netdev=net0 -netdev user,id=net0",
-        .objects = "virtio*",
         .socket = false,
     },{
         .name = "virtio-blk",
         .args = "-machine q35 -device virtio-blk,drive=disk0 "
         "-drive file=null-co://,id=disk0,if=none,format=raw",
-        .objects = "virtio*",
         .socket = false,
     },{
         .name = "virtio-scsi",
         .args = "-machine q35 -device virtio-scsi,num_queues=8 "
         "-device scsi-hd,drive=disk0 "
         "-drive file=null-co://,id=disk0,if=none,format=raw",
-        .objects = "scsi* virtio*",
         .socket = false,
     },{
         .name = "virtio-gpu",
         .args = "-machine q35 -nodefaults -device virtio-gpu",
-        .objects = "virtio*",
         .socket = false,
     },{
         .name = "virtio-vga",
         .args = "-machine q35 -nodefaults -device virtio-vga",
-        .objects = "virtio*",
         .socket = false,
     },{
         .name = "virtio-rng",
         .args = "-machine q35 -nodefaults -device virtio-rng",
-        .objects = "virtio*",
         .socket = false,
     },{
         .name = "virtio-balloon",
         .args = "-machine q35 -nodefaults -device virtio-balloon",
-        .objects = "virtio*",
         .socket = false,
     },{
         .name = "virtio-serial",
         .args = "-machine q35 -nodefaults -device virtio-serial",
-        .objects = "virtio*",
         .socket = false,
     },{
         .name = "virtio-mouse",
         .args = "-machine q35 -nodefaults -device virtio-mouse",
-        .objects = "virtio*",
         .socket = false,
     },{
         .name = "virtio-9p",
         .argfunc = generic_fuzzer_virtio_9p_args,
-        .objects = "virtio*",
         .socket = false,
     },{
         .name = "virtio-9p-synth",
         .args = "-machine q35 -nodefaults "
         "-device virtio-9p,fsdev=hshare,mount_tag=hshare "
         "-fsdev synth,id=hshare",
-        .objects = "virtio*",
         .socket = false,
     },*/{
         .arch = "i386",
@@ -441,7 +419,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         "-drive id=nvm,file=null-co://,file.read-zeroes=on,if=none,format=raw "
         "-object memory-backend-file,id=mb,share=on,mem-path=/tmp/nvm-mb,size=4096 "
         "-device nvme,cmb_size_mb=32,serial=deadbeef,drive=nvm,pmrdev=mb",
-        .objects = "*nvme*,*nvme-cmb*",
         .mrnames = "*nvme*,*nvme-cmb*",
         .file = "hw/block/nvme.c",
         .socket = false,
@@ -463,7 +440,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .args = "-machine pc -nodefaults "
         "-drive file=null-co://,if=none,format=raw,id=disk0 "
         "-device ide-hd,drive=disk0",
-        .objects = "*ide*",
         .mrnames = "*ide*",
         .file = "hw/ide/qdev.c",
         .socket = false,
@@ -473,7 +449,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .args = "-machine pc -nodefaults "
         "-drive file=null-co://,if=none,format=raw,id=disk0 "
         "-device ide-cd,drive=disk0",
-        .objects = "*ide*",
         .mrnames = "*ide*",
         .file = "hw/ide/qdev.c",
         .socket = false,
@@ -500,7 +475,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "piix3-ide",
         // suitable for piix3-ide, piix4-ide and piix3-ide-xen
         .args = "-machine q35 -nodefaults -device piix3-ide",
-        .objects = "*piix-bmdma*,*bmdma*",
         .mrnames = "*piix-bmdma*,*bmdma*",
         .file = "hw/ide/piix.c",
         .socket = false,
@@ -524,7 +498,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         "-device am53c974,id=scsi "
         "-device scsi-hd,drive=disk0 "
         "-drive id=disk0,if=none,file=null-co://,format=raw",
-        .objects = "*esp* *scsi* *am53c974*",
         .mrnames = "*esp-io*",
         // because sysbus-esp is not supported in i386/arm/aarch
         // we ignore hw/scsi/esp.c
@@ -536,7 +509,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .args = "-machine q35 -nodefaults "
         "-fw_cfg name=videzzo,string=fuzz "
         "-fw_cfg name=is,string=promising ",
-        .objects = "*fwcfg.ctl*,*fwcfg.data*,*fwcfg.dma*,"
         "*fwcfg*",
         .mrnames = "*fwcfg.ctl*,*fwcfg.data*,*fwcfg.dma*,"
         "*fwcfg*",
@@ -546,7 +518,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "tusb6010",
         .args = "-machine n810 -m 128M -usb",
-        .objects = "*tusb-async* *",
         .mrnames = "*tusb-async*",
         .file = "hw/usb/tusb6010.c",
         .socket = false,
@@ -554,7 +525,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "imx-usb-phy",
         .args = "-machine sabrelite",
-        .objects = "*imx-usbphy*",
         .mrnames = "*imx-usbphy*",
         .file = "hw/usb/imx-usb-phy.c",
         .socket = false,
@@ -563,7 +533,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "chipidea",
         .args = "-machine sabrelite -nodefaults "
         COMMON_USB_CMD_1,
-        .objects = "*usb-chipidea.misc*,"
         "*usb-chipidea.dc*,*usb-chipidea.endpoints*",
         .mrnames = "*usb-chipidea.misc*,"
         "*usb-chipidea.dc*,*usb-chipidea.endpoints*",
@@ -574,7 +543,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "versal-usb2",
         .args = "-machine xlnx-versal-virt -nodefaults "
         COMMON_USB_CMD,
-        .objects = "*versal.usb2Ctrl_alias*",
         .mrnames = "*versal.usb2Ctrl_alias*",
         .file = "hw/usb/xlnx-versal-usb2-ctrl-regs.c",
         .socket = false,
@@ -584,7 +552,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "dwc3",
         .args = "-machine xlnx-versal-virt -nodefaults "
         COMMON_USB_CMD,
-        .objects = "*versal.dwc3_alias*",
         .mrnames = "*versal.dwc3_alias*",
         .file = "hw/usb/hcd-dwc3.c",
         .socket = false,
@@ -594,7 +561,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         // arm supports raspi0/1/2, aarch64 supports raspi3
         .args = "-machine raspi0 -nodefaults "
         COMMON_USB_CMD,
-        .objects = "*dwc2-io* *dwc2-fifo*",
         .mrnames = "*dwc2-io*,*dwc2-fifo*",
         .file = "hw/usb/hcd-dwc2.c",
         .socket = false,
@@ -602,7 +568,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "xgmac",
         .args = "-machine midway",
-        .objects = "*xgmac*",
         .mrnames = "*xgmac*",
         .file = "hw/net/xgmac.c",
         .socket = true,
@@ -610,7 +575,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "stellaris-enet",
         .args = "-machine lm3s6965evb",
-        .objects = "*stellaris_enet*",
         .mrnames = "*stellaris_enet*",
         .file = "hw/net/stellaris_enet.c",
         .socket = false,
@@ -651,7 +615,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "npcm7xx-emc",
         .args = "-machine npcm750-evb",
-        .objects = "*npcm7xx-emc*",
         .mrnames = "*npcm7xx-emc*",
         .file = "hw/net/npcm7xx_emc.c",
         .socket = false,
@@ -659,7 +622,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "msf2-emac",
         .args= "-machine emcraft-sf2",
-        .objects = "*msf2-emac*",
         .mrnames = "*msf2-emac*",
         .file = "hw/net/msf2-emac.c",
         .socket = false,
@@ -667,7 +629,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "lan9118",
         .args = "-machine smdkc210",
-        .objects = "*lan9118-mmio*",
         .mrnames = "*lan9118-mmio*",
         .file = "hw/net/lan9118.c",
         .socket = false,
@@ -675,7 +636,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "imx-fec",
         .args = "-machine sabrelite",
-        .objects = "*imx.fec*",
         .mrnames = "*imx.fec*",
         .file = "hw/net/imx_fec.c",
         .socket = false,
@@ -683,7 +643,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "ftgmac100",
         .args = "-machine palmetto-bmc",
-        .objects = "*ftgmac100*,*aspeed-mmi*",
         .mrnames = "*ftgmac100*,*aspeed-mmi*",
         .file = "hw/net/ftgmac100.c",
         .socket = false,
@@ -692,7 +651,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "cadence-gem",
         .args = "-machine xlnx-versal-virt "
         "-net nic,model=cadence_gem,netdev=net0 -netdev user,id=net0",
-        .objects = "*enet*",
         .mrnames = "*enet*",
         .file = "hw/net/cadence_gem.c",
         .socket = false,
@@ -700,7 +658,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "allwinner-sun8i-emac",
         .args = "-machine orangepi-pc -m 1G",
-        .objects = "*allwinner-sun8i-emac*",
         .mrnames = "*allwinner-sun8i-emac*",
         .file = "hw/net/allwinner-sun8i-emac.c",
         .socket = false,
@@ -709,7 +666,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "allwinner-emac",
         .args = "-machine cubieboard -nodefaults "
         "-net nic,model=allwinner-emac,netdev=net0 -netdev user,id=net0",
-        .objects = "*aw_emac*",
         .mrnames = "*aw_emac*",
         .file = "hw/net/allwinner-emac.c",
         .socket = false,
@@ -717,7 +673,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "aarch64",
         .name = "xlnx-zynqmp-can",
         .args = "-machine xlnx-zcu102",
-        .objects = "*xlnx.zynqmp-can*",
         .mrnames = "*xlnx.zynqmp-can*",
         .file = "hw/net/can/xlnx-zynqmp-can.c",
         .socket = false,
@@ -725,7 +680,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "aarch64",
         .name = "xlnx-dp",
         .args = "-machine xlnx-zcu102",
-        .objects = "*.core*,*.v_blend*,*.av_buffer_manager*,*.audio*",
         .mrnames = "*.core*,*.v_blend*,*.av_buffer_manager*,*.audio*",
         .file = "hw/display/xlnx_dp.c",
         .socket = false,
@@ -733,7 +687,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "exynos4210-fimd",
         .args = "-machine smdkc210",
-        .objects = "*exynos4210.fimd*",
         .mrnames = "*exynos4210.fimd*",
         .file = "hw/display/exynos4210_fimd.c",
         .socket = false,
@@ -741,7 +694,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "omap-dss",
         .args = "-machine n810 -m 128M",
-        .objects = "*omap.diss1*,*omap.disc1*,*omap.rfbi1*,*omap.venc1*,*omap.im3*",
         .mrnames = "*omap.diss1*,*omap.disc1*,*omap.rfbi1*,*omap.venc1*,*omap.im3*",
         .file = "hw/net/omap_dss.c",
         .socket = false,
@@ -749,7 +701,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "omap-lcdc",
         .args = "-machine sx1-v1 -m 32M",
-        .objects = "*omap.lcdc*",
         .mrnames = "*omap.lcdc*",
         .file = "hw/net/omap_lcdc.c",
         .socket = false,
@@ -757,7 +708,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "pl110",
         .args = "-machine integratorcp",
-        .objects = "*pl110*",
         .mrnames = "*pl110*",
         .file = "hw/display/pl110.c",
         .socket = false,
@@ -765,7 +715,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "pxa2xx-lcd",
         .args = "-machine verdex",
-        .objects = "*pxa2xx-lcd-controller*",
         .mrnames = "*pxa2xx-lcd-controller*",
         .file = "hw/display/pxa2xx_lcd.c",
         .socket = false,
@@ -773,7 +722,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "tc6393xb",
         .args = "-machine tosa",
-        .objects = "*tc6393xb*",
         .mrnames = "*tc6393xb*",
         .file = "hw/display/tc6393xb.c",
         .socket = false,
@@ -781,7 +729,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "pl041",
         .args = "-machine integratorcp",
-        .objects = "*pl041*",
         .mrnames = "*pl041*",
         .file = "hw/audio/pl041.c",
         .socket = false,
@@ -789,7 +736,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "pflash-cfi02",
         .args = "-machine xilinx-zynq-a9",
-        .objects = "*zynq.pflash*",
         .mrnames = "*zynq.pflash*",
         .file = "hw/block/pflash_cfi02.c",
         .socket = false,
@@ -797,7 +743,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "pflash-cfi01",
         .args = "-machine collie",
-        .objects = "*collie.fl1*,*collie.fl2*",
         .mrnames = "*collie.fl1*,*collie.fl2*",
         .file = "hw/block/pflash_cfi01.c",
         .socket = false,
@@ -805,7 +750,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "onenand",
         .args = "-machine n810 -m 128M",
-        .objects = "*onenand*",
         .mrnames = "*onenand*",
         .file = "hw/block/onenand.c",
         .socket = false,
@@ -813,7 +757,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "allwinner-sdhost",
         .args = "-machine cubieboard",
-        .objects = "*allwinner-sdhost*",
         .mrnames = "*allwinner-sdhost*",
         .file = "hw/sd/allwinner-sdhost.c",
         .socket = false,
@@ -822,7 +765,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "bcm2835-sdhost",
         // arm supports raspi0/1/2, aarch64 supports raspi3
         .args = "-machine raspi0",
-        .objects = "*bcm2835-sdhost*",
         .mrnames = "*bcm2835-sdhost*",
         .file = "hw/sd/bcm2835_sdhost.c",
         .socket = false,
@@ -830,7 +772,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "omap-mmc",
         .args = "-machine sx1-v1 -m 32M",
-        .objects = "*omap.mmc*",
         .mrnames = "*omap.mmc*",
         .file = "hw/sd/omap_mmc.c",
         .socket = false,
@@ -838,7 +779,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "pl181",
         .args = "-machine integratorcp",
-        .objects = "*pl181*",
         .mrnames = "*pl181*",
         .file = "hw/sd/pl181.c",
         .socket = false,
@@ -846,7 +786,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "pxa2xx-mmci",
         .args = "-machine verdex",
-        .objects = "*pxa2xx-mmci*",
         .mrnames = "*pxa2xx-mmci*",
         .file = "hw/sd/pxa2xx_mmci.c",
         .socket = false,
@@ -860,7 +799,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         // note that ahci-idp is not explosed for arm machine!
         .name = "sysbus-ahci",
         .args = "-machine midway",
-        .objects= "*ahci* *ahci-idp*",
         .mrnames = "*ahci*,*ahci-idp*",
         .file = "hw/ide/ahci.c",
         .socket = false,
@@ -868,7 +806,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "npcm7xx-otp",
         .args = "-machine npcm750-evb",
-        .objects = "*npcm7xx-emc*",
         .mrnames = "*regs*",
         .file = "hw/nvram/npcm7xx_otp.c",
         .socket = false,
@@ -876,7 +813,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "nrf51-nvm",
         .args = "-machine microbit",
-        .objects = "*nrf51_soc.nvmc*,*nrf51_soc.ficr*,"
         "*nrf51_soc.uicr*,*nrf51_soc.flash*",
         .mrnames = "*nrf51_soc.nvmc*,*nrf51_soc.ficr*,"
         "*nrf51_soc.uicr*,*nrf51_soc.flash*",
@@ -889,7 +825,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "sp804",
         .args = "-machine midway",
-        .objects = "*sp804*",
         .mrnames = "*sp804*",
         .file = "hw/timer/arm_timer.c",
         .socket = false,
@@ -897,7 +832,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "pl011",
         .args = "-machine midway",
-        .objects = "*pl011*",
         .mrnames = "*pl011*",
         .file = "hw/char/pl011.c",
         .socket = false,
@@ -905,7 +839,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "highbank-regs",
         .args = "-machine midway",
-        .objects = "*highbank_regs*",
         .mrnames = "*highbank_regs*",
         .file = "hw/arm/highbank.c",
         .socket = false,
@@ -913,7 +846,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "pl061",
         .args = "-machine midway",
-        .objects = "*pl061*",
         .mrnames = "*pl061*",
         .file = "hw/gpio/pl061.c",
         .socket = false,
@@ -921,7 +853,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "pl031",
         .args = "-machine midway",
-        .objects = "*pl031*",
         .mrnames = "*pl031*",
         .file = "hw/rtc/pl031.c",
         .socket = false,
@@ -929,7 +860,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "pl022",
         .args = "-machine midway",
-        .objects = "*pl022*",
         .mrnames = "*pl022*",
         .file = "hw/ssi/pl022.c",
         .socket = false,
@@ -938,7 +868,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "a9-scu",
         .args = "-machine highbank",
-        .objects = "*a9-scu*",
         .mrnames = "*a9-scu*",
         .file = "hw/misc/a9scu.c",
         .socket = false,
@@ -946,7 +875,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "arm-gic",
         .args = "-machine highbank",
-        .objects = "*gic_dist*,*gic_cpu*,*gic_viface*,*gic_vcpu*",
         .mrnames = "*gic_dist*,*gic_cpu*,*gic_viface*,*gic_vcpu*",
         .file = "hw/intc/arm_gic.c hw/intc/arm_gic_common.c",
         .socket = false,
@@ -954,7 +882,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "a9-gtimer",
         .args = "-machine highbank",
-        .objects = "*a9gtimer shared*,*a9gtimer per cpu*",
         .mrnames = "*a9gtimer shared*,*a9gtimer per cpu*",
         .file = "hw/timer/a9gtimer.c",
         .socket = false,
@@ -962,7 +889,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "arm",
         .name = "arm-mptimer",
         .args = "-machine highbank",
-        .objects = "*arm_mptimer_timer*,*arm_mptimer_timerblock*",
         .mrnames = "*arm_mptimer_timer*,*arm_mptimer_timerblock*",
         .file = "hw/timer/arm_mptimer.c",
         .socket = false,
@@ -972,7 +898,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "aarch64",
         .name = "cadence-uart",
         .args = "-machine xlnx-zcu102",
-        .objects = "*uart*",
         .mrnames = "*uart*",
         .file = "hw/char/cadence_uart.c",
         .socket = false,
@@ -982,7 +907,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         // xilinx-qspips + fifo -> xlnx-zynqmp-qspips
         .name = "xlnx-zynqmp-qspips",
         .args = "-machine xlnx-zcu102",
-        .objects = "*spi*,*lqspi*",
         .mrnames = "*spi*,*lqspi*",
         .file = "hw/ssi/xilinx_spips.c",
         .socket = false,
@@ -990,7 +914,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "aarch64",
         .name = "xlnx-dpdma",
         .args = "-machine xlnx-zcu102",
-        .objects = "*xlnx.dpdma*",
         .mrnames = "*xlnx.dpdma*",
         .file = "hw/dma/xlnx_dpdma.c",
         .socket = false,
@@ -998,7 +921,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "aarch64",
         .name = "xlnx-zynqmp-ipi",
         .args = "-machine xlnx-zcu102",
-        .objects = "*xlnx.zynqmp_ipi*",
         .mrnames = "*xlnx.zynqmp_ipi*",
         .file = "hw/intc/xln-zynqmp-pip.c",
         .socket = false,
@@ -1006,7 +928,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "aarch64",
         .name = "xlnx-zynqmp-rtc",
         .args = "-machine xlnx-zcu102",
-        .objects = "*xlnx-zynmp.rtc*",
         .mrnames = "*xlnx-zynmp.rtc*",
         .file = "hw/rtc/xlnx-zynqmp-rtc.c",
         .socket = false,
@@ -1014,7 +935,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "aarch64",
         .name = "xlnx-zdma",
         .args = "-machine xlnx-zcu102",
-        .objects = "*xlnx.zdma*",
         .mrnames = "*xlnx.zdma*",
         .file = "hw/dma/xlnx-zdma.c",
         .socket = false,
@@ -1022,7 +942,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "aarch64",
         .name = "xlnx-csu-dma",
         .args = "-machine xlnx-zcu102",
-        .objects = "*xlnx.csu_dma*",
         .mrnames = "*xlnx.csu_dma*",
         .file = "hw/dma/xlnx_csu_dma.c",
         .socket = false,
@@ -1030,7 +949,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "aarch64",
         .name = "arm-gicv3",
         .args = "-machine sbsa-ref",
-        .objects = "*gicv3_dist*,*gicv3_redist_region*",
         .mrnames = "*gicv3_dist*,*gicv3_redist_region*",
         .file = "hw/intc/arm_gicv3.c hw/intc/arm_gicv3_common.c",
         .socket = false,
@@ -1038,7 +956,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "aarch64",
         .name = "wdt-sbsa",
         .args = "-machine sbsa-ref",
-        .objects = "*sbsa_gwdt.refresh*,*sbsa_gwdt.control*",
         .mrnames = "*sbsa_gwdt.refresh*,*sbsa_gwdt.control*",
         .file = "hw/watchdog/sbsa_gwdt.c",
         .socket = false,
@@ -1046,7 +963,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "aarch64",
         .name = "platform-bus",
         .args = "-machine virt",
-        .objects = "*platform bus*",
         .mrnames = "*platform bus*",
         .file = "hw/core/platform-bus.c",
         .socket = false,
@@ -1468,22 +1384,22 @@ static void locate_fuzzable_objects(Object *obj, char *mrname) {
                 add_interface(event_type1, addr, mr->size, mr->name, min, max, true);
                 add_interface(event_type2, addr, mr->size, mr->name, min, max, true);
             }
-         }
-     } else if(object_dynamic_cast(OBJECT(obj), TYPE_PCI_DEVICE)) {
-            /*
-             * Don't want duplicate pointers to the same PCIDevice, so remove
-             * copies of the pointer, before adding it.
-             */
-            g_ptr_array_remove_fast(fuzzable_pci_devices, PCI_DEVICE(obj));
-            g_ptr_array_add(fuzzable_pci_devices, PCI_DEVICE(obj));
-     }
+        }
+    } else if(object_dynamic_cast(OBJECT(obj), TYPE_PCI_DEVICE)) {
+        /*
+         * Don't want duplicate pointers to the same PCIDevice, so remove
+         * copies of the pointer, before adding it.
+         */
+        g_ptr_array_remove_fast(fuzzable_pci_devices, PCI_DEVICE(obj));
+        g_ptr_array_add(fuzzable_pci_devices, PCI_DEVICE(obj));
+    }
 
-     object_child_foreach(obj, insert_qom_composition_child, children);
+    object_child_foreach(obj, insert_qom_composition_child, children);
 
-     for (i = 0; i < children->len; i++) {
-         locate_fuzzable_objects(g_array_index(children, Object *, i), mrname);
-     }
-     g_array_free(children, TRUE);
+    for (i = 0; i < children->len; i++) {
+        locate_fuzzable_objects(g_array_index(children, Object *, i), mrname);
+    }
+    g_array_free(children, TRUE);
 }
 
 static QTestState *fuzz_qts;
