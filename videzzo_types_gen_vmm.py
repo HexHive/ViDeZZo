@@ -19,6 +19,8 @@ ac97_00.add_struct('AC97_BUF0', {'buf#0x1000': FIELD_RANDOM})
 ac97_00.add_point_to('AC97_BD.addr', ['AC97_BUF0'], alignment=2)
 ac97_00.add_head(['AC97_BD'])
 ac97_00.add_instrumentation_point('ac97.c', ['fetch_bd', 'pci_dma_read', 0, 1])
+ac97_00.add_instrumentation_point('DevIchAc97.cpp', ['_ZL28ichac97R3StreamFetchNextBdleP11PDMDEVINSR3P10AC97STREAMP12AC97STREAMR3', '_ZL20PDMDevHlpPCIPhysReadP11PDMDEVINSR3mPvm', 0, 1])
+ac97_00.add_instrumentation_point('DevIchAc97.cpp', ['_ZL20ichac97R3StreamSetUpP11PDMDEVINSR3P9AC97STATEP11AC97STATER3P10AC97STREAMP12AC97STREAMR3b', '_ZL20PDMDevHlpPCIPhysReadP11PDMDEVINSR3mPvm', 0, 1])
 ###################################################################################################################
 cs4231a_01 = Model('cs4231a', 1)
 cs4231a_01.add_struct('CS4231A_BUF0', {'buf#0x1000': FIELD_RANDOM})
@@ -39,17 +41,22 @@ intel_hda_03.add_constant('INTEL_HDA_BUF0.len', [0x1000])
 intel_hda_03.add_flag('INTEL_HDA_BUF0.flags', {0: 1, 1: 31})
 intel_hda_03.add_head(['INTEL_HDA_BUF0'])
 intel_hda_03.add_instrumentation_point('intel-hda.c', ['intel_hda_parse_bdl', 'pci_dma_read', 0, 1])
+intel_hda_03.add_instrumentation_point('DevHdaStream.cpp', ['_Z16hdaR3StreamSetUpP11PDMDEVINSR3P8HDASTATEP9HDASTREAMP11HDASTREAMR3h', '_ZL20PDMDevHlpPCIPhysReadP11PDMDEVINSR3mPvm', 0, 1])
+intel_hda_03.add_instrumentation_point('DevHdaStream.cpp', ['_ZL22hdaR3StreamDoDmaOutputP11PDMDEVINSR3P8HDASTATEP9HDASTREAMP11HDASTREAMR3jm', '_ZL20PDMDevHlpPCIPhysReadP11PDMDEVINSR3mPvm', 0, 1])
 ###################################################################################################################
 intel_hda_04 = Model('intel_hda', 4)
 intel_hda_04.add_struct('INTEL_HDA_VERB', {'verb#0x4': FIELD_FLAG})
 intel_hda_04.add_flag('INTEL_HDA_VERB.verb', {0: 8, 8: 12, 20: 7, 27: 1, 28: 4})
 intel_hda_04.add_head(['INTEL_HDA_VERB'])
 intel_hda_04.add_instrumentation_point('intel-hda.c', ['intel_hda_corb_run', 'ldl_le_pci_dma', 0, 1])
+intel_hda_04.add_instrumentation_point('DevHda.cpp', ['_ZL12hdaR3CmdSyncP11PDMDEVINSR3P8HDASTATEb', '_ZL20PDMDevHlpPCIPhysReadP11PDMDEVINSR3mPvm', 0, 1])
 ###################################################################################################################
 sb16_05 = Model('sb16', 5)
 sb16_05.add_struct('SB16_BUF0', {'buf#0x1000': FIELD_RANDOM})
 sb16_05.add_head(['SB16_BUF0'])
 sb16_05.add_instrumentation_point('i8257.c', ['i8257_dma_read_memory', 'cpu_physical_memory_read', 0, 0])
+sb16_05.add_instrumentation_point('DevDMA.cpp', ['_ZL15dmaR3ReadMemoryP11PDMDEVINSR3jPvjj', '_ZL17PDMDevHlpPhysReadP11PDMDEVINSR3mPvm', 0, 1])
+sb16_05.add_instrumentation_point('DevDMA.cpp', ['_ZL15dmaR3ReadMemoryP11PDMDEVINSR3jPvjj', '_ZL17PDMDevHlpPhysReadP11PDMDEVINSR3mPvm', 1, 1])
 ###################################################################################################################
 eepro100_10 = Model('eepro100', 10)
 eepro100_tx = {
@@ -138,6 +145,9 @@ e1000e_13.add_head(['E1000_TX_DESC0', 'E1000_CONTEXT_DESC'])
 # 3.2.1 we use a round-robin approach to support e1000_tx_desc and e1000_context_desc
 e1000e_13.add_instrumentation_point('e1000e_core.c', ['e1000e_start_xmit', 'pci_dma_read', 0, 1])
 e1000e_13.add_instrumentation_point('e1000.c', ['start_xmit', 'pci_dma_read', 0, 1])
+e1000e_13.add_instrumentation_point('DevE1000.cpp', ['_ZL15e1kDumpTxDCacheP11PDMDEVINSR3P8E1KSTATEP13E1kTxDContext', '_ZL20PDMDevHlpPCIPhysReadP11PDMDEVINSR3mPvm', 0, 1])
+e1000e_13.add_instrumentation_point('DevE1000.cpp', ['_ZL14e1kTxDLoadMoreP11PDMDEVINSR3P8E1KSTATEP13E1kTxDContext', '_ZL20PDMDevHlpPCIPhysReadP11PDMDEVINSR3mPvm', 0, 1])
+e1000e_13.add_instrumentation_point('DevE1000.cpp', ['_ZL14e1kTxDLoadMoreP11PDMDEVINSR3P8E1KSTATEP13E1kTxDContext', '_ZL20PDMDevHlpPCIPhysReadP11PDMDEVINSR3mPvm', 1, 1])
 ###################################################################################################################
 e1000e_14 = Model('e1000e', 14)
 # 3.2.2 e1000e_read_rx_descr, e1000_rx_desc_packet_split, e1000_rx_desc_extended share buffer_addr and other staff
@@ -159,8 +169,11 @@ e1000_16.add_struct('E1000_BUF1', {'buf#0x10000': FIELD_RANDOM})
 e1000_16.add_point_to('E1000_RX_DESC.buffer_addr', ['E1000_BUF1'])
 e1000_16.add_head(['E1000_RX_DESC'])
 e1000_16.add_instrumentation_point('e1000.c', ['e1000_receive_iov', 'pci_dma_read', 0, 1])
+e1000_16.add_instrumentation_point('DevE1000.cpp', ['_ZL15e1kR3CanReceiveP11PDMDEVINSR3P8E1KSTATE', '_ZL20PDMDevHlpPCIPhysReadP11PDMDEVINSR3mPvm', 0, 1])
+e1000_16.add_instrumentation_point('DevE1000.cpp', ['_ZL14e1kRxDPrefetchP11PDMDEVINSR3P8E1KSTATEP13E1kRxDContext', '_ZL20PDMDevHlpPCIPhysReadP11PDMDEVINSR3mPvm', 0, 1])
+e1000_16.add_instrumentation_point('DevE1000.cpp', ['_ZL14e1kRxDPrefetchP11PDMDEVINSR3P8E1KSTATEP13E1kRxDContext', '_ZL20PDMDevHlpPCIPhysReadP11PDMDEVINSR3mPvm', 1, 1])
 ###################################################################################################################
-# ne2000 maintaining an internal mem buffer does have any dma accesses
+# ne2000 maintaining an internal mem buffer does have any dma accesses (same for both qemu and vbox)
 ###################################################################################################################
 pcnet_17 = Model('pcnet', 17)
 pcnet_17.add_struct('PCNET_XDA', {'tbadr#0x4': FIELD_POINTER | FIELD_FLAG, 'length#0x2': FIELD_RANDOM, 'status#0x2': FIELD_FLAG})
@@ -388,6 +401,14 @@ floppy_40.add_struct('FLOPPY_BUF', {'buf#0x1000': FIELD_RANDOM})
 floppy_40.add_head(['FLOPPY_BUF'])
 floppy_40.add_instrumentation_point('i8257.c', ['i8257_dma_read_memory', 'cpu_physical_memory_read', 0, 0])
 ###################################################################################################################
+ahci_41 = Model('ahci', 41)
+ahci_41.add_struct('AHCI_CMDHDR', {'u32DescInf#0x4': FIELD_FLAG, 'u32PRDBC#0x4': FIELD_RANDOM, 'u32CmdTblAddr#0x8': FIELD_POINTER, 'u32Resevered#0x10': FIELD_RANDOM})
+ahci_41.add_struct('AHCI_BUF0', {'buf#0x1000': FIELD_RANDOM})
+ahci_41.add_flag('AHCI_CMDHDR.u32DescInf', {0: '5@5', 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 5, 16: 16})
+ahci_41.add_point_to('AHCI_CMDHDR.u32CmdTblAddr', ['AHCI_BUF0'])
+ahci_41.add_head(['AHCI_CMDHDR'])
+ahci_41.add_instrumentation_point('DevAHCI.cpp', ['_ZL25ahciPortTaskGetCommandFisP11PDMDEVINSR3P4AHCIP8AHCIPORTP7AHCIREQ', '_ZL24PDMDevHlpPCIPhysReadMetaP11PDMDEVINSR3mPvm', 0, 1])
+###################################################################################################################
 # ahci: we don't ignore this because I realised dma_memory_map is something we should handle!
 ahci_42 = Model('ahci', 42)
 # the struct is implicity defined
@@ -402,13 +423,19 @@ ahci_42.add_flag('AHCI_CMFIS.cmfis1', {0: 4, 4: 3, 7: 1})
 ahci_42.add_flag('AHCI_CMFIS.cmfis15', {0: 2, 2: 1, 3: 5})
 ahci_42.add_head(['AHCI_CMFIS'])
 ahci_42.add_instrumentation_point('ahci.c', ['handle_cmd', 'dma_memory_map', 0, 1])
+ahci_42.add_instrumentation_point('DevAHCI.cpp', ['_ZL25ahciPortTaskGetCommandFisP11PDMDEVINSR3P4AHCIP8AHCIPORTP7AHCIREQ', '_ZL24PDMDevHlpPCIPhysReadMetaP11PDMDEVINSR3mPvm', 1, 1])
 ###################################################################################################################
 ahci_43 = Model('ahci', 43)
 ahci_43.add_struct('AHCI_SG', {'addr#0x8': FIELD_POINTER, 'reserved#0x4': FIELD_RANDOM, 'flags_size#0x4': FIELD_RANDOM})
-ahci_43.add_struct('AHCI_BUF', {'buf#0x1000': FIELD_RANDOM})
-ahci_43.add_point_to('AHCI_SG.addr', ['AHCI_BUF'])
+ahci_43.add_struct('AHCI_BUF1', {'buf#0x1000': FIELD_RANDOM})
+ahci_43.add_point_to('AHCI_SG.addr', ['AHCI_BUF1'])
 ahci_43.add_head(['AHCI_SG'])
-ahci_42.add_instrumentation_point('ahci.c', ['ahci_populate_sglist', 'dma_memory_map', 0, 1])
+ahci_43.add_instrumentation_point('ahci.c', ['ahci_populate_sglist', 'dma_memory_map', 0, 1])
+ahci_43.add_instrumentation_point('DevAHCI.cpp', ['_ZL31ahciR3CopyBufferFromGuestWorkerP11PDMDEVINSR3mP7RTSGBUFmPm', '_ZL20PDMDevHlpPCIPhysReadP11PDMDEVINSR3mPvm', 0, 1]) # ?
+ahci_43.add_instrumentation_point('DevAHCI.cpp', ['_ZL19ahciR3IoReqQueryBufP15PDMIMEDIAEXPORTP18PDMMEDIAEXIOREQINTPvPS3_Pm', '_ZL24PDMDevHlpPCIPhysReadMetaP11PDMDEVINSR3mPvm', 0, 1])
+ahci_43.add_instrumentation_point('DevAHCI.cpp', ['_ZL15ahciR3PrdtlWalkP11PDMDEVINSR3P7AHCIREQPFvS0_mP7RTSGBUFmPmES4_mm', '_ZL24PDMDevHlpPCIPhysReadMetaP11PDMDEVINSR3mPvm', 0, 1])
+ahci_43.add_instrumentation_point('DevAHCI.cpp', ['_ZL19ahciR3PrdtQuerySizeP11PDMDEVINSR3P7AHCIREQPm', '_ZL24PDMDevHlpPCIPhysReadMetaP11PDMDEVINSR3mPvm', 0, 1])
+ahci_43.add_instrumentation_point('DevAHCI.cpp', ['_ZL20ahciTrimRangesCreateP11PDMDEVINSR3P8AHCIPORTP7AHCIREQjP7RTRANGEjPj', '_ZL24PDMDevHlpPCIPhysReadMetaP11PDMDEVINSR3mPvm', 0, 1])
 ###################################################################################################################
 ahci_44 = Model('ahci', 44)
 ahci_44.add_struct('AHCI_RESFIS', {'resfix#0x1000': FIELD_RANDOM})
@@ -419,7 +446,7 @@ ahci_44.add_instrumentation_point('ahci', ['ahci_map_fis_address', 'map_page', 0
 ahci_45 = Model('ahci', 45)
 ahci_45.add_struct('AHCI_LST', {'lst#0x1000': FIELD_RANDOM})
 ahci_45.add_head(['AHCI_LST'])
-ahci_45.add_instrumentation_point('ahci', ['ahci_map_fis_address', 'map_page', 0, 2])
+ahci_45.add_instrumentation_point('ahci', ['ahci_map_clb_address', 'map_page', 0, 2])
 ###################################################################################################################
 sdhci_46 = Model('sdhci', 46)
 sdhci_46.add_struct('SDHCI_FIFO_BUFFER0', {'buf#0x1000': FIELD_RANDOM})
@@ -716,6 +743,7 @@ for i in range(0, 32):
     ohci_80.add_point_to('OHCI_HCCA.intr{}'.format(i), ['OHCI_BUF0'])
 ohci_80.add_head(['OHCI_HCCA'])
 ohci_80.add_instrumentation_point('hcd-ohci.c', ['ohci_read_hcca', 'dma_memory_read', 0, 1])
+ohci_80.add_instrumentation_point('DevOHCI.cpp', ['_ZL16ohciR3UpdateHCCAP11PDMDEVINSR3P4OHCIP6OHCIR3', '_ZL14ohciR3PhysReadP11PDMDEVINSR3jPvm', 0, 1])
 ###################################################################################################################
 ohci_81 = Model('ohci', 81)
 ohci_81.add_struct('OHCI_BUF1', {'buf#0x1000': FIELD_RANDOM})
@@ -734,6 +762,7 @@ ohci_81.add_point_to('OHCI_ISO_TD.next', ['OHCI_ISO_TD'], alignment=4)
 ohci_81.add_point_to_single_linked_list('OHCI_ED.head', 'OHCI_ED.tail', ['OHCI_TD', 'OHCI_ISO_TD'], ['next', 'next'], flags=['OHCI_ED.flags.15'], alignment=4)
 ohci_81.add_head(['OHCI_ED'])
 ohci_81.add_instrumentation_point('hcd-ohci.c', ['ohci_service_ed_list', 'ohci_read_ed', 0, 1])
+ohci_81.add_instrumentation_point('DevOHCI.cpp', ['_ZL25ohciR3ServicePeriodicListP11PDMDEVINSR3P4OHCIP6OHCIR3', '_ZL12ohciR3ReadEdP11PDMDEVINSR3jP6OHCIED', 0, 1])
 ###################################################################################################################
 ehci_82 = Model('ehci', 82)
 ehci_82.add_struct('list', {'list#0x4': FIELD_POINTER})
