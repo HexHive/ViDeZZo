@@ -25,22 +25,6 @@ videzzo-core:
 	clang ${CFLAGS} -o videzzo_types.o -c videzzo_types.c
 	ar rcs libvidezzo.a videzzo.o videzzo_types.o
 
-videzzo-vmm:
-	CFLAGS="${CFLAGS} ${SANITIZERS}"                 HYPERVISOR=vmm make videzzo-core
-	clang -fsanitize=fuzzer ${CFLAGS} ${SANITIZERS} \
-		-videzzo-instrumentation=./videzzo_vmm_types.yaml -flegacy-pass-manager \
-		-lvncclient -lgmodule-2.0 -lglib-2.0 \
-		-o vmm       videzzo_vmm.c libvidezzo.a
-
-videzzo-vmm-debug:
-	CFLAGS="${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG" HYPERVISOR=vmm make videzzo-core
-	clang -fsanitize=fuzzer ${CFLAGS} ${SANITIZERS} -DVIDEZZO_DEBUG  \
-		-videzzo-instrumentation=./videzzo_vmm_types.yaml -flegacy-pass-manager \
-		-lvncclient -lgmodule-2.0 -lglib-2.0 \
-		-o vmm-debug videzzo_vmm.c libvidezzo.a
-
-vmm: videzzo-vmm videzzo-vmm-debug
-
 videzzo-qemu:
 	CFLAGS="${CFLAGS} ${SANITIZERS}"                 HYPERVISOR=qemu make videzzo-core
 	make -C videzzo_qemu qemu clusterfuzz
