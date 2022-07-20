@@ -9,24 +9,20 @@ __pycache__
 # objects
 *.[aoi]
 *.py[cd]
-vmm
-vmm-debug
 videzzo-merge
 videzzo-poc-gen
 
 # temp files
 videzzo_types.c
-videzzo_vmm-00.h
 videzzo_qemu/*.h
 videzzo_vbox/*.h
-out
 out-*
 *.zip
 *.yaml
 
 # source code
-qemu
+videzzo_qemu/qemu
 *.tar.gz
 llvm-project
 binutils-2.35
-vbox
+videzzo_vbox/vbox

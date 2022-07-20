@@ -1,6 +1,9 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Shanghai
 RUN apt-get update
+RUN apt-get install -y tzdata
 RUN apt-get install -y build-essential cmake vim python3.7 \
 make autoconf automake libtool ninja-build libglib2.0-dev \
 libfdt-dev libpixman-1-dev zlib1g-dev patchelf wget libattr1 libattr1-dev \
@@ -30,7 +33,7 @@ RUN rm /usr/bin/objcopy; ln -s /usr/local/bin/objcopy /usr/bin/objcopy
 
 # update gdb
 RUN apt-get install -y gdb
-RUN wget -q -O ~/.gdbinit-gef.py https://github.com/hugsy/gef/raw/master/gef.py
+RUN wget -q -O ~/.gdbinit-gef.py https://github.com/hugsy/gef/dev/master/gef.py
 RUN echo source /root/.gdbinit-gef.py >> ~/.gdbinit
 
 # virtualbox
@@ -41,8 +44,8 @@ libssl-dev libvpx-dev libxcursor-dev libxinerama-dev libxml2-dev libxml2-utils \
 libxmu-dev libxrandr-dev make nasm python3-dev python-dev qttools5-dev-tools \
 unzip xsltproc default-jdk libstdc++5 libxslt1-dev linux-kernel-headers makeself \
 mesa-common-dev subversion yasm zlib1g-dev
-RUN apt-get install -y lib32z1 libc6-dev-i386 lib32gcc1 lib32stdc++6
-RUN apt-get install -y pylint python3-psycopg2 python3-willow  python-pil
+RUN apt-get install -y lib32z1 libc6-dev-i386 lib32gcc-s1 lib32stdc++6
+RUN apt-get install -y pylint python3-psycopg2 python3-willow
 RUN \
 ln -s libX11.so.6    /usr/lib32/libX11.so && \
 ln -s libXTrap.so.6  /usr/lib32/libXTrap.so && \
@@ -50,3 +53,4 @@ ln -s libXt.so.6     /usr/lib32/libXt.so && \
 ln -s libXtst.so.6   /usr/lib32/libXtst.so && \
 ln -s libXmu.so.6    /usr/lib32/libXmu.so && \
 ln -s libXext.so.6   /usr/lib32/libXext.so
+RUN apt-get install -y libcurl4-openssl-dev

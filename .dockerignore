@@ -2,25 +2,28 @@
 crash-*
 slow-unit-*
 leak-*
+
 # cache
 __pycache__
+
 # objects
 *.[aoi]
 *.py[cd]
-vmm
-vmm-debug
 videzzo-merge
+videzzo-poc-gen
+
 # temp files
 videzzo_types.c
-videzzo_vmm-01.h
-videzzo_vmm-02.h
 videzzo_qemu/*.h
-videzzo_qemu/*.h
-videzzo_qemu/*.h
-out
+videzzo_vbox/*.h
+videzzo_qemu/out-*
+videzzo_vbox/out-*
 *.zip
+*.yaml
+
 # source code
-qemu
+videzzo_qemu/qemu
 *.tar.gz
 llvm-project
 binutils-2.35
+videzzo_vbox/vbox
