@@ -84,6 +84,7 @@ static NativeEventQueue *gEventQ = NULL;
 #define TARGET_NAME "i386"
 
 #include "videzzo.h"
+#include "VBoxMalloc.h"
 
 static RTUUID uuid;
 static char uuid_str[64];
@@ -92,6 +93,7 @@ static PVM pVM;
 static PVMCPUCC pVCpu;
 static ComPtr<IMachine> machine;
 static ComPtr<IConsole> console;
+static VGuestAllocator vbox_malloc;
 
 //
 // Fuzz Target Configs
@@ -663,13 +665,12 @@ __attribute__ ((visibility ("default"))) uint64_t AroundInvalidAddress(uint64_t 
 
 static uint64_t videzzo_malloc(size_t size) {
     // alloc a dma accessible buffer in guest memory
-    // return guest_alloc(vbox_alloc, size);
-    return 0;
+    return guest_alloc(&vbox_malloc, size);
 }
 
 static bool videzzo_free(uint64_t addr) {
     // free the dma accessible buffer in guest memory
-    // guest_free(vbox_alloc, addr);
+    guest_free(&vbox_malloc, addr);
     return true;
 }
 
@@ -811,7 +812,7 @@ static void videzzo_vbox_pre() {
     }
     
     // step 2: get allocator
-    // vbox_alloc = get_vbox_alloc(s);
+    pc_alloc_init(&vbox_malloc, 128 * 1024 * 1024, ALLOC_NO_FLAGS);
 
     // step 3: enable source coverage collection
     // this main thread musked SIGALRM in rtThreadPosixBlockSignals
