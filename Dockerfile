@@ -13,8 +13,8 @@ libgtk-3-dev libsdl2-dev screen parallel \
 htop cpulimit meson autoconf-archive libopus-dev zip unzip sudo
 
 RUN apt-get install -y curl
-RUN rm /usr/bin/python3 && ln -s /usr/bin/python3.7 /usr/bin/python3
-RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3 get-pip.py
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+RUN python3 get-pip.py
 RUN python3 -m pip install install wllvm picire gdown pyyaml
 
 WORKDIR /root
@@ -41,7 +41,7 @@ RUN apt-get install -y acpica-tools chrpath doxygen g++-multilib libasound2-dev 
 libcurl4-openssl-dev libdevmapper-dev libidl-dev libopus-dev libpam0g-dev \
 libpulse-dev libqt5opengl5-dev libqt5x11extras5-dev qttools5-dev libsdl1.2-dev libsdl-ttf2.0-dev \
 libssl-dev libvpx-dev libxcursor-dev libxinerama-dev libxml2-dev libxml2-utils \
-libxmu-dev libxrandr-dev make nasm python3-dev python-dev qttools5-dev-tools \
+libxmu-dev libxrandr-dev make nasm python3-dev qttools5-dev-tools \
 unzip xsltproc default-jdk libstdc++5 libxslt1-dev linux-kernel-headers makeself \
 mesa-common-dev subversion yasm zlib1g-dev
 RUN apt-get install -y lib32z1 libc6-dev-i386 lib32gcc-s1 lib32stdc++6
