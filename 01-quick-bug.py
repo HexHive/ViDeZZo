@@ -3,18 +3,19 @@ import os
 import sys
 import multiprocessing
 
-def worker(out, target, index):
-    os.system('cd {0}; cpulimit -l 100 -- ./{1} -max_total_time=60 >{1}-{2}.log 2>&1; cd $OLDPWD'.format(out, target, index))
+def worker(out, target, index, timeout):
+    os.system('cd {0}; cpulimit -l 100 -- ./{1} -max_total_time={3} >{1}-{2}.log 2>&1; cd $OLDPWD'.format(out, target, index, timeout))
     print('[+] {}-{}-{} starts!'.format(out, target, index))
 
 if __name__ == '__main__':
-    if len(sys.argv) != 4:
-        print('usage: python3 {} path/to/out-san index nproc'.format(sys.argv[0]))
+    if len(sys.argv) != 5:
+        print('usage: python3 {} path/to/out-san index nproc timeout'.format(sys.argv[0]))
         exit(1)
 
     out = sys.argv[1]
     index = sys.argv[2]
     nproc = int(sys.argv[3])
+    timeout = sys.argv[4]
 
     targets = []
     for target in os.listdir(out):
@@ -41,7 +42,7 @@ if __name__ == '__main__':
 
     with multiprocessing.Pool(processes=nproc) as pool:
         for target in targets:
-            res = pool.apply_async(worker, (out, target, index))
+            res = pool.apply_async(worker, (out, target, index, timeout))
         pool.close()
         pool.join()
 
