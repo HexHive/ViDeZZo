@@ -5,6 +5,7 @@ leak-*
 
 # cache
 __pycache__
+.vscode
 
 # objects
 *.[aoi]
