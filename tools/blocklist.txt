@@ -1,0 +1,31 @@
+# QEMU
+pc-bios
+
+# VBox
+vbox_vm_*
+VBoxManage
+VBoxHeadless
+VBoxViDeZZo
+VBoxSVC
+VBoxXPCOMIPCD
+VBoxVMM.so
+VBoxRT.so
+VBoxXPCOM.so
+VBoxDDU.so
+VBoxDDR0.debug
+VBoxDDR0.r0
+VBoxDD2.so
+VBoxDD.so
+VMMR0.debug
+VMMR0.r0
+components
+
+# libFuzzer
+crash-*
+slow-*
+leak-*
+oom-*
+
+# others
+*.sh
+*.log
