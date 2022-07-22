@@ -89,6 +89,13 @@ echo [-] starting delta debugging!
 time picire --input=$ws/picire_inputs --test=$ws/picire_tester.sh \
 	--parallel --subset-iterator=skip --complement-iterator=backward
 
-echo [-] saved output to $ws/picire_inputs.*/picire_inputs
+echo [-] save output to $ws/picire_inputs.*/picire_inputs
 echo [-] run $ws/picire_reproduce.sh $ws/picire_inputs.*/picire_inputs
 echo [-] modify and run $ws/picire_latest.sh $ws/picire_inputs.*/picire_inputs
+
+# step 5: let's merge
+poc=poc-$(basename ${target})-$(basename ${crash})
+$(dirname $0)/videzzo-merge -o ${poc} $(tr '\n' ' ' < $ws/picire_inputs.*/picire_inputs) ${crash}
+echo [-] generate PoC to ${poc}
+echo [-] please debug via the following command
+echo "  gdb --args ${target} ${poc}"
