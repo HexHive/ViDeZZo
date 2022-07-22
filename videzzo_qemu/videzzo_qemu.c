@@ -557,15 +557,6 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .socket = false,
     },{
         .arch = "arm",
-        .name = "dwc2",
-        // arm supports raspi0/1/2, aarch64 supports raspi3
-        .args = "-machine raspi0 -nodefaults "
-        COMMON_USB_CMD,
-        .mrnames = "*dwc2-io*,*dwc2-fifo*",
-        .file = "hw/usb/hcd-dwc2.c",
-        .socket = false,
-    },{
-        .arch = "arm",
         .name = "xgmac",
         .args = "-machine midway",
         .mrnames = "*xgmac*",
@@ -1525,10 +1516,6 @@ static QTestState *qtest_setup(void) {
     qtest_server_set_send_handler(&qtest_client_inproc_recv, &fuzz_qts);
     return qtest_inproc_init(&fuzz_qts, false, fuzz_arch,
             &qtest_server_inproc_recv);
-}
-
-void *get_vmm_state() {
-    return fuzz_qts;
 }
 
 // This is called in LLVMFuzzerInitialize

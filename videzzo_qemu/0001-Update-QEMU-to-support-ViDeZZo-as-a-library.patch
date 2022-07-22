@@ -1,24 +1,8 @@
-From aefb39142def8a2ccd39e7f157c89012650ec9ba Mon Sep 17 00:00:00 2001
-From: Qiang Liu <cyruscyliu@gmail.com>
-Date: Tue, 18 Jan 2022 10:16:17 +0100
-Subject: [PATCH] Update QEMU to support ViDeZZo as a library
-
-Signed-off-by: Qiang Liu <cyruscyliu@gmail.com>
----
- include/qemu/osdep.h                        |  9 +++++++
- meson.build                                 | 17 ++++++++++++++
- meson_options.txt                           |  2 ++
- tests/qtest/videzzo/less_crashes_wrappers.c | 26 +++++++++++++++++++++
- tests/qtest/videzzo/meson.build             | 21 +++++++++++++++++
- 7 files changed, 80 insertions(+), 2 deletions(-)
- create mode 100644 tests/qtest/videzzo/less_crashes_wrappers.c
- create mode 100644 tests/qtest/videzzo/meson.build
-
 diff --git a/include/qemu/osdep.h b/include/qemu/osdep.h
-index c9ec783..319d2c1 100644
+index b1c161c..42dfd3d 100644
 --- a/include/qemu/osdep.h
 +++ b/include/qemu/osdep.h
-@@ -183,6 +183,15 @@ extern "C" {
+@@ -212,6 +212,15 @@ void QEMU_ERROR("code path is reachable")
  #error building with G_DISABLE_ASSERT is not supported
  #endif
  
@@ -35,10 +19,10 @@ index c9ec783..319d2c1 100644
  #define O_LARGEFILE 0
  #endif
 diff --git a/meson.build b/meson.build
-index 2d66014..e247a6c 100644
+index 8a8c415..f32b075 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -181,6 +181,11 @@ if get_option('gprof')
+@@ -199,6 +199,11 @@ if get_option('gprof')
    qemu_ldflags += ['-p']
  endif
  
@@ -50,15 +34,7 @@ index 2d66014..e247a6c 100644
  # Specify linker-script with add_project_link_arguments so that it is not placed
  # within a linker --start-group/--end-group pair
  if get_option('fuzzing')
-@@ -259,6 +264,7 @@ endif
- 
- # Fuzzing
- if get_option('fuzzing') and get_option('fuzzing_engine') == '' and \
-+    not get_option('videzzo') and \
-     not cc.links('''
-           #include <stdint.h>
-           #include <sys/types.h>
-@@ -2595,6 +2601,7 @@ qmp_ss = ss.source_set()
+@@ -2889,6 +2894,7 @@ qmp_ss = ss.source_set()
  qom_ss = ss.source_set()
  softmmu_ss = ss.source_set()
  specific_fuzz_ss = ss.source_set()
@@ -66,7 +42,7 @@ index 2d66014..e247a6c 100644
  specific_ss = ss.source_set()
  stub_ss = ss.source_set()
  trace_ss = ss.source_set()
-@@ -2850,6 +2857,7 @@ subdir('linux-user')
+@@ -3162,6 +3168,7 @@ subdir('linux-user')
  # needed for fuzzing binaries
  subdir('tests/qtest/libqos')
  subdir('tests/qtest/fuzz')
@@ -74,7 +50,7 @@ index 2d66014..e247a6c 100644
  
  # accel modules
  tcg_real_module_ss = ss.source_set()
-@@ -3193,6 +3201,15 @@ foreach target : target_dirs
+@@ -3514,6 +3521,15 @@ foreach target : target_dirs
          'dependencies': specific_fuzz.dependencies(),
        }]
      endif
@@ -91,10 +67,10 @@ index 2d66014..e247a6c 100644
      execs = [{
        'name': 'qemu-' + target_name,
 diff --git a/meson_options.txt b/meson_options.txt
-index 52b11ce..8b04f40 100644
+index e58e158..441b74c 100644
 --- a/meson_options.txt
 +++ b/meson_options.txt
-@@ -32,6 +32,8 @@ option('docs', type : 'feature', value : 'auto',
+@@ -42,6 +42,8 @@ option('docs', type : 'feature', value : 'auto',
         description: 'Documentations build support')
  option('fuzzing', type : 'boolean', value: false,
         description: 'build fuzzing targets')
@@ -102,7 +78,19 @@ index 52b11ce..8b04f40 100644
 +       description: 'build videzzo targets')
  option('gettext', type : 'feature', value : 'auto',
         description: 'Localization of the GTK+ user interface')
- option('install_blobs', type : 'boolean', value : true,
+ option('module_upgrades', type : 'boolean', value : false,
+diff --git a/scripts/oss-fuzz/instrumentation-filter-template b/scripts/oss-fuzz/instrumentation-filter-template
+index 76d2b61..7909550 100644
+--- a/scripts/oss-fuzz/instrumentation-filter-template
++++ b/scripts/oss-fuzz/instrumentation-filter-template
+@@ -10,6 +10,7 @@ src:*/net/*
+ # instrument the fuzzer entry-point so libFuzzer always sees at least some
+ # coverage - otherwise it will exit after the first input
+ src:*/tests/qtest/fuzz/fuzz.c
++src:*/tests/qtest/videzzo/videzzo_qemu.c
+ 
+ # Enable instrumentation for all functions in those files
+ fun:*
 diff --git a/tests/qtest/videzzo/less_crashes_wrappers.c b/tests/qtest/videzzo/less_crashes_wrappers.c
 new file mode 100644
 index 0000000..faf775e
@@ -162,6 +150,3 @@ index 0000000..b26ee22
 +videzzo_fuzz_ss.add(declare_dependency(
 +  link_args: fuzz_exe_ldflags + ['-Wl,-wrap,abort'])
 +)
--- 
-2.17.1
-
