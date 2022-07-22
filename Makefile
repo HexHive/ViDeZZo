@@ -10,13 +10,10 @@ SANITIZERS = -fsanitize=address,undefined
 CFLAGS ?= -g -fPIE -fno-omit-frame-pointer -fno-optimize-sibling-calls \
 		  -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include
 
-videzzo-merge:
-	clang ${CFLAGS} -o videzzo-merge merge.c videzzo.c
+videzzo-tool:
+	CFLAGS="${CFLAGS}" make -C videzzo_tool all
 
-videzzo-poc-gen:
-	clang ${CFLAGS} -o videzzo-poc-gen poc-gen.c videzzo.c
-
-tools: videzzo-merge videzzo-poc-gen
+tool: videzzo-tool
 
 videzzo-core:
 	python3 videzzo_types_gen.py ${HYPERVISOR}
@@ -67,3 +64,4 @@ clean:
 distclean: clean
 	make -C videzzo_qemu clean
 	make -C videzzo_vbox clean
+	make -C videzzo_tool clean

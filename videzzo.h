@@ -322,4 +322,10 @@ int remove_offset_from_vnc_port(int vnc_port);
 }  // extern "C"
 #endif  // __cplusplus
 
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/socket.h>
+#include <rfb/rfbclient.h>
+
 #endif /* VIDEZZO_H */

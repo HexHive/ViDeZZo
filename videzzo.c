@@ -7,11 +7,6 @@
  */
 
 #include "videzzo.h"
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/socket.h>
-#include <rfb/rfbclient.h>
 
 //
 // Reproducer
