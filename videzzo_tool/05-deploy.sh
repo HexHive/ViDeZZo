@@ -146,7 +146,7 @@ function gen_qemu_cmds() {
     batch=$1
     dir=videzzo_qemu/out-san
     for fuzz_target in ${qemu_fuzz_target[@]}; do
-        cmd="cd ${dir}; cpulimit -l 100 -- ./${fuzz_target} -max_total_time=${__timeout_s} >${fuzz_target}-${batch}.log 2>&1; cd $OLDPWD"
+        cmd="cd ${dir}; cpulimit -l 100 -- ./${fuzz_target} -fork=1 -ignore-crashes=1 -max_total_time=${__timeout_s} >${fuzz_target}-${batch}.log 2>&1; cd $OLDPWD"
         echo ${cmd} >> ${gen_cmds}
     done
 }
@@ -155,7 +155,7 @@ function gen_vbox_cmds() {
     batch=$1
     dir=videzzo_vbox/out-san
     for fuzz_target in ${vbox_fuzz_target[@]}; do
-        cmd="cd ${dir}; cpulimit -l 100 -- ./${fuzz_target} -max_total_time=${__timeout_s} >${fuzz_target}-${batch}.log 2>&1; cd $OLDPWD"
+        cmd="cd ${dir}; cpulimit -l 100 -- ./${fuzz_target} -fork=1 -ignore-crashes=1 -max_total_time=${__timeout_s} >${fuzz_target}-${batch}.log 2>&1; cd $OLDPWD"
         echo ${cmd} >> ${gen_cmds}
     done
 }
