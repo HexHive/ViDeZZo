@@ -2,21 +2,22 @@
 
 function usage() {
 cat << HEREDOC
- Usage: $0 [-b blocklist.txt] [-t timeout] [-v qemu|vbox|all]
+ Usage: $0 [-b blocklist.txt] [-t timeout] [-v qemu|vbox|all] revision
 
  positional arguments:
+   revision          revision (int) of current fuzzing compaign
+
+ optional arguments:
    -b, blocklist.txt absolute pathname of the blocked fuzz target
    -t, timeout       number of seconds we want to run, 86400 by default
    -v, qemu|vbox|all virtual machine manager we want to fuzz, all by default
-
- optional arguments:
    -h                show this help message and exit
 
 HEREDOC
    exit 1
 }
 
-blocklist=$(pwd)/tools/blocklist.txt
+blocklist=$(pwd)/videzzo_tool/blocklist.txt
 timeout=86400
 vmm='all'
 
@@ -37,6 +38,12 @@ case "${o}" in
    ;;
 esac
 done
+
+revision=${@:$OPTIND:1}
+
+if [ -z ${revision} ]; then
+    usage
+fi
 
 echo "[+] === We are going to deploy ViDeZZo. ==="
 
@@ -126,36 +133,34 @@ number_of_fuzz_target=$(expr ${number_of_qemu_fuzz_target} + ${number_of_vbox_fu
 echo "[+] Detect resources"
 
 processors=$(expr $(nproc) - 2)
-echo "   - ${processors} processors"
-echo "   - ${timeout} seconds"
+echo "   - ${processors} processors"                                                 # 10
+echo "   - ${timeout} seconds"                                                       # 3600
 echo "   - ${number_of_qemu_fuzz_target} qemu targets"
 echo "   - ${number_of_vbox_fuzz_target} vbox targets"
-echo "   - ${number_of_fuzz_target} in total"
+echo "   - ${number_of_fuzz_target} in total"                                        # 108
 
 echo "[+] Calculate average timeout for each fuzz target"
-__batches=$(expr ${number_of_fuzz_target} / ${processors} + 1)
+__batches=$(expr \( ${number_of_fuzz_target} + ${processors} - 1 \) / ${processors}) # 11
 echo "   - ${__batches} batches"
-__timeout_h=$(expr ${timeout} / 3600)
-__timeout_r=$(expr ${__timeout_h} / ${__batches} + 1)
-__timeout_s=$(expr ${__timeout_r} \* 3600)
-echo "   - ${__timeout_s} seconds"
+__timeout=$(expr \( ${timeout} + ${__batches} - 1 \) / ${__batches})                 # 360
+echo "   - ${__timeout} seconds"
 
 gen_cmds=/tmp/videzzo_deploy_cmds.sh
 
 function gen_qemu_cmds() {
-    batch=$1
+    batch=${revision}
     dir=videzzo_qemu/out-san
     for fuzz_target in ${qemu_fuzz_target[@]}; do
-        cmd="cd ${dir}; cpulimit -l 100 -- ./${fuzz_target} -fork=1 -ignore-crashes=1 -max_total_time=${__timeout_s} >${fuzz_target}-${batch}.log 2>&1; cd $OLDPWD"
+        cmd="cd ${dir}; export ASAN_OPTIONS=detect_leaks=0; cpulimit -l 100 -- ./${fuzz_target} -fork=1 -ignore-crashes=1 -max_total_time=${__timeout} >${fuzz_target}-${batch}.log 2>&1; cd \$OLDPWD"
         echo ${cmd} >> ${gen_cmds}
     done
 }
 
 function gen_vbox_cmds() {
-    batch=$1
+    batch=${revision}
     dir=videzzo_vbox/out-san
     for fuzz_target in ${vbox_fuzz_target[@]}; do
-        cmd="cd ${dir}; cpulimit -l 100 -- ./${fuzz_target} -fork=1 -ignore-crashes=1 -max_total_time=${__timeout_s} >${fuzz_target}-${batch}.log 2>&1; cd $OLDPWD"
+        cmd="cd ${dir}; export ASAN_OPTIONS=detect_leaks=0; cpulimit -l 100 -- ./${fuzz_target} -fork=1 -ignore-crashes=1 -max_total_time=${__timeout} >${fuzz_target}-${batch}.log 2>&1; cd \$OLDPWD"
         echo ${cmd} >> ${gen_cmds}
     done
 }
@@ -172,5 +177,5 @@ elif [ ${vmm} = "vbox" ]; then
     gen_vbox_cmds
 fi
 
-echo "[+] Please check and run ${gen_cmds}"
-parallel -j$(processors) --bar < ${gen_cmds}
+echo "[+] Will run ${gen_cmds}"
+parallel -j${processors} --bar < ${gen_cmds}
