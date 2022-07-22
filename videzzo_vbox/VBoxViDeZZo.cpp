@@ -737,8 +737,10 @@ void locate_fuzzable_objects(char *mrname) {
                     continue;
                 addr = pRegEntry_PIO->uPort;
                 size = pRegEntry_PIO->cPorts;
-                add_interface(EVENT_TYPE_PIO_READ, addr, size, pRegEntry_PIO->pszDesc, 1, 4, true);
-                add_interface(EVENT_TYPE_PIO_WRITE, addr, size, pRegEntry_PIO->pszDesc, 1, 4, true);
+                if (!interface_exists(EVENT_TYPE_PIO_READ, addr, size)) {
+                    add_interface(EVENT_TYPE_PIO_READ, addr, size, pRegEntry_PIO->pszDesc, 1, 4, true);
+                    add_interface(EVENT_TYPE_PIO_WRITE, addr, size, pRegEntry_PIO->pszDesc, 1, 4, true);
+                }
             }
         }
         // MMIO
@@ -750,8 +752,10 @@ void locate_fuzzable_objects(char *mrname) {
                     continue;
                 addr = pRegEntry_MMIO->GCPhysMapping;
                 size = pRegEntry_MMIO->cbRegion;
-                add_interface(EVENT_TYPE_MMIO_READ, addr, size, pRegEntry_MMIO->pszDesc, 1, 4, true);
-                add_interface(EVENT_TYPE_MMIO_WRITE, addr, size, pRegEntry_MMIO->pszDesc, 1, 4, true);
+                if (!interface_exists(EVENT_TYPE_PIO_READ, addr, size)) {
+                    add_interface(EVENT_TYPE_MMIO_READ, addr, size, pRegEntry_MMIO->pszDesc, 1, 4, true);
+                    add_interface(EVENT_TYPE_MMIO_WRITE, addr, size, pRegEntry_MMIO->pszDesc, 1, 4, true);
+                }
             }
         }
     }

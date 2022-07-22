@@ -7,6 +7,11 @@
  */
 
 #include "videzzo.h"
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/socket.h>
+#include <rfb/rfbclient.h>
 
 //
 // Reproducer
@@ -267,6 +272,16 @@ void add_interface(EventType type, uint64_t addr, uint32_t size,
     memcpy(Id_Description[n_interfaces].name, name, strlen(name) <= 32 ? strlen(name) : 32);
     Id_Description[n_interfaces].dynamic = dynamic;
     n_interfaces++;
+}
+
+bool interface_exists(EventType type, uint64_t addr, uint32_t size) {
+    for (int i = 0; i < n_interfaces; i++) {
+        if (Id_Description[i].type == type && \
+                Id_Description[i].emb.addr == addr && \
+                Id_Description[i].emb.size == size)
+            return true;
+    }
+    return false;
 }
 
 static uint64_t around_event_addr(uint8_t id, uint64_t raw_addr) {

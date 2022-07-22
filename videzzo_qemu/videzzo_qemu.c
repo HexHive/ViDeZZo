@@ -1381,8 +1381,10 @@ static void locate_fuzzable_objects(Object *obj, char *mrname) {
             }
             // TODO: Deduplicate MemoryRegions in the future
             if (mr_type != INVLID_ADDRESS) {
-                add_interface(event_type1, addr, mr->size, mr->name, min, max, true);
-                add_interface(event_type2, addr, mr->size, mr->name, min, max, true);
+                if (!interface_exists(event_type1, addr, mr->size)) {
+                    add_interface(event_type1, addr, mr->size, mr->name, min, max, true);
+                    add_interface(event_type2, addr, mr->size, mr->name, min, max, true);
+                }
             }
         }
     } else if(object_dynamic_cast(OBJECT(obj), TYPE_PCI_DEVICE)) {

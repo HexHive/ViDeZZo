@@ -273,6 +273,7 @@ void flush_events(void *opaque) __attribute__((weak));
 //
 void add_interface(EventType type, uint64_t addr, uint32_t size,
     const char *name, uint8_t min_access_size, uint8_t max_access_size, bool dynamic);
+bool interface_exists(EventType type, uint64_t addr, uint32_t size);
 int get_number_of_interfaces(void);
 void print_interfaces(void);
 
@@ -321,11 +322,5 @@ int remove_offset_from_vnc_port(int vnc_port);
 #ifdef __cplusplus
 }  // extern "C"
 #endif  // __cplusplus
-
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/socket.h>
-#include <rfb/rfbclient.h>
 
 #endif /* VIDEZZO_H */
