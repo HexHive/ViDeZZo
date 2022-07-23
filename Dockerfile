@@ -33,7 +33,7 @@ RUN rm /usr/bin/objcopy; ln -s /usr/local/bin/objcopy /usr/bin/objcopy
 
 # update gdb
 RUN apt-get install -y gdb
-RUN wget -q -O ~/.gdbinit-gef.py https://github.com/hugsy/gef/dev/master/gef.py
+RUN wget -q -O ~/.gdbinit-gef.py https://github.com/hugsy/gef/blob/dev/gef.py
 RUN echo source /root/.gdbinit-gef.py >> ~/.gdbinit
 
 # virtualbox
