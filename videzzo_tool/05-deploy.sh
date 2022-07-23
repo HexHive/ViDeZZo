@@ -53,12 +53,12 @@ if [ ! -f "$(pwd)/videzzo.c" ]; then
 fi
 
 if [ ${vmm} = "all" ]; then
-    echo [-] make qemu
-    echo [-] make vbox
+    make qemu
+    make vbox
 elif [ ${vmm} = "qemu" ]; then
-    echo [-] make qemu
+    make qemu
 elif [ ${vmm} = "vbox" ]; then
-    echo [-] make vbox
+    make vbox
 fi
 
 echo "[+] Load blocklist.txt ..."
@@ -146,21 +146,25 @@ __timeout=$(expr \( ${timeout} + ${__batches} - 1 \) / ${__batches})            
 echo "   - ${__timeout} seconds"
 
 gen_cmds=/tmp/videzzo_deploy_cmds.sh
+# libfuzzer_args="-fork=1 -ignore_crashes=1 -print_final_stats=1 -max_total_time=${__timeout} -detect_leaks=0 -use_value_profile=1"
+libfuzzer_args="-print_final_stats=1 -max_total_time=${__timeout} -detect_leaks=0 -use_value_profile=1"
 
 function gen_qemu_cmds() {
     batch=${revision}
     dir=videzzo_qemu/out-san
     for fuzz_target in ${qemu_fuzz_target[@]}; do
-        cmd="cd ${dir}; export ASAN_OPTIONS=detect_leaks=0; cpulimit -l 100 -- ./${fuzz_target} -fork=1 -ignore-crashes=1 -max_total_time=${__timeout} >${fuzz_target}-${batch}.log 2>&1; cd \$OLDPWD"
+        cmd="cd ${dir} && cpulimit -l 100 -f -- ./${fuzz_target} ${libfuzzer_args} >${fuzz_target}-${batch}.log 2>&1 && cd \$OLDPWD"
         echo ${cmd} >> ${gen_cmds}
     done
 }
+
+vbox_env="export VBOX_LOG_DEST=\"nofile stdout\" && export VBOX_LOG=\"+gui.e.l.f\""
 
 function gen_vbox_cmds() {
     batch=${revision}
     dir=videzzo_vbox/out-san
     for fuzz_target in ${vbox_fuzz_target[@]}; do
-        cmd="cd ${dir}; export ASAN_OPTIONS=detect_leaks=0; cpulimit -l 100 -- ./${fuzz_target} -fork=1 -ignore-crashes=1 -max_total_time=${__timeout} >${fuzz_target}-${batch}.log 2>&1; cd \$OLDPWD"
+        cmd="cd ${dir} && ${vbox_env} && cpulimit -l 100 -f -- ./${fuzz_target} ${libfuzzer_args} >${fuzz_target}-${batch}.log 2>&1 && cd \$OLDPWD"
         echo ${cmd} >> ${gen_cmds}
     done
 }
