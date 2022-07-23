@@ -11,6 +11,9 @@ AArch64 builds.
 
 More technical details go in to our paper. The usage of ViDeZZo is as follows.
 
+Some development plans.
+- [ ] Fix messages lost due to not enough seed size
+- [ ] Tune performance a bit
 
 ## Docker container
 
@@ -74,5 +77,5 @@ we do not have a plan to support them.
 
 ## Contribution
 
-If any questions and ideas, please do not hesitate to raise an issse or a pull
+If any questions and ideas, please do not hesitate to raise an issue or a pull
 request.
