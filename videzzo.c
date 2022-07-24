@@ -1725,7 +1725,9 @@ int init_vnc_client(void *s, int vnc_port) {
         rfbClientCleanup(client);
         _Exit(0);
     } else {
-        flush_events(s);
+        __flush flush = gfctx_get_flush();
+        if (flush != NULL)
+            flush(s);
     }
     return 0;
 }

@@ -1397,6 +1397,15 @@ static void locate_fuzzable_objects(Object *obj, char *mrname) {
 
 static QTestState *fuzz_qts;
 
+// Copied from tests/qtest/fuzz/fuzz.c
+#define MAX_EVENT_LOOPS 10
+static void flush_events(QTestState *s) {
+    int i = MAX_EVENT_LOOPS;
+    while (g_main_context_pending(NULL) && i-- > 0) {
+        main_loop_wait(false);
+    }
+}
+
 //
 // call into videzzo from QEMU
 //

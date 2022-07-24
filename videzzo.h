@@ -266,7 +266,6 @@ uint64_t dispatch_clock_step(Event *event) __attribute__((weak));
 uint64_t dispatch_socket_write(Event *event) __attribute__((weak));
 uint64_t dispatch_mem_alloc(Event *event) __attribute__((weak));
 uint64_t dispatch_mem_free(Event *event) __attribute__((weak));
-void flush_events(void *opaque) __attribute__((weak));
 
 //
 // Interfaces
