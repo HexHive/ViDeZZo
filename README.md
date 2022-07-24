@@ -58,9 +58,10 @@ virtual device, start with `sudo`.
 >Evaluate security impacts of crashes, fix bugs and verify, submit patches and
 discuss in communities. Apply for CVE and advertise if it is necessary.
 
-+ Collect historical seeds: run the crashed fuzz target with `CORPUS`.
-+ Delta-debug and gen a PoC: run `02-dd.sh -t ABS_PATH_TO_BINARY -c
-ABS_PATH_TO_CRASHING_SEED -s ABS_PATH_TO_CORPUS`.
++ Collect historical seeds: run the crashed fuzz target with `CORPUS`.  +
+Delta-debug and gen a PoC: run `02-dd.sh -t ABS_PATH_TO_BINARY -c
+ABS_PATH_TO_CRASHING_SEED -s ABS_PATH_TO_CORPUS`. Note that UBSAN bugs need to
+enable "halt_on_error" and the check of "runtime error".
 
 ## Source code coverage profiling
 
