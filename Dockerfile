@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:20.04 as base
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Shanghai
@@ -18,12 +18,6 @@ RUN python3 get-pip.py
 RUN python3 -m pip install install wllvm picire gdown pyyaml
 
 WORKDIR /root
-
-# update llvm toolchains
-RUN mkdir llvm-project
-RUN cd llvm-project && gdown https://drive.google.com/uc?id=18iunm7PhpOk4uNWLRjer9uLgLJNEFkV0 && \
-tar xf llvm-project-13.tar.gz && cd $OLDPWD
-ENV PATH=/root/llvm-project/bin:$PATH
 
 # update binutils
 RUN wget https://ftp.gnu.org/gnu/binutils/binutils-2.35.tar.gz
@@ -54,3 +48,11 @@ ln -s libXtst.so.6   /usr/lib32/libXtst.so && \
 ln -s libXmu.so.6    /usr/lib32/libXmu.so && \
 ln -s libXext.so.6   /usr/lib32/libXext.so
 RUN apt-get install -y libcurl4-openssl-dev
+
+FROM base as development
+
+# update llvm toolchains
+RUN mkdir llvm-project
+RUN cd llvm-project && gdown https://drive.google.com/uc?id=18iunm7PhpOk4uNWLRjer9uLgLJNEFkV0 && \
+tar xf llvm-project-13.tar.gz && cd $OLDPWD
+ENV PATH=/root/llvm-project/bin:$PATH

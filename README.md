@@ -22,6 +22,7 @@ native Ubuntu 20.04 host.
 
 ```
 sudo docker build -t videzzo:latest .
+sudo docker build --target base -t videzzo:latest . # for artifact evaluation only
 sudo docker run --rm -it -v $PWD:/root/videzzo videzzo:latest /bin/bash
 ```
 
