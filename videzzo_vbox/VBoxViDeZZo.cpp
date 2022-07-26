@@ -752,7 +752,7 @@ void locate_fuzzable_objects(char *mrname) {
                     continue;
                 addr = pRegEntry_MMIO->GCPhysMapping;
                 size = pRegEntry_MMIO->cbRegion;
-                if (!interface_exists(EVENT_TYPE_PIO_READ, addr, size)) {
+                if (!interface_exists(EVENT_TYPE_MMIO_READ, addr, size)) {
                     add_interface(EVENT_TYPE_MMIO_READ, addr, size, pRegEntry_MMIO->pszDesc, 1, 4, true);
                     add_interface(EVENT_TYPE_MMIO_WRITE, addr, size, pRegEntry_MMIO->pszDesc, 1, 4, true);
                 }
