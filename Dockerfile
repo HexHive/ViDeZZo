@@ -27,7 +27,7 @@ RUN rm /usr/bin/objcopy; ln -s /usr/local/bin/objcopy /usr/bin/objcopy
 
 # update gdb
 RUN apt-get install -y gdb
-RUN wget -q -O ~/.gdbinit-gef.py https://github.com/hugsy/gef/blob/dev/gef.py
+RUN wget -q -O ~/.gdbinit-gef.py https://raw.githubusercontent.com/hugsy/gef/dev/gef.py
 RUN echo source /root/.gdbinit-gef.py >> ~/.gdbinit
 
 # virtualbox
@@ -48,6 +48,8 @@ ln -s libXtst.so.6   /usr/lib32/libXtst.so && \
 ln -s libXmu.so.6    /usr/lib32/libXmu.so && \
 ln -s libXext.so.6   /usr/lib32/libXext.so
 RUN apt-get install -y libcurl4-openssl-dev
+RUN apt-get install -y libncurses5
+RUN git config --global --add safe.directory '*'
 
 FROM base as development
 
