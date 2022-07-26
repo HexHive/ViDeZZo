@@ -393,7 +393,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "vboxvmm",
-        .args = "",
+        .args = nullptr,
         .file = "src/VBox/Devices/VMMDev/VMMDev.cpp",
         .mrnames = "*VMMDev*",
         .byte_address = true,
