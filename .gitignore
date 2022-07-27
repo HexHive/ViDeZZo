@@ -9,6 +9,8 @@ __pycache__
 
 # objects
 *.[aoi]
+*.qemu
+*.vbox
 *.py[cd]
 videzzo-merge
 videzzo-poc-gen

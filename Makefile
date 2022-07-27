@@ -20,7 +20,7 @@ videzzo-core:
 	clang ${CFLAGS} -o videzzo.o -c videzzo.c
 	clang ${CFLAGS} -o videzzo_types.i -E videzzo_types.c
 	clang ${CFLAGS} -o videzzo_types.o -c videzzo_types.c
-	ar rcs libvidezzo.a videzzo.o videzzo_types.o
+	ar rcs libvidezzo.a.${HYPERVISOR} videzzo.o videzzo_types.o
 
 videzzo-qemu:
 	CFLAGS="${CFLAGS} ${SANITIZERS}"                 HYPERVISOR=qemu make videzzo-core
