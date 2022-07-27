@@ -6,7 +6,7 @@ from videzzo_types_lib import Model, FIELD_RANDOM, FIELD_POINTER, FIELD_FLAG, FI
 
 def __gen_code(models, hypervisor_dir):
     code ="""/*
- * Type-Aware Virtual-Device Fuzzing
+ * Dependency-Aware Virtual-Device Fuzzing
  *
  * Copyright Qiang Liu <cyruscyliu@gmail.com>
  *

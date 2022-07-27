@@ -98,7 +98,7 @@ index 0000000..faf775e
 +++ b/tests/qtest/videzzo/less_crashes_wrappers.c
 @@ -0,0 +1,26 @@
 +/*
-+ * Stateful Virtual-Device Fuzzing Less Crashes Wrapper
++ * Dependency-Aware Virtual-Device Fuzzing Less Crashes Wrapper
 + *
 + * Copyright Red Hat Inc., 2020
 + *

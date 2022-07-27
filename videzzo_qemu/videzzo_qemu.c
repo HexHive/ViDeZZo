@@ -1,5 +1,5 @@
 /*
- * Type-Aware Virtual-Device Fuzzing QEMU
+ * Dependency-Aware Virtual-Device Fuzzing QEMU
  *
  * Copyright Red Hat Inc., 2021
  *

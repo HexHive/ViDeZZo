@@ -460,7 +460,7 @@ class Model(object):
         Generate license.
         """
         license = """/*
- * Type-Aware Virtual-Device Fuzzing
+ * Dependency-Aware Virtual-Device Fuzzing
  *
  * Copyright Qiang Liu <cyruscyliu@gmail.com>
  *
