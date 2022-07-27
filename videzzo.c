@@ -1562,7 +1562,10 @@ size_t reset_data(uint8_t *Data, size_t MaxSize) {
 //
 size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size,
         size_t MaxSize, unsigned int Seed) {
-    return ViDeZZoCustomMutator(Data, Size, MaxSize, Seed);
+    if (getenv("VIDEZZO_DISABLE_INTER_MESSAGE_MUTATORS"))
+        return LLVMFuzzerMutate(Data, Size, MaxSize);
+    else
+        return ViDeZZoCustomMutator(Data, Size, MaxSize, Seed);
 }
 
 ViDeZZoFuzzTarget *fuzz_target;
