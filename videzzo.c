@@ -81,7 +81,7 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
         while (injected_event != NULL) {
             Event *tmp_event = (Event *)calloc(sizeof(Event), 1);
             event_ops[injected_event->type].deep_copy(injected_event, tmp_event);
-            insert_event(group_event_input, tmp_event, group_event_input->n_events - 1);
+            append_event(group_event_input, tmp_event);
             injected_event = injected_event->next;
         }
         free_input(input);
@@ -93,7 +93,8 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
         // we are going to construct a group event
         Event *group_event = event_ops[EVENT_TYPE_GROUP_EVENT].construct(
             EVENT_TYPE_GROUP_EVENT, INTERFACE_GROUP_EVENT, 0, sizeof(Input), 0, (uint8_t *)input);
-        // we inject this group event into the old input
+        // we inject this group event into the old input, and then
+        // we will delete the old_current_event in __videzzo_execute_one_input
         insert_event(old_input, group_event, old_current_event);
         old_input->n_groups++;
     }

@@ -37,8 +37,12 @@ static uint64_t EVENT_MEMALLOC(size_t size) {{
     event_ops[event->type].print_event(event);
 #endif
     uint64_t phyaddr = event_ops[EVENT_TYPE_MEM_ALLOC].dispatch(event);
-    event_ops[event->type].release(event);
-    free(event);
+
+    int current_event = gfctx_get_current_event();
+    append_event(gfctx_get_current_input(), event);
+    current_event++;
+    gfctx_set_current_event(current_event);
+
     return phyaddr;
 }}
 
@@ -49,8 +53,11 @@ static void EVENT_MEMFREE(uint64_t physaddr) {{
     event_ops[event->type].print_event(event);
 #endif
     event_ops[EVENT_TYPE_MEM_FREE].dispatch(event);
-    event_ops[event->type].release(event);
-    free(event);
+
+    int current_event = gfctx_get_current_event();
+    append_event(gfctx_get_current_input(), event);
+    current_event++;
+    gfctx_set_current_event(current_event);
 }}
 
 static void __EVENT_MEMREAD(uint64_t physaddr, size_t size, uint8_t *data) {{
@@ -62,7 +69,7 @@ static void __EVENT_MEMREAD(uint64_t physaddr, size_t size, uint8_t *data) {{
     event_ops[EVENT_TYPE_MEM_READ].dispatch(event);
 
     int current_event = gfctx_get_current_event();
-    insert_event(gfctx_get_current_input(), event, current_event);
+    append_event(gfctx_get_current_input(), event);
     current_event++;
     gfctx_set_current_event(current_event);
 }}
@@ -76,7 +83,7 @@ static void __EVENT_MEMWRITE(uint64_t physaddr, size_t size, uint8_t *data) {{
     event_ops[EVENT_TYPE_MEM_WRITE].dispatch(event);
 
     int current_event = gfctx_get_current_event();
-    insert_event(gfctx_get_current_input(), event, current_event);
+    append_event(gfctx_get_current_input(), event);
     current_event++;
     gfctx_set_current_event(current_event);
 }}
