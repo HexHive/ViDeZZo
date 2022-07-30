@@ -93,8 +93,6 @@ typedef struct {
     size_t limit;                       /* input size   */
     void *buf;                          /* input data   */
     int index;                          /* input cursor */
-#define DEFAULT_INPUT_MAXSIZE           4096
-#define VIDEZZO_INPUT_MAXSIZE           4096
     size_t size;                        /* real input size */
     Event *events;                      /* corresponding events */
     int n_events;                       /* number of events
@@ -183,6 +181,13 @@ uint32_t gfctx_get_size(void);
 typedef void (*__flush)(void *object);
 void gfctx_set_flush(__flush);
 __flush gfctx_get_flush(void);
+
+// A generic trigger-action protocol
+// We put probes in videzzo-vmm and handle them in videzzo-core. Currently, one
+// probe is bond to one function. We haven't support any find-grained
+// instrumentation in videzzo-vmm. Considering there may be multiple types of
+// probes, we define a new set of interfaces for users, which includes a new
+// handler array and a new argument convention.
 
 // a local handler of a feedback should take the current input and
 // the index of the event just issued as parameters and udpate the current input

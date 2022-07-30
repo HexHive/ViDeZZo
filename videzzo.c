@@ -14,6 +14,18 @@
 #include <rfb/rfbclient.h>
 
 //
+// Default size for an input
+//
+static int get_default_input_maxsize() {
+    if (getenv("DEFAULT_INPUT_MAXSIZE"))
+        return atoi(getenv("DEFAULT_INPUT_MAXSIZE"));
+    else
+        return 0x1000;
+}
+
+static int DEFAULT_INPUT_MAXSIZE = 0x1000;
+
+//
 // Reproducer
 //
 int merge = 0;
@@ -81,7 +93,7 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
         while (injected_event != NULL) {
             Event *tmp_event = (Event *)calloc(sizeof(Event), 1);
             event_ops[injected_event->type].deep_copy(injected_event, tmp_event);
-            append_event(group_event_input, tmp_event);
+            insert_event(group_event_input, tmp_event, group_event_input->n_events - 1);
             injected_event = injected_event->next;
         }
         free_input(input);
@@ -182,7 +194,11 @@ void __videzzo_execute_one_input(Input *input) {
 #endif
 }
 
+extern void __free_memory_blocks();
+
 size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush flush) {
+    DEFAULT_INPUT_MAXSIZE = get_default_input_maxsize();
+
     // read Data to Input
     Input *input = init_input(Data, Size);
     if (!input)
@@ -203,11 +219,16 @@ size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flu
     } else {
         __videzzo_execute_one_input(input);
     }
-    size_t SerializationSize = serialize(input, Data, Size);
+    size_t SerializationSize = serialize(input, Data, DEFAULT_INPUT_MAXSIZE);
     gfctx_set_current_input(NULL);
     gfctx_set_object(NULL);
     gfctx_set_flush(NULL);
     free_input(input);
+    //
+    // We want to free all allocated blocks here to have a reliable reproducer.
+    //
+    __free_memory_blocks();
+
     return SerializationSize;
 }
 
@@ -423,7 +444,6 @@ static void print_event_data(Event *event) {
         fprintf(stderr, ", %s", enc);
     free(enc);
 }
-
 
 static void print_end() {
     fprintf(stderr, "\n");
@@ -651,14 +671,256 @@ static uint32_t serialize_clock_step(Event *event, uint8_t *Data, size_t Offset,
     return 10;
 }
 
+// For consecutive writes, we don't guarentee that two consecutive writes are
+// address-consecutive. This make the following the solution breaks its
+// assumption. Here, we sacrifice some performance to guarentee this assumption.
+static int handle_non_address_consecutive_writes(Input *input) {
+    Event *e;
+    int n_delete = 0;
+
+    Event *head = NULL, *next = NULL;
+
+    e = input->events;
+
+    for (int i = 0; e != NULL; i++) {
+        if (e->type != EVENT_TYPE_MEM_WRITE) {
+            e = e->next;
+            continue;
+        }
+        // for each write, we search
+        head = e;
+        next = head->next;
+        for (int j = i + 1; next != NULL; j++) {
+            if (head && next->addr == head->addr + head->size) {
+                uint32_t new_size = head->size + next->size;
+                uint8_t *new_data = (uint8_t *)calloc(new_size, 1);
+                memcpy(new_data, head->data, head->size);
+                memcpy(new_data + head->size, next->data, next->size);
+                free(head->data);
+                head->data = new_data;
+                head->size += next->size;
+                head->event_size += next->size;
+
+                remove_event(input, j);
+                n_delete += 1;
+                break;
+            }
+            next = next->next;
+        }
+        e = e->next;
+    }
+    return n_delete;
+}
+
+// For consecutive writes, we will merge them into one message, and this will
+// reduce the number of messages by 80%. However, this handler should be fast.
+//
+// The following is the nearest neighbor solution.
+static int handle_consecutive_writes(Input *input) {
+    Event *e;
+
+    bool reset = false;
+    int consecutive_writes = 0; // 0 -> write -> 1 -> non-write|non-consecutive -> 0
+    Event *head = NULL, *next = NULL;
+    uint32_t additional_size = 0;
+    uint8_t *additional_data = (uint8_t *)calloc(1024, 1);
+
+    int n_delete = 0;
+    uint8_t *delete = (uint8_t *)calloc(input->n_events, 1);
+
+    e = input->events;
+
+    for (int i = 0; e != NULL; i++) {
+        if (e->type != EVENT_TYPE_MEM_WRITE) {
+            reset = true;
+        } else {
+            consecutive_writes += 1;
+            if (consecutive_writes == 1) {
+                head = e;
+            } else {
+                next = e;
+                if (head && next->addr != head->addr + head->size + additional_size) {
+                    reset = true;
+                } else {
+                    // copy
+                    memcpy(additional_data + additional_size, next->data, next->size);
+                    additional_size += next->size;
+                    // let's mark this
+                    delete[i] = 0xde;
+                    n_delete += 1;
+                }
+            }
+        }
+
+        if (reset) {
+            // update
+            if (head && additional_size > 0) {
+                uint32_t new_size = head->size + additional_size;
+                uint8_t *new_data = (uint8_t *)calloc(new_size, 1);
+                memcpy(new_data, head->data, head->size);
+                memcpy(new_data + head->size, additional_data, additional_size);
+                free(head->data);
+                head->data = new_data;
+                head->size += additional_size;
+                head->event_size += additional_size;
+            }
+            // reset
+            reset = false;
+            consecutive_writes = 0;
+            head = NULL;
+            next = NULL;
+            additional_size = 0;
+            memset(additional_data, 0, 1024);
+        }
+        e = e->next;
+    }
+
+    for (int i = input->n_events - 1; i >= 0; i--) {
+        if (delete[i] == 0xde)
+            remove_event(input, i);
+    }
+    free(delete);
+    free(additional_data);
+    return n_delete;
+}
+
+// Remove useless messages as follows
+static int handle_useless_messages(Input *input) {
+    Event *e;
+    int n_delete = 0;
+    uint8_t *delete = (uint8_t *)calloc(input->n_events, 1);
+
+    e = input->events;
+    for (int i = 0; e != NULL; i++) {
+        if (e->type == EVENT_TYPE_MEM_ALLOC ||
+                e->type == EVENT_TYPE_MEM_READ ||
+                e->type == EVENT_TYPE_MEM_FREE) {
+            delete[i] = 0xde; // let's mark this
+            n_delete += 1;
+        }
+        e = e->next;
+    }
+    for (int i = input->n_events - 1; i >= 0; i--) {
+        if (delete[i] == 0xde)
+            remove_event(input, i);
+    }
+    free(delete);
+    return n_delete;
+}
+
+// For any buffers, if there is no read operation to it, we regard this buffer
+// as a safe buffer. We only allocate and fill the first safe buffer, and
+// relocate other safe buffers to the first one. Therefore, the second and the
+// following allocate and write operation can be remove, thus reducing the size
+// of messages. This could be summarized as a copy-on-read mechanism.
+
+// For simplicity and first, we consider the buffer whose size is 0x1000.
+// This follows such a pattern.
+// * 005, EVENT_TYPE_MEM_ALLOC, 0x1000
+// * 001, EVENT_TYPE_MEM_WRITE, 0x100000, 0x1000, 04d2328d04d2328d04d2328d04d2328d04d2328d04d2328d04d2328d04d2328d04d2328d04d2328d...
+// * 001, EVENT_TYPE_MEM_WRITE, 0x10f16900, 0x4, 00001000
+// Note that, there is definitely no read event following.
+//
+// Second, we consider duplicated allocation. According to my observation,
+// 0x00100000 is always allocated for many times and this can be removed.
+//
+// With the first and the second reduction, the size of messages goes down by 95%.
+static int handle_copy_on_read(Input *input) {
+    Event *e;
+    bool in = false, first = false;
+    int n_alloc = 0, n_free = 0;
+    uint32_t copy_on_read_addr = 0;
+    int copy_on_read_state = 0; // 0 -> alloc -> 1 -> write -> 2 -> write
+
+    int n_delete = 0;
+    uint8_t *delete = (uint8_t *)calloc(input->n_events, 1);
+
+    e = input->events;
+    for (int i = 0; e != NULL; i++) {
+        if (e->type == EVENT_TYPE_MEM_ALLOC) {
+            if (n_alloc == 0) {
+                in = true;
+                first = true;
+            }
+            n_alloc += 1;
+            if (copy_on_read_state == 0)
+                copy_on_read_state = 1;
+            delete[i] = 0xde; // let's mark this
+            n_delete += 1;
+        } else if (e->type == EVENT_TYPE_MEM_FREE) {
+            n_free += 1;
+            if (n_free == n_alloc) {
+                n_alloc = 0;
+                n_free = 0;
+                in = false;
+                first = false;
+            }
+            delete[i] = 0xde; // let's mark this
+            n_delete += 1;
+        } else if (e->type == EVENT_TYPE_MEM_WRITE) {
+            if (copy_on_read_state == 1) {
+                if (first) {
+                    first = false; // let's keep this
+                    copy_on_read_addr = (uint32_t)e->addr;
+                    // however, we can reduce 0x0010000
+                    if (n_delete > 1 && copy_on_read_addr == 0x00100000) { // we must keep one
+                        delete[i] = 0xde; // let's mark this
+                        n_delete += 1;
+                    }
+                } else {
+                    delete[i] = 0xde; // let's mark this
+                    n_delete += 1;
+                }
+                copy_on_read_state = 2;
+            } else if (copy_on_read_state == 2){
+                memcpy(e->data, &copy_on_read_addr, 4);
+                copy_on_read_state = 0;
+            }
+        } else if (e->type == EVENT_TYPE_MEM_READ) {
+            delete[i] = 0xde; // let's mark this
+            n_delete += 1;
+        }
+        e = e->next;
+    }
+
+    for (int i = input->n_events - 1; i >= 0; i--) {
+        if (delete[i] == 0xde)
+            remove_event(input, i);
+    }
+    free(delete);
+    return n_delete;
+}
+
 static uint32_t serialize_group_event(Event *event, uint8_t *Data, size_t Offset, size_t MaxSize) {
-    uint32_t size = event->size;
-    if (Offset + 6 + size >= MaxSize)
+    Input *input = (Input *)event->data;
+#ifdef VIDEZZO_DEBUG
+    int all_events = input->n_events;
+#endif
+
+    // this breaks the reproduction
+    // handle_copy_on_read(input);
+    handle_useless_messages(input);
+    while (handle_non_address_consecutive_writes(input)) {};
+    while (handle_consecutive_writes(input)) {};
+#ifdef VIDEZZO_DEBUG
+    fprintf(stderr, "- serialize_group_event: reduce %d/%d messages, remain %d bytes",
+            all_events - input->n_events, all_events, input->size);
+#endif
+    size_t size = input->size;
+
+    if (Offset + 6 + size >= MaxSize) {
+#ifdef VIDEZZO_DEBUG
+        fprintf(stderr, ", but space is not enough\n");
+#endif
         return 0;
+    }
+#ifdef VIDEZZO_DEBUG
+        fprintf(stderr, ", and space is enough\n");
+#endif
+
     Data[Offset] = event->type;
     Data[Offset + 1] = event->interface;
     memcpy(Data + Offset + 2, (uint8_t *)&size, 4);
-    Input *input = (Input *)event->data;
     serialize(input, Data + Offset + 6, MaxSize - Offset - 6);
     return 6 + size;
 }
@@ -743,7 +1005,7 @@ EventOps event_ops[] = {
         .construct   = construct_socket_write,
                                             .release     = release_data,
         .deep_copy   = deep_copy_with_data,
-    }, [EVENT_TYPE_GROUP_EVENT] = { // ?
+    }, [EVENT_TYPE_GROUP_EVENT] = {
         .change_addr = NULL,                .change_size = NULL,
         .change_valu = NULL,                .change_data = NULL,
         .dispatch    = NULL,                .print_event = print_event_group_event,
@@ -1194,10 +1456,10 @@ uint32_t serialize(Input *input, uint8_t *Data, uint32_t MaxSize) {
     fprintf(stderr, "- serialize\n");
 #endif
     for (int i = 0; event != NULL; i++) {
+        Offset += event_ops[event->type].serialize(event, Data, Offset, MaxSize);
 #ifdef VIDEZZO_DEBUG
         event_ops[event->type].print_event(event);
 #endif
-        Offset += event_ops[event->type].serialize(event, Data, Offset, MaxSize);
         event = event->next;
     }
 #ifdef VIDEZZO_DEBUG

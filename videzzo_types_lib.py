@@ -453,7 +453,7 @@ class Model(object):
         """
         Create a function to free allocated memory.
         """
-        self.append_code('free_memory_blocks();')
+        self.append_code('// free_memory_blocks();')
 
     def gen_license(self):
         """

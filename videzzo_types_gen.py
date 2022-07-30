@@ -123,6 +123,29 @@ static void free_memory_blocks() {{
     guest_memory_blocks = NULL;
 }}
 
+void __free_memory_blocks() {{
+    GuestMemoryBlock *tmp = guest_memory_blocks, *last = NULL;
+    Event *event;
+
+    if (tmp == NULL) return;
+    do {{
+        // construct
+        event = event_ops[EVENT_TYPE_MEM_FREE].construct(EVENT_TYPE_MEM_FREE,
+            INTERFACE_MEM_FREE, 0, 0, tmp->address, NULL);
+        // dispatch
+        event_ops[EVENT_TYPE_MEM_FREE].dispatch(event);
+        // free
+        event_ops[EVENT_TYPE_MEM_FREE].release(event);
+        free(event);
+
+        last = tmp;
+        tmp = tmp->next;
+        free(last);
+        last = NULL;
+    }} while (tmp != NULL);
+    guest_memory_blocks = NULL;
+}}
+
 #define RAND() (rand() & 0x7fff) /* ensure only 15-bit */
 uint32_t urand32() {{
     return (uint32_t)(((uint32_t)RAND() << 30) ^ ((uint32_t)RAND() << 15) ^ (uint32_t)RAND());
