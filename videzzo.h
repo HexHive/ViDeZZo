@@ -47,7 +47,7 @@ static const char *EventTypeNames[N_EVENT_TYPES] = {
     "EVENT_TYPE_PIO_WRITE",             //03
     "EVENT_TYPE_CLOCK_STEP",            //04
     "EVENT_TYPE_SOCKET_WRITE",          //05
-    "EVNET_TYPE_GROUP_EVENT",           //06
+    "EVENT_TYPE_GROUP_EVENT",           //06
     "EVENT_TYPE_MEM_READ",              //07
     "EVENT_TYPE_MEM_WRITE",             //08
     "EVENT_TYPE_MEM_ALLOC",             //09
