@@ -9,6 +9,6 @@ CC=clang CXX=clang++ ../configure \
     --disable-werror --disable-sanitizers \
     --extra-cflags="-DCLANG_COV_DUMP -DVIDEZZO_LESS_CRASHES -fprofile-instr-generate -fcoverage-mapping" \
     --target-list="i386-softmmu arm-softmmu"
-ninja qemu-videzzo-i386 qemu-system-i386 qemu-videzzo-arm qemu-system-arm
+ninja qemu-videzzo-i386 qemu-videzzo-arm
 popd
 popd
