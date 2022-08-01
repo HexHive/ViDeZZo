@@ -1328,7 +1328,8 @@ uint32_t deserialize(Input *input) {
 #endif
     while (input_check_index(input, 2)) {
         type = input_next_8(input);
-        interface = input_next_8(input);
+        interface = __disimm_around_event_interface(input_next_8(input));
+        type = Id_Description[interface].type;
         switch (type) {
             case EVENT_TYPE_MMIO_READ:
             case EVENT_TYPE_PIO_READ:
@@ -2009,4 +2010,21 @@ static void vnc_client_receive(void) {
 
 static void uninit_vnc_client(void) {
     rfbClientCleanup(client);
+}
+
+//
+// Disable inter-message mutators
+//
+uint32_t __disimm_around_event_size(uint32_t size, uint32_t mod) {
+    if (getenv("VIDEZZO_DISABLE_INTER_MESSAGE_MUTATORS"))
+        return pow2floor((size - 1) % (mod - 1) + 1);
+    else
+        return size;
+}
+
+uint8_t __disimm_around_event_interface(uint8_t interface) {
+    if (getenv("VIDEZZO_DISABLE_INTER_MESSAGE_MUTATORS")) {
+        return get_possible_interface(interface);
+    } else
+        return interface;
 }

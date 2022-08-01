@@ -999,7 +999,7 @@ static uint64_t qemu_readq(uint64_t addr) {
 }
 
 uint64_t dispatch_mmio_read(Event *event) {
-    switch (event->size) {
+    switch (__disimm_around_event_size(event->size, 8)) {
         case ViDeZZo_Byte: return qemu_readb(event->addr);
         case ViDeZZo_Word: return qemu_readw(event->addr);
         case ViDeZZo_Long: return qemu_readl(event->addr);
@@ -1021,7 +1021,7 @@ static uint32_t qemu_inl(uint16_t addr) {
 }
 
 uint64_t dispatch_pio_read(Event *event) {
-    switch (event->size) {
+    switch (__disimm_around_event_size(event->size, 4)) {
         case ViDeZZo_Byte: return qemu_inb(event->addr);
         case ViDeZZo_Word: return qemu_inw(event->addr);
         case ViDeZZo_Long: return qemu_inl(event->addr);
@@ -1137,7 +1137,7 @@ uint64_t dispatch_mmio_write(Event *event) {
                 break;
         }
     }
-    switch (event->size) {
+    switch (__disimm_around_event_size(event->size, 8)) {
         case ViDeZZo_Byte: qemu_writeb(event->addr, event->valu & 0xFF); break;
         case ViDeZZo_Word: qemu_writew(event->addr, event->valu & 0xFFFF); break;
         case ViDeZZo_Long: qemu_writel(event->addr, event->valu & 0xFFFFFFFF); break;
@@ -1162,7 +1162,7 @@ static void qemu_outl(uint16_t addr, uint32_t value) {
 uint64_t dispatch_pio_write(Event *event) {
     if (e1000e && event->addr == 0xc080)
         event->valu %= event->valu % 0xfffff;
-    switch (event->size) {
+    switch (__disimm_around_event_size(event->size, 4)) {
         case ViDeZZo_Byte: qemu_outb(event->addr, event->valu & 0xFF); break;
         case ViDeZZo_Word: qemu_outw(event->addr, event->valu & 0xFFFF); break;
         case ViDeZZo_Long: qemu_outl(event->addr, event->valu & 0xFFFFFFFF); break;

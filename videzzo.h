@@ -323,6 +323,15 @@ int init_vnc(void);
 int init_vnc_client(void *s, int vnc_port);
 int remove_offset_from_vnc_port(int vnc_port);
 
+//
+// Disable inter-message mutators
+//
+// When disable these mutators, we have to make sure some fields are reasonable.
+// We check and expose a set of APIs to use.
+//
+uint32_t __disimm_around_event_size(uint32_t size, uint32_t mod);
+uint8_t __disimm_around_event_interface(uint8_t interface);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif  // __cplusplus
