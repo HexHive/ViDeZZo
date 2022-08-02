@@ -747,17 +747,28 @@ ohci_80.add_instrumentation_point('DevOHCI.cpp', ['_ZL16ohciR3UpdateHCCAP11PDMDE
 ###################################################################################################################
 ohci_81 = Model('ohci', 81)
 ohci_81.add_struct('OHCI_BUF1', {'buf#0x100': FIELD_RANDOM})
+ohci_81.add_struct('OHCI_BUF2', {
+    'tag#0x4': FIELD_RANDOM, 'data_len#0x4': FIELD_CONSTANT,
+    'flags#0x1': FIELD_FLAG, 'lun#0x1': FIELD_RANDOM, 'cmd_len#0x1': FIELD_RANDOM, 'cmd1#0x1': FIELD_RANDOM,
+    'buf#0xff0': FIELD_RANDOM, 'sig2#0x4': FIELD_CONSTANT})
+ohci_81.add_flag('OHCI_BUF2.flags', {0: 7, 7: 1})
+ohci_81.add_constant('OHCI_BUF2.sig2', [0x43425355])
+ohci_81.add_constant('OHCI_BUF2.data_len', [0, 100])
 ohci_81.add_struct('OHCI_ED', {'flags#0x4': FIELD_FLAG, 'tail#0x4': FIELD_POINTER , 'head#0x4': FIELD_POINTER, 'next#0x4': FIELD_POINTER})
-ohci_81.add_flag('OHCI_ED.flags', {0: '7@0x0', 7: 4, 11: 2, 13: 1, 14: 1, 15: 1, 16: 11, 27: 5})
+ohci_81.add_flag('OHCI_ED.flags', {0: '7@0x0', 7: 2, 9: '2@0', 11: 2, 13: 1, 14: 1, 15: 1, 16: 11, 27: 5})
 ohci_81.add_point_to('OHCI_ED.next', ['OHCI_BUF1'], alignment=4)
-ohci_81.add_struct('OHCI_TD', {'flags#0x4': FIELD_FLAG, 'cbp#0x4': FIELD_RANDOM, 'next#0x4': FIELD_POINTER, 'be#0x4': FIELD_RANDOM})
+ohci_81.add_struct('OHCI_TD', {'flags#0x4': FIELD_FLAG, 'cbp#0x4': FIELD_POINTER | FIELD_FLAG, 'next#0x4': FIELD_POINTER, 'be#0x4': FIELD_POINTER | FIELD_FLAG})
+ohci_81.add_flag('OHCI_TD.cbp', {0: '12@0xffc'})
+ohci_81.add_flag('OHCI_TD.be', {0: '4@a', 4: 2, 6: '6@0'})
+ohci_81.add_point_to('OHCI_TD.cbp', ['OHCI_BUF2'], alignment=12, immediate=True)
+ohci_81.add_point_to('OHCI_TD.be', ['OHCI_BUF2'], alignment=12, immediate=True)
 ohci_81.add_flag('OHCI_TD.flags', {0: 16, 18: 1, 19: 2, 21: 3, 24: 1, 25: 1, 26: 2, 28: 4})
 ohci_81.add_point_to('OHCI_TD.next', ['OHCI_TD'], alignment=4)
 ohci_81.add_struct('OHCI_ISO_TD', {
     'flags#0x4': FIELD_FLAG, 'bp#0x4': FIELD_RANDOM, 'next#0x4': FIELD_POINTER, 'be#0x4': FIELD_RANDOM,
     'offset0#0x2': FIELD_RANDOM, 'offset1#0x2': FIELD_RANDOM, 'offset2#0x2': FIELD_RANDOM, 'offset3#0x2': FIELD_RANDOM,
     'offset4#0x2': FIELD_RANDOM, 'offset5#0x2': FIELD_RANDOM, 'offset6#0x2': FIELD_RANDOM, 'offset7#0x2': FIELD_RANDOM})
-ohci_81.add_flag('OHCI_ISO_TD.flags', {0: 16, 18: 1, 19: 2, 21: 3, 24: 1, 25: 1, 26: 2, 28: 4})
+ohci_81.add_flag('OHCI_ISO_TD.flags', {0: '16@0', 18: 1, 19: 2, 21: 3, 24: 3, 28: 4})
 ohci_81.add_point_to('OHCI_ISO_TD.next', ['OHCI_ISO_TD'], alignment=4)
 ohci_81.add_point_to_single_linked_list('OHCI_ED.head', 'OHCI_ED.tail', ['OHCI_TD', 'OHCI_ISO_TD'], ['next', 'next'], flags=['OHCI_ED.flags.15'], alignment=4)
 ohci_81.add_head(['OHCI_ED'])

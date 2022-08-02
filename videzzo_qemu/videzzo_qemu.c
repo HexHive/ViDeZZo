@@ -97,7 +97,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "i386",
         .name = "ohci",
         .args = "-machine q35 -nodefaults -device pci-ohci,num-ports=6 "
-        COMMON_USB_CMD,
+        COMMON_USB_CMD_STORAGE,
         .mrnames = "*ohci*",
         .file = "hw/usb/hcd-ohci.c",
         .socket = false,

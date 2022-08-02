@@ -168,7 +168,7 @@ class Model(object):
             'links': {'0': field_name},
         }
     """
-    def add_point_to(self, pointer, types, flags=None, alignment=0, array=False):
+    def add_point_to(self, pointer, types, flags=None, alignment=0, array=False, immediate=False):
         """
         pointer: struct_type.field_name
         types: [struct_type0, struct_type1, ..., struct_typen]
@@ -178,11 +178,14 @@ class Model(object):
         self.check_field(struct_type, field_name)
         if len(types) == 1:
             self.structs[struct_type][field_name]['point_to'] = {
-                'flags': None, 'types': {'0': types[0]}, 'alignment': alignment, 'array': array}
+                'flags': None, 'types': {'0': types[0]},
+                'alignment': alignment, 'array': array, 'immediate': immediate}
             return struct_type, field_name
         else:
             assert flags is not None
-            metadata = {'flags': [], 'types': {}, 'alignment': alignment, 'array': array}
+            metadata = {
+                'flags': [], 'types': {},
+                'alignment': alignment, 'array': array, 'immediate': immediate}
             for flag in flags:
                 flag_struct_type, flag_field_name, flag_bit = flag.split('.')
                 self.check_field(flag_struct_type, flag_field_name)
@@ -259,6 +262,16 @@ class Model(object):
         # self.append_code('{}->{} = {};'.format(struct_name, field_name, 'urand32()'))
         self.__gen_event_memwrite(struct_name, field_name, 'urand32()', 4)
 
+    def gen_immediate_point_to(self, struct_name, field_name, metadata):
+        struct_type = self.recover_struct_type_from_name(struct_name)
+
+        flags = metadata['flags']
+        if flags:
+            flag_value = self.__gen_flag_value(flags)
+        else:
+            flag_value = '0x0'
+        self.__gen_point_to(struct_name, field_name, metadata['point_to'], flag_value)
+
     def gen_constant_declaration(self):
         """
         Declare these constants.
@@ -329,7 +342,7 @@ class Model(object):
             self.__gen_event_memwrite(struct_name, field_name, sub_struct_name, 4);
 
         def is_single_linked_list(__metadata):
-            return 'linked_list' in __metadata and __metadata['linked_list'] is 'single'
+            return 'linked_list' in __metadata and __metadata['linked_list'] == 'single'
 
         # we support pointing to a single object, or a single linked list
         if flags is None:
@@ -431,8 +444,10 @@ class Model(object):
                 self.gen_random(struct_name, field_name, metadata)
             elif field_type & FIELD_CONSTANT:
                 self.gen_constant(struct_name, field_name, metadata)
-            elif field_type & FIELD_POINTER:
-                pass
+            elif (field_type & FIELD_POINTER):
+                if 'immediate' in metadata['point_to'] and metadata['point_to']['immediate']:
+                    # we want both point_to and flags so we pass metadata
+                    self.gen_immediate_point_to(struct_name, field_name, metadata)
             else:
                 raise ValueError('unsupported FIELD_TYPE: {}'.format(field_type))
         return struct_name
