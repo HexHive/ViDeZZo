@@ -16,7 +16,7 @@ def __gen_code(models, hypervisor_dir):
 #include "videzzo.h"
 
 static uint64_t get_bit(uint64_t data, uint32_t start, uint32_t length) {{
-    return (data >> start) & ((1 << (length + 1)) - 1);
+    return (data >> start) & ((1 << (length)) - 1);
 }}
 
 // very interesting and useful function
