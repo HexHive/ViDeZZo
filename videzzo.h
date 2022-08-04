@@ -70,7 +70,7 @@ typedef struct Event {
 
 typedef struct EventOps {
     void (*change_addr)(Event *event, uint64_t new_addr);
-    uint32_t (*change_size)(Event *event, uint32_t new_size); // return real size
+    void (*change_size)(Event *event, uint32_t new_size);
     void (*change_valu)(Event *event, uint64_t new_valu);
     void (*change_data)(Event *event, uint8_t *new_data);
     uint64_t (*dispatch)(Event *event);
@@ -111,6 +111,9 @@ void remove_event(Input *input, uint32_t idx);
 void insert_event(Input *input, Event *event, uint32_t idx);
 void append_event(Input *input, Event *event);
 size_t reset_data(uint8_t *Data, size_t MaxSize);
+// we validate the input for [remove|insert|append]_event and serialize
+bool validate_input_size(Input *input, size_t groundtruth);
+bool validate_input_n_events(Input *input, int groundtruth);
 
 //
 // Interface

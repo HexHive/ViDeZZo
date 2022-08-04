@@ -387,30 +387,12 @@ static void change_addr_generic(Event *event, uint64_t new_addr) {
     event->addr = around_event_addr(event->interface, new_addr);
 }
 
-static uint32_t change_size_generic(Event *event, uint32_t new_size) {
+static void change_size_generic(Event *event, uint32_t new_size) {
     event->size = around_event_size(event->interface, new_size);
-    return new_size;
 }
 
 static void change_valu_generic(Event *event, uint64_t new_valu) {
     event->valu = new_valu;
-}
-
-static uint32_t change_size_socket_write(Event *event, uint32_t new_size) {
-    // copy old data
-    new_size = around_event_size(event->interface, new_size);
-    uint8_t *new_data = (uint8_t *)calloc(new_size, 1);
-    if (new_size >= event->size) {
-        memcpy(new_data, event->data, event->size);
-    } else {
-        memcpy(new_data, event->data, new_size);
-    }
-    free(event->data);
-    event->data = new_data;
-    // update size
-    event->event_size += (new_size - event->size);
-    event->size = new_size;
-    return new_size;
 }
 
 static void change_data_socket_write(Event *event, uint8_t *new_data) {
@@ -916,7 +898,7 @@ EventOps event_ops[] = {
         .construct   = construct_clock_step,.release     = release_nothing,
         .deep_copy   = deep_copy_no_data,
     }, [EVENT_TYPE_SOCKET_WRITE] = {
-        .change_addr = NULL,                .change_size = change_size_socket_write,
+        .change_addr = NULL,                .change_size = NULL,
         .change_valu = NULL,                .change_data = change_data_socket_write,
         .dispatch    =dispatch_socket_write,.print_event = print_event_socket_write,
         .serialize   = serialize_socket_write,
@@ -1191,6 +1173,26 @@ void free_input(Input *input) {
     free(input);
 }
 
+bool validate_input_size(Input *input, size_t groundtruth) {
+    size_t real_size = 0;
+    Event *event = input->events, *tmp;
+    while ((tmp = event)) {
+        real_size += event->event_size;
+        event = tmp->next;
+    }
+    return real_size == groundtruth;
+}
+
+bool validate_input_n_events(Input *input, int groundtruth) {
+    int real_n_events = 0;
+    Event *event = input->events, *tmp;
+    while ((tmp = event)) {
+        real_n_events++;
+        event = tmp->next;
+    }
+    return real_n_events == groundtruth;
+}
+
 //
 // Input IO
 //
@@ -1396,15 +1398,10 @@ static void __Mutate_ChangeAddr(Event *event, uint64_t new_addr) {
     }
 }
 
-static uint32_t __Mutate_ChangeSize(Event *event, uint32_t new_size) {
-    if (event->type == EVENT_TYPE_SOCKET_WRITE) {
-        new_size = (new_size - SOCKET_WRITE_MIN_SIZE) %
-            (SOCKET_WRITE_MAX_SIZE - SOCKET_WRITE_MIN_SIZE) + SOCKET_WRITE_MIN_SIZE;
-    }
+static void __Mutate_ChangeSize(Event *event, uint32_t new_size) {
     if (event_ops[event->type].change_size) { // check
-        return event_ops[event->type].change_size(event, new_size); // update
+        event_ops[event->type].change_size(event, new_size); // update
     }
-    return 0;
 }
 
 static void __Mutate_ChangeValu(Event *event, uint64_t new_value) {
@@ -1414,11 +1411,10 @@ static void __Mutate_ChangeValu(Event *event, uint64_t new_value) {
 }
 
 static void __Mutate_ChangeData(Event *event, uint8_t *new_data) {
-    if (event_ops[event->type].change_data) {
-        event_ops[event->type].change_data(event, new_data);
+    if (event_ops[event->type].change_data) { // check
+        event_ops[event->type].change_data(event, new_data); // update
     }
 }
-
 
 static void __Mutate_InsertEvent(Input *input, uint32_t idx, uint32_t N) {
     // contruct a new event
@@ -1567,28 +1563,11 @@ static size_t Mutate_ChangeAddr(Input *input) { // randomize
     return get_input_size(input);
 }
 
-// Size--||++
+// Size||
 static size_t Mutate_ChangeSize(Input *input) { // randomize
     size_t Idx = rand() % input->n_events; // choose one event
     Event *event = get_event(input, Idx); // get this event
-    uint32_t old_size = event->size;
-    uint32_t new_size = rand();
-    new_size = __Mutate_ChangeSize(event, rand());
-    if (new_size == 0)
-        return 0;
-    // update offset
-    for (Event *following_event = event->next;
-            following_event != NULL; following_event = following_event->next) {
-        if (new_size >= old_size)
-            following_event->offset += (new_size - old_size);
-        else
-            following_event->offset -= (old_size - new_size);
-    }
-    // update input size
-    if (new_size >= old_size)
-        input->size += (new_size - old_size);
-    else
-        input->size -= (old_size - new_size);
+    __Mutate_ChangeSize(event, rand());
     return get_input_size(input);
 }
 
