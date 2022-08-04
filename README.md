@@ -11,10 +11,6 @@ AArch64 builds.
 
 More technical details go in to our paper. The usage of ViDeZZo is as follows.
 
-Some development plans.
-- [ ] Fix messages lost due to not enough seed size
-- [ ] Tune performance a bit
-
 ## Docker container
 
 We recommend running ViDeZZo in a docker container. We also tested ViDeZZo on a
@@ -59,9 +55,16 @@ virtual device, start with `sudo`.
 >Evaluate security impacts of crashes, fix bugs and verify, submit patches and
 discuss in communities. Apply for CVE and advertise if it is necessary.
 
-+ Collect historical seeds: run the crashed fuzz target with `CORPUS`.  +
-Delta-debug and gen a PoC: run `02-dd.sh -t ABS_PATH_TO_BINARY -c
-ABS_PATH_TO_CRASHING_SEED -s ABS_PATH_TO_CORPUS`. Note that UBSAN bugs need to
++ Collect historical seeds: run the crashed fuzz target with `CORPUS`,
+`DEFAULT_INPUT_MAXSIZE=10000000`, and `-max_len=10000000`, where `10000000` is
+decided by the running status.
+
+``` bash
+DEFAULT_INPUT_MAXSIZE=10000000 ./qemu-videzzo-i386-target-videzzo-fuzz-ohci -max_len=10000000 ohci
+```
+
++ Delta-debug and gen a PoC: run `02-dd.sh -t ABS_PATH_TO_BINARY -s
+ABS_PATH_TO_CORPUS -c ABS_PATH_TO_CRASHING_SEED`. Note that UBSAN bugs need to
 enable "halt_on_error" and the check of "runtime error".
 
 ## Source code coverage profiling
