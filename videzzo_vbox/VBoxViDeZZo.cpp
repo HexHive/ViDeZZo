@@ -689,7 +689,7 @@ void flush_events(void *opaque) {
 //
 // call into videzzo from vbox
 //
-static void videzzo_vbox(uint8_t *Data, size_t Size) {
+static int videzzo_vbox(uint8_t *Data, size_t Size) {
     /*
     QTestState *s = opaque;
     if (vnc_client_needed && !vnc_client_initialized) {
@@ -697,7 +697,7 @@ static void videzzo_vbox(uint8_t *Data, size_t Size) {
         vnc_client_initialized = true;
     }
     */
-    videzzo_execute_one_input(Data, Size, pVM, &flush_events);
+    return videzzo_execute_one_input(Data, Size, pVM, &flush_events);
 }
 
 //

@@ -238,7 +238,7 @@ typedef struct ViDeZZoFuzzTarget {
     // This is repeatedly executed during the fuzzing loop.
     // Its should handle setup, input execution and cleanup.
     // Cannot be NULL.
-    void (*fuzz)(unsigned char *, size_t);
+    int (*fuzz)(unsigned char *, size_t);
     void *opaque;                           /* ViDeZZoFuzzTargetConfig */
 } ViDeZZoFuzzTarget;
 
@@ -287,7 +287,7 @@ void print_interfaces(void);
 //
 // call from videzzo-vmm to videzzo-core
 //
-size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush flush);
+int videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush flush);
 
 //
 // Feecback From VMM

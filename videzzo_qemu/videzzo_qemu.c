@@ -1409,13 +1409,13 @@ static void flush_events(QTestState *s) {
 //
 // call into videzzo from QEMU
 //
-static void videzzo_qemu(uint8_t *Data, size_t Size) {
+static int videzzo_qemu(uint8_t *Data, size_t Size) {
     QTestState *s = fuzz_qts;
     if (vnc_client_needed && !vnc_client_initialized) {
         init_vnc_client(s, vnc_port);
         vnc_client_initialized = true;
     }
-    videzzo_execute_one_input(Data, Size, s, &flush_events);
+    return videzzo_execute_one_input(Data, Size, s, &flush_events);
 }
 
 //

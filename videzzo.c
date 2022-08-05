@@ -41,13 +41,16 @@ void videzzo_clear_merge() {
 //
 // GroupMutator Feedback
 //
+// TODO: Somehow, we want to disable all group mutators. We use this variable or
+// an environment variable to control this. Apparantly, they are duplicated. In
+// the future, we want remove one of them.
 bool DisableGroupMutator = false;
 
-void disable_group_mutator_miss(void) {
+void disable_group_mutator(void) {
     DisableGroupMutator = true;
 }
 
-void enable_group_mutator_miss(void) {
+void enable_group_mutator(void) {
     DisableGroupMutator = false;
 }
 
@@ -166,7 +169,7 @@ size_t ViDeZZoCustomMutator(uint8_t *Data, size_t Size,
     return reset_data(Data, MaxSize); // Fallback, should not happen frequently.
 }
 
-void __videzzo_execute_one_input(Input *input) {
+static void __videzzo_execute_one_input(Input *input) {
     Event *event = input->events;
 #ifdef VIDEZZO_DEBUG
     fprintf(stderr, "- dispatching events\n");
@@ -193,7 +196,7 @@ void __videzzo_execute_one_input(Input *input) {
 
 extern void __free_memory_blocks();
 
-size_t videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush flush) {
+int videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush flush) {
     DEFAULT_INPUT_MAXSIZE = get_default_input_maxsize();
 
     // read Data to Input
@@ -592,6 +595,9 @@ static uint32_t serialize_io_read(Event *event, uint8_t *Data, size_t Offset, si
     Data[Offset + 1] = event->interface;
     memcpy(Data + Offset + 2, (uint8_t *)&(event->addr), 8);
     memcpy(Data + Offset + 10, (uint8_t *)&(event->size), 4);
+#ifdef VIDEZZO_DEBUG
+    event_ops[event->type].print_event(event);
+#endif
     return 14;
 }
 
@@ -603,6 +609,9 @@ static uint32_t serialize_io_write(Event *event, uint8_t *Data, size_t Offset, s
     memcpy(Data + Offset + 2, (uint8_t *)&(event->addr), 8);
     memcpy(Data + Offset + 10, (uint8_t *)&(event->size), 4);
     memcpy(Data + Offset + 14, (uint8_t *)&(event->valu), 8);
+#ifdef VIDEZZO_DEBUG
+    event_ops[event->type].print_event(event);
+#endif
     return 22;
 }
 
@@ -618,6 +627,9 @@ static uint32_t serialize_mem_read_or_write(Event *event, uint8_t *Data, size_t 
         memset(Data + Offset + 14, 0, size);
     else
         memcpy(Data + Offset + 14, (uint8_t *)(event->data), size);
+#ifdef VIDEZZO_DEBUG
+    event_ops[event->type].print_event(event);
+#endif
     return 14 + event->size;
 }
 
@@ -627,6 +639,9 @@ static uint32_t serialize_mem_alloc_or_free(Event *event, uint8_t *Data, size_t 
     Data[Offset] = event->type;
     Data[Offset + 1] = event->interface;
     memcpy(Data + Offset + 2, (uint8_t *)&(event->valu), 8);
+#ifdef VIDEZZO_DEBUG
+    event_ops[event->type].print_event(event);
+#endif
     return 10;
 }
 
@@ -638,6 +653,9 @@ static uint32_t serialize_socket_write(Event *event, uint8_t *Data, size_t Offse
     Data[Offset + 1] = event->interface;
     memcpy(Data + Offset + 2, (uint8_t *)&size, 4);
     memcpy(Data + Offset + 6, (uint8_t *)event->data, size);
+#ifdef VIDEZZO_DEBUG
+    event_ops[event->type].print_event(event);
+#endif
     return 6 + size;
 }
 
@@ -647,6 +665,9 @@ static uint32_t serialize_clock_step(Event *event, uint8_t *Data, size_t Offset,
     Data[Offset] = event->type;
     Data[Offset + 1] = event->interface;
     memcpy(Data + Offset + 2, (uint8_t *)&event->valu, 8);
+#ifdef VIDEZZO_DEBUG
+    event_ops[event->type].print_event(event);
+#endif
     return 10;
 }
 
@@ -807,11 +828,21 @@ static uint32_t serialize_group_event(Event *event, uint8_t *Data, size_t Offset
     // this is covered by handle_non_address_consecutive_writes
     // while (handle_consecutive_writes(input)) {};
     size_t size = input->size;
+    // let's update event
+    event->size = input->size;
+    event->event_size = 6 + event->size;
+    // note that parent input is not updated, but this is fine
+    // we are going to end this iteration ...
 
     if (Offset + 6 + size >= MaxSize) {
-        fprintf(stderr, "- serialize_group_event: reduce %d/%d messages, remain %lu bytes",
+        fprintf(stderr, "  * serialize_group_event: reduce %d/%d messages, remain %lu bytes",
                 n_events - input->n_events, n_events, input->size);
         fprintf(stderr, ", but space is not enough\n");
+        Event *last_event = get_event(input, input->n_events - 1);
+        return event_ops[last_event->type].serialize(last_event, Data, Offset, MaxSize);
+#ifdef VIDEZZO_DEBUG
+        event_ops[last_event->type].print_event(last_event);
+#endif
         return 0;
     }
 
@@ -819,6 +850,9 @@ static uint32_t serialize_group_event(Event *event, uint8_t *Data, size_t Offset
     Data[Offset + 1] = event->interface;
     memcpy(Data + Offset + 2, (uint8_t *)&size, 4);
     serialize(input, Data + Offset + 6, MaxSize - Offset - 6);
+#ifdef VIDEZZO_DEBUG
+    event_ops[event->type].print_event(event);
+#endif
     return 6 + size;
 }
 
@@ -1344,10 +1378,10 @@ uint32_t deserialize(Input *input) {
                 size = input_next_32(input);
                 uint8_t *sub_events = (uint8_t *)calloc(size, 1);
                 input_next(input, sub_events, size); // get their data
-                Input *input = init_input(sub_events, size); // make it an input
-                deserialize(input); // nice!
+                Input *grouped_input = init_input(sub_events, size); // make it an input
+                deserialize(grouped_input); // nice!
                 free(sub_events);
-                event = event_ops[type].construct(type, interface, 0, size, 0, (uint8_t *)input);
+                event = event_ops[type].construct(type, interface, 0, size, 0, (uint8_t *)grouped_input);
 #ifdef VIDEZZO_DEBUG
                 event_ops[event->type].print_event(event);
 #endif
@@ -1375,9 +1409,6 @@ uint32_t serialize(Input *input, uint8_t *Data, uint32_t MaxSize) {
 #endif
     for (int i = 0; event != NULL; i++) {
         Offset += event_ops[event->type].serialize(event, Data, Offset, MaxSize);
-#ifdef VIDEZZO_DEBUG
-        event_ops[event->type].print_event(event);
-#endif
         event = event->next;
     }
 #ifdef VIDEZZO_DEBUG
@@ -1740,8 +1771,10 @@ int LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size) {
         fuzz_target->pre_fuzz();
         pre_fuzz_done = true;
     }
-    fuzz_target->fuzz(Data, Size);
-    return 0;
+    // as we may append events, LLVMFuzzerTestoneInput should
+    // return the size of the new input
+    size_t Res = fuzz_target->fuzz(Data, Size);
+    return Res;
 }
 
 //
