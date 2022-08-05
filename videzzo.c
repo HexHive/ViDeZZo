@@ -144,26 +144,23 @@ size_t ViDeZZoCustomMutator(uint8_t *Data, size_t Size,
     }
     // set up the RNG
     srand(Seed);
-    // Mutate all events
-    // TODO: maybe 100 is tunable
-    for (int i = 0; i < 100; i++) {
-        // weighted: select_weighted_mutators
-        size_t aaaaaaa = select_mutators(rand());
+    // Mutate all events until an non-zero size
+    // weighted: select_weighted_mutators
+    size_t aaaaaaa = select_mutators(rand());
 #ifdef VIDEZZO_DEBUG
-        fprintf(stderr, "- %s\n", CustomMutatorNames[aaaaaaa]);
+    fprintf(stderr, "- %s\n", CustomMutatorNames[aaaaaaa]);
 #endif
-        size_t NewSize = CustomMutators[aaaaaaa](input);
-        if (NewSize) {
-            size_t SerializationSize = serialize(input, Data, MaxSize);
-            free_input(input);
+    size_t NewSize = CustomMutators[aaaaaaa](input);
+    if (NewSize) {
+        size_t SerializationSize = serialize(input, Data, MaxSize);
+        free_input(input);
 #ifdef VIDEZZO_DEBUG
-            if (NewSize > MaxSize)
-                fprintf(stderr, "- NewSize (overflow), %zu\n", NewSize);
-            else
-                fprintf(stderr, "- NewSize, %zu\n", NewSize);
+        if (NewSize > MaxSize)
+            fprintf(stderr, "- NewSize (overflow), %zu\n", NewSize);
+        else
+            fprintf(stderr, "- NewSize, %zu\n", NewSize);
 #endif
-            return SerializationSize;
-        }
+        return SerializationSize;
     }
     free_input(input);
     return reset_data(Data, MaxSize); // Fallback, should not happen frequently.
@@ -1712,8 +1709,7 @@ size_t reset_data(uint8_t *Data, size_t MaxSize) {
         append_event(input, event);
     }
     // save
-    serialize(input, Data, MaxSize);
-    size_t Size = get_input_size(input);
+    size_t Size = serialize(input, Data, MaxSize);
     free_input(input);
     return Size;
 }
