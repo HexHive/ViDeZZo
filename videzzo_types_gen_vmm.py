@@ -747,11 +747,14 @@ ohci_80.add_instrumentation_point('DevOHCI.cpp', ['_ZL16ohciR3UpdateHCCAP11PDMDE
 ###################################################################################################################
 ohci_81 = Model('ohci', 81)
 ohci_81.add_struct('OHCI_BUF1', {'buf#0x100': FIELD_RANDOM})
+# this involves SCSI commands!
 ohci_81.add_struct('OHCI_BUF2', {
     'tag#0x4': FIELD_RANDOM, 'data_len#0x4': FIELD_CONSTANT,
-    'flags#0x1': FIELD_FLAG, 'lun#0x1': FIELD_RANDOM, 'cmd_len#0x1': FIELD_RANDOM, 'cmd1#0x1': FIELD_RANDOM,
+    'flags#0x1': FIELD_FLAG, 'lun#0x1': FIELD_RANDOM, 'cmd_len#0x1': FIELD_RANDOM, 'cmd1#0x1': FIELD_CONSTANT,
     'buf#0xff0': FIELD_RANDOM, 'sig2#0x4': FIELD_CONSTANT})
 ohci_81.add_flag('OHCI_BUF2.flags', {0: 7, 7: 1})
+# ohci_81.add_constant('OHCI_BUF2.cmd1', [0x12, 0x03, 0xa0, 0x00, 0x46, 0x4a, 0x0a, 0xa1, 0x85])
+ohci_81.add_constant('OHCI_BUF2.cmd1', [0x12, 0x03])
 ohci_81.add_constant('OHCI_BUF2.sig2', [0x43425355])
 ohci_81.add_constant('OHCI_BUF2.data_len', [0, 100])
 ohci_81.add_struct('OHCI_ED', {'flags#0x4': FIELD_FLAG, 'tail#0x4': FIELD_POINTER , 'head#0x4': FIELD_POINTER, 'next#0x4': FIELD_POINTER})
