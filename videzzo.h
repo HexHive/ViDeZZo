@@ -22,7 +22,7 @@
 //
 // Event
 //
-#define N_EVENT_TYPES           11
+#define N_EVENT_TYPES           12
 typedef enum {                          //I
     EVENT_TYPE_MMIO_READ      = 0,      //*
     EVENT_TYPE_MMIO_WRITE,              //*
@@ -33,25 +33,29 @@ typedef enum {                          //I
 #define SOCKET_WRITE_MIN_SIZE   0x001
 #define SOCKET_WRITE_MAX_SIZE   0x100
     EVENT_TYPE_SOCKET_WRITE   = 5,      //*
-    EVENT_TYPE_GROUP_EVENT    = 6,      //-
-    EVENT_TYPE_MEM_READ       = 7,      //*
+    EVENT_TYPE_MEM_READ       = 6,      //*
     EVENT_TYPE_MEM_WRITE,               //*
-    EVENT_TYPE_MEM_ALLOC      = 9,      //*
+    EVENT_TYPE_MEM_ALLOC,               //*
     EVENT_TYPE_MEM_FREE,                //*
+    // we may add subtype but this is too early
+    // LM: load miss, RS: recording stop
+    EVENT_TYPE_GROUP_EVENT_LM = 10,     //-
+    EVENT_TYPE_GROUP_EVENT_RS = 11,     //-
 } EventType;
 
 static const char *EventTypeNames[N_EVENT_TYPES] = {
-    "EVENT_TYPE_MMIO_READ",             //00
-    "EVENT_TYPE_MMIO_WRITE",            //01
-    "EVENT_TYPE_PIO_READ",              //02
-    "EVENT_TYPE_PIO_WRITE",             //03
-    "EVENT_TYPE_CLOCK_STEP",            //04
-    "EVENT_TYPE_SOCKET_WRITE",          //05
-    "EVENT_TYPE_GROUP_EVENT",           //06
-    "EVENT_TYPE_MEM_READ",              //07
-    "EVENT_TYPE_MEM_WRITE",             //08
-    "EVENT_TYPE_MEM_ALLOC",             //09
-    "EVENT_TYPE_MEM_FREE",              //10
+    "EVENT_TYPE_MMIO_READ",
+    "EVENT_TYPE_MMIO_WRITE",
+    "EVENT_TYPE_PIO_READ",
+    "EVENT_TYPE_PIO_WRITE",
+    "EVENT_TYPE_CLOCK_STEP",
+    "EVENT_TYPE_SOCKET_WRITE",
+    "EVENT_TYPE_MEM_READ",
+    "EVENT_TYPE_MEM_WRITE",
+    "EVENT_TYPE_MEM_ALLOC",
+    "EVENT_TYPE_MEM_FREE",
+    "EVENT_TYPE_GROUP_EVENT_LM",
+    "EVENT_TYPE_GROUP_EVENT_RS",
 };
 
 typedef struct Event {
@@ -122,16 +126,17 @@ bool validate_input_n_events(Input *input, int groundtruth);
 // the transparent events, these interfaces are
 // also transparent to the fuzzer
 // predefined interfaces are fixed by ViDeZZo
-#define INTERFACE_MEM_READ      0
-#define INTERFACE_MEM_WRITE     1
-#define INTERFACE_CLOCK_STEP    2
-#define INTERFACE_GROUP_EVENT   3
-#define INTERFACE_SOCKET_WRITE  4
-#define INTERFACE_MEM_ALLOC     5
-#define INTERFACE_MEM_FREE      6
+#define INTERFACE_MEM_READ       0
+#define INTERFACE_MEM_WRITE      1
+#define INTERFACE_CLOCK_STEP     2
+#define INTERFACE_SOCKET_WRITE   3
+#define INTERFACE_MEM_ALLOC      4
+#define INTERFACE_MEM_FREE       5
+#define INTERFACE_GROUP_EVENT_LM 6
+#define INTERFACE_GROUP_EVENT_RS 7
 // dynamic interfaces are shared with VMM
-#define INTERFACE_DYNAMIC       7
-#define INTERFACE_END           512
+#define INTERFACE_DYNAMIC        8
+#define INTERFACE_END            512
 
 typedef struct {
     uint64_t addr;

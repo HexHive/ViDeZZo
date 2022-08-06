@@ -54,14 +54,85 @@ void enable_group_mutator(void) {
     DisableGroupMutator = false;
 }
 
+static int in_one_iteration = 0;
 static int loop_counter = 0;
+static int status = 0; // 0 -> 1/2 -> 2/1 -> bingo
 
+// TODO: change the API convetion and API name
+void GroupMutatorOrder(uint8_t id) {
+    if (getenv("VIDEZZO_DISABLE_INTRA_MESSAGE_ANNOTATION"))
+        return;
+    if (DisableGroupMutator)
+        return;
+#ifdef VIDEZZO_DEBUG
+    fprintf(stderr, "- GroupMutatorOrder: %d\n", status);
+#endif
+    static int current_event_s = 0;
+    static int current_event_e = 0;
+    static int last_id = 0;
+
+    if (status == 0 && (id == 1 || id == 2)) {
+        status = 1;
+        last_id = id;
+        // start to record
+        current_event_s = gfctx_get_current_event();
+    } else if (status == 1 && in_one_iteration) {
+        if (id == 2 && last_id == 1)
+            status = 2;
+        else if (id == 1 && last_id == 2)
+            status = 2;
+        // end the record
+        current_event_e = gfctx_get_current_event();
+    }
+
+    if (status == 2) {
+        // we want to group any events between (_s, _e]
+        Input *input = gfctx_get_current_input();
+
+        // we dislike a group event to trigger this Order
+        Event *trigger_event = get_event(input, gfctx_get_current_event());
+        if (trigger_event->type == EVENT_TYPE_GROUP_EVENT_RS)
+            return;
+
+        // create new context
+        Input *new_input = init_input(NULL, DEFAULT_INPUT_MAXSIZE);
+        Event *event, *event_copy;
+        for (int i = current_event_s + 1; i <= current_event_e; ++i) {
+            event = get_event(input, i);
+            // if any EVENT_TYPE_GROUP_EVENT_RS, we drop this
+            if (event->type == EVENT_TYPE_GROUP_EVENT_RS)
+                return;
+            // we don't want a EVENT_TYPE_GROUP_EVENT_LM
+            if (event->type == EVENT_TYPE_GROUP_EVENT_LM) {
+                // for this, we want its last event
+                Input *grouped_input = (Input *)event->data;
+                event = get_event(grouped_input, grouped_input->n_events - 1);
+            }
+            event_copy = (Event *)calloc(sizeof(Event), 1);
+            event_ops[event->type].deep_copy(event, event_copy);
+            append_event(new_input, event_copy);
+            // should we delete the event?
+            event_ops[event->type].print_event(event);
+        }
+        // we are going to construct a group event
+        Event *group_event = event_ops[EVENT_TYPE_GROUP_EVENT_RS].construct(
+            EVENT_TYPE_GROUP_EVENT_RS, INTERFACE_GROUP_EVENT_RS, 0,
+            new_input->size, 0, (uint8_t *)new_input);
+        // bingo, we've got all events into new_input
+        // let's find a place to inject the group event
+        // currently, we don't want to make it a next event
+        // let's insert it after current_event_s
+        insert_event(input, group_event, current_event_s + 1);
+    }
+#ifdef VIDEZZO_DEBUG
+    fprintf(stderr, "- GroupMutatorOrder Done\n");
+#endif
+}
+
+// TODO: change the API convention and API name
 void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
     if (getenv("VIDEZZO_DISABLE_INTRA_MESSAGE_ANNOTATION"))
         return;
-#ifdef VIDEZZO_DEBUG
-    fprintf(stderr, "- GroupMutatorMiss: %d\n", loop_counter);
-#endif
     if (DisableGroupMutator)
         return;
 
@@ -71,8 +142,12 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
 
     // we dislike a group event to trigger this Miss
     Event *trigger_event = get_event(old_input, old_current_event);
-    if (trigger_event->type == EVENT_TYPE_GROUP_EVENT && loop_counter == 0)
+    if (trigger_event->type == EVENT_TYPE_GROUP_EVENT_LM && loop_counter == 0)
         return;
+
+#ifdef VIDEZZO_DEBUG
+    fprintf(stderr, "- GroupMutatorMiss: %d\n", loop_counter);
+#endif
 
     // create new context
     // so all injected events will go into here
@@ -88,7 +163,7 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
 
     // nice, all events go into our new input
     // we construct the group event
-    if (trigger_event->type == EVENT_TYPE_GROUP_EVENT) {
+    if (trigger_event->type == EVENT_TYPE_GROUP_EVENT_LM) {
         // apprantly, we are in a loop
         Input *group_event_input = (Input* )trigger_event->data;
         Event *injected_event = input->events, *tmp_event;
@@ -106,8 +181,8 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
         event_ops[trigger_event->type].deep_copy(trigger_event, trigger_event_copy);
         append_event(input, trigger_event_copy);
         // we are going to construct a group event
-        Event *group_event = event_ops[EVENT_TYPE_GROUP_EVENT].construct(
-            EVENT_TYPE_GROUP_EVENT, INTERFACE_GROUP_EVENT, 0, sizeof(Input), 0, (uint8_t *)input);
+        Event *group_event = event_ops[EVENT_TYPE_GROUP_EVENT_LM].construct(
+            EVENT_TYPE_GROUP_EVENT_LM, INTERFACE_GROUP_EVENT_LM, 0, input->size, 0, (uint8_t *)input);
         // we inject this group event into the old input, and then
         // we will delete the old_current_event in __videzzo_execute_one_input
         insert_event(old_input, group_event, old_current_event);
@@ -176,12 +251,12 @@ static void __videzzo_execute_one_input(Input *input) {
 #endif
     int i;
     for (i = 0; event != NULL; i++) {
-#ifdef VIDEZZO_DEBUG
-        event_ops[event->type].print_event(event);
-#endif
         // set up feedback context
         gfctx_set_current_event(i);
         videzzo_dispatch_event(event);
+#ifdef VIDEZZO_DEBUG
+        event_ops[event->type].print_event(event);
+#endif
         event = get_next_event(event);
         if (loop_counter) {
             remove_event(input, i + 1);
@@ -197,6 +272,8 @@ static void __videzzo_execute_one_input(Input *input) {
 extern void __free_memory_blocks();
 
 int videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush flush) {
+    in_one_iteration = 1;
+    status = 0;
     DEFAULT_INPUT_MAXSIZE = get_default_input_maxsize();
 
     // read Data to Input
@@ -229,6 +306,7 @@ int videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush 
     //
     __free_memory_blocks();
 
+    in_one_iteration = 0;
     return SerializationSize;
 }
 
@@ -256,20 +334,24 @@ InterfaceDescription Id_Description[INTERFACE_END] = {
         .emb = {.addr = 0xFFFFFFFF, .size = 0xFFFFFFFF},
         .name = "socket_write", .dynamic = false, // disable socket write
         .min_access_size = 0xFF, .max_access_size = 0xFF,
-    }, [INTERFACE_GROUP_EVENT] = {
-        .type = EVENT_TYPE_GROUP_EVENT,
+    }, [INTERFACE_GROUP_EVENT_LM] = {
+        .type = EVENT_TYPE_GROUP_EVENT_LM,
         .emb = {.addr = 0xFFFFFFFF, .size = 0xFFFFFFFF},
-        .name = "group_event", .dynamic = false,
+        .name = "group_event_lm", .dynamic = false,
         .min_access_size = 0xFF, .max_access_size = 0xFF,
+    }, [INTERFACE_GROUP_EVENT_RS] = {
+        .type = EVENT_TYPE_GROUP_EVENT_RS,
+        .emb = {.addr = 0xFFFFFFFF, .size = 0xFFFFFFFF},
+        .name = "group_event_re", .dynamic = false,
     }, [INTERFACE_MEM_ALLOC] = {
         .type = EVENT_TYPE_MEM_ALLOC,
         .emb = {.addr = 0xFFFFFFFF, .size = 0xFFFFFFFF},
-        .name = "group_event", .dynamic = false,
+        .name = "memalloc", .dynamic = false,
         .min_access_size = 0xFF, .max_access_size = 0xFF,
     }, [INTERFACE_MEM_FREE] = {
         .type = EVENT_TYPE_MEM_FREE,
         .emb = {.addr = 0xFFFFFFFF, .size = 0xFFFFFFFF},
-        .name = "group_event", .dynamic = false,
+        .name = "memfree", .dynamic = false,
         .min_access_size = 0xFF, .max_access_size = 0xFF,
     }
 };
@@ -580,7 +662,7 @@ static Event *construct_clock_step(uint8_t type, uint8_t interface,
 static Event *construct_group_event(uint8_t type, uint8_t interface,
         uint64_t addr, uint32_t size, uint64_t valu, uint8_t *data) {
     Event *event = __alloc_an_event(type, interface);
-    event->size = around_event_size(interface, size);
+    event->size = size; // it's usually 0 at the beginning
     assert(data != NULL);
     // assume we are in charge of free this data for performance
     /*(Input *)*/event->data = /*(Input *)*/data;
@@ -892,6 +974,27 @@ uint64_t dispatch_socket_write(Event *event) { return 0; }
 uint64_t dispatch_mem_alloc(Event *event) { return 0; }
 uint64_t dispatch_mem_free(Event *event) { return 0; }
 
+static uint64_t dispatch_group_event(Event *event) {
+    Input *input = (Input *)event->data;
+    Event *e;
+    int i;
+#ifdef VIDEZZO_DEBUG
+    fprintf(stderr, "- dispatching events\n");
+#endif
+    for (e = input->events, i = 0;
+            e != NULL; i++) {
+#ifdef VIDEZZO_DEBUG
+        event_ops[e->type].print_event(e);
+#endif
+        videzzo_dispatch_event(e);
+        e = get_next_event(e);
+    }
+#ifdef VIDEZZO_DEBUG
+    fprintf(stderr, "- dispatching events done\n");
+#endif
+    return 0;
+}
+
 EventOps event_ops[] = {
     [EVENT_TYPE_MMIO_READ] = {
         .change_addr = change_addr_generic, .change_size = change_size_generic,
@@ -936,10 +1039,18 @@ EventOps event_ops[] = {
         .construct   = construct_socket_write,
                                             .release     = release_data,
         .deep_copy   = deep_copy_with_data,
-    }, [EVENT_TYPE_GROUP_EVENT] = {
+    }, [EVENT_TYPE_GROUP_EVENT_LM] = {
         .change_addr = NULL,                .change_size = NULL,
         .change_valu = NULL,                .change_data = NULL,
-        .dispatch    = NULL,                .print_event = print_event_group_event,
+        .dispatch    = dispatch_group_event,.print_event = print_event_group_event,
+        .serialize   = serialize_group_event,
+        .construct   = construct_group_event,
+                                            .release     = release_group_event,
+        .deep_copy   = deep_copy_with_data,
+    }, [EVENT_TYPE_GROUP_EVENT_RS] = {
+        .change_addr = NULL,                .change_size = NULL,
+        .change_valu = NULL,                .change_data = NULL,
+        .dispatch    = dispatch_group_event,.print_event = print_event_group_event,
         .serialize   = serialize_group_event,
         .construct   = construct_group_event,
                                             .release     = release_group_event,
@@ -1206,10 +1317,11 @@ void free_input(Input *input) {
 
 bool validate_input_size(Input *input, size_t groundtruth) {
     size_t real_size = 0;
-    Event *event = input->events, *tmp;
-    while ((tmp = event)) {
+    Event *event = input->events;
+    while (event) {
+        fprintf(stderr, "- 0x%x\n", event->event_size);
         real_size += event->event_size;
-        event = tmp->next;
+        event = event->next;
     }
     return real_size == groundtruth;
 }
@@ -1217,9 +1329,9 @@ bool validate_input_size(Input *input, size_t groundtruth) {
 bool validate_input_n_events(Input *input, int groundtruth) {
     int real_n_events = 0;
     Event *event = input->events, *tmp;
-    while ((tmp = event)) {
+    while (event) {
         real_n_events++;
-        event = tmp->next;
+        event = event->next;
     }
     return real_n_events == groundtruth;
 }
@@ -1367,7 +1479,8 @@ uint32_t deserialize(Input *input) {
 #endif
                 append_event(input, event);
                 break;
-            case EVENT_TYPE_GROUP_EVENT:
+            case EVENT_TYPE_GROUP_EVENT_LM:
+            case EVENT_TYPE_GROUP_EVENT_RS:
                 //  1B   1B   4B
                 //+TYPE+ ID +SIZE+
                 if (!input_check_index(input, 4)) {
