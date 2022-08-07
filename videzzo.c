@@ -902,6 +902,8 @@ static int handle_useless_messages(Input *input) {
 }
 
 static uint32_t serialize_group_event(Event *event, uint8_t *Data, size_t Offset, size_t MaxSize) {
+    static int log_counter = 0;
+
     Input *input = (Input *)event->data;
     int n_events = input->n_events;
 
@@ -917,9 +919,13 @@ static uint32_t serialize_group_event(Event *event, uint8_t *Data, size_t Offset
     // we are going to end this iteration ...
 
     if (Offset + 6 + size >= MaxSize) {
-        fprintf(stderr, "  * serialize_group_event: reduce %d/%d messages, remain %lu bytes",
-                n_events - input->n_events, n_events, input->size);
-        fprintf(stderr, ", but space is not enough\n");
+        // this is only a reminder, we don't want it to degrade the performance
+        log_counter++;
+        if (log_counter < 100) {
+            fprintf(stderr, "  * serialize_group_event: reduce %d/%d messages, remain %lu bytes",
+                    n_events - input->n_events, n_events, input->size);
+            fprintf(stderr, ", but space is not enough\n");
+        }
         Event *last_event = get_event(input, input->n_events - 1);
         // serialize_xxx will print event, so we don't print it here
         return event_ops[last_event->type].serialize(last_event, Data, Offset, MaxSize);
