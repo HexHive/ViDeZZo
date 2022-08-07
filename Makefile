@@ -59,7 +59,7 @@ qemu-debug: videzzo-qemu-debug
 vbox-debug: videzzo-vbox-debug
 
 clean:
-	rm -rf *.o *.a *.i videzzo-merge
+	rm -rf *.o *.a.* *.i
 
 distclean: clean
 	make -C videzzo_qemu clean

@@ -16,7 +16,7 @@
 //
 // Default size for an input
 //
-static int get_default_input_maxsize() {
+int get_default_input_maxsize() {
     if (getenv("DEFAULT_INPUT_MAXSIZE"))
         return atoi(getenv("DEFAULT_INPUT_MAXSIZE"));
     else
@@ -560,7 +560,7 @@ static void print_event_socket_write(Event *event) {
 static void print_event_group_event(Event *event) {
     print_event_prologue(event);
     fprintf(stderr, ", 0x%x", event->size);
-    fprintf(stderr, ", 0x%d events", ((Input *)event->data)->n_events);
+    fprintf(stderr, ", 0x%x events", ((Input *)event->data)->n_events);
     print_end();
 }
 
@@ -965,6 +965,25 @@ static void deep_copy_with_data(Event *orig, Event *copy) {
     memcpy(copy->data, orig->data, copy->size);
 }
 
+static void deep_copy_with_grouped_input(Event *orig, Event *copy) {
+    // copy Event
+    memcpy(copy, orig, sizeof(Event));
+
+    // copy Input
+    copy->data = calloc(sizeof(Input), 1);
+
+    // copy Input.Event
+    Input *copied_input = (Input *)copy->data;
+    Input *origed_input = (Input *)orig->data;
+    Event *origed_event = origed_input->events;
+    for (int i = 0; origed_event != NULL; i++) {
+        Event *copied_event = (Event *)calloc(sizeof(Event), 1);
+        event_ops[origed_event->type].deep_copy(origed_event, copied_event);
+        append_event(copied_input, copied_event);
+        origed_event = origed_event->next;
+    }
+}
+
 // Weak definitations - to make videzz.c realy VMM-independent
 uint64_t dispatch_mmio_read(Event *event) { return 0; }
 uint64_t dispatch_mmio_write(Event *event) { return 0; }
@@ -1049,7 +1068,7 @@ EventOps event_ops[] = {
         .serialize   = serialize_group_event,
         .construct   = construct_group_event,
                                             .release     = release_group_event,
-        .deep_copy   = deep_copy_with_data,
+        .deep_copy   = deep_copy_with_grouped_input,
     }, [EVENT_TYPE_GROUP_EVENT_RS] = {
         .change_addr = NULL,                .change_size = NULL,
         .change_valu = NULL,                .change_data = NULL,
@@ -1057,7 +1076,7 @@ EventOps event_ops[] = {
         .serialize   = serialize_group_event,
         .construct   = construct_group_event,
                                             .release     = release_group_event,
-        .deep_copy   = deep_copy_with_data,
+        .deep_copy   = deep_copy_with_grouped_input,
     }, [EVENT_TYPE_MEM_READ] = {
         .change_addr = NULL,                .change_size = NULL,
         .change_valu = NULL,                .change_data = NULL,
@@ -1383,7 +1402,7 @@ CONSUME_INPUT_NEXT(ptr);
 // input because which interface to bind is also a valid information.
 uint32_t deserialize(Input *input) {
     // some saved data
-    uint8_t interface, type;
+    uint8_t interface, type, type1;
     uint64_t addr, val;
     uint32_t size;
     Event *event = NULL;
@@ -1393,9 +1412,16 @@ uint32_t deserialize(Input *input) {
     fprintf(stderr, "- deserialize\n");
 #endif
     while (input_check_index(input, 2)) {
-        type = input_next_8(input);
-        interface = __disimm_around_event_interface(input_next_8(input));
-        type = Id_Description[interface].type;
+        type1 = input_next_8(input);
+        if (merge) {
+            // if merge, we do not have a dynamic interface list, therefore
+            // we cannot around event interface!
+            interface = input_next_8(input);
+            type = type1;
+        } else {
+            interface = __disimm_around_event_interface(input_next_8(input));
+            type = Id_Description[interface].type;
+        }
         switch (type) {
             case EVENT_TYPE_MMIO_READ:
             case EVENT_TYPE_PIO_READ:

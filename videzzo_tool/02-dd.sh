@@ -53,6 +53,7 @@ if [[ -z $seeds ]]; then
 fi
 
 seeds=${seeds}*
+arglist="$arglist -max_len=10000000"
 
 echo "[-] target = $target"
 echo "[-] crash  = $crash"
@@ -65,16 +66,19 @@ echo [-] working in $ws
 # step 2: create a tester script
 echo "#!/bin/bash" > $ws/picire_tester.sh
 echo "export ASAN_OPTIONS=detect_leaks=0" >> $ws/picire_tester.sh
+echo "export DEFAULT_INPUT_MAXSIZE=10000000" >> $ws/picire_tester.sh
 echo "$target $crash $arglist -pre_seed_inputs=@\$1 2>&1 | grep -q -e \"ERROR\";" >> $ws/picire_tester.sh
 chmod +x $ws/picire_tester.sh
 echo [-] created $ws/picire_tester.sh
 echo "#!/bin/bash" > $ws/picire_reproduce.sh
 echo "export ASAN_OPTIONS=detect_leaks=0" >> $ws/picire_reproduce.sh
+echo "export DEFAULT_INPUT_MAXSIZE=10000000" >> $ws/picire_reproduce.sh
 echo "$target $crash $arglist -pre_seed_inputs=@\$1" >> $ws/picire_reproduce.sh
 chmod +x $ws/picire_reproduce.sh
 echo [-] created $ws/picire_reproduce.sh
 echo "#!/bin/bash" > $ws/picire_latest.sh
 echo "export ASAN_OPTIONS=detect_leaks=0" >> $ws/picire_latest.sh
+echo "export DEFAULT_INPUT_MAXSIZE=10000000" >> $ws/picire_latest.sh
 echo "$target $crash $arglist -pre_seed_inputs=@\$1" >> $ws/picire_latest.sh
 chmod +x $ws/picire_latest.sh
 echo [-] created $ws/picire_latest.sh
@@ -95,7 +99,10 @@ echo [-] modify and run $ws/picire_latest.sh $ws/picire_inputs.*/picire_inputs
 
 # step 5: let's merge
 poc=poc-$(basename ${target})-$(basename ${crash})
+export DEFAULT_INPUT_MAXSIZE=10000000
 $(dirname $0)/videzzo-merge -o ${poc} $(tr '\n' ' ' < $ws/picire_inputs.*/picire_inputs) ${crash}
+unset DEFAULT_INPUT_MAXSIZE
 echo [-] generate PoC to ${poc}
 echo [-] please debug via the following command
-echo "  gdb --args ${target} ${poc}"
+echo " DEFAULT_INPUT_MAXSIZE=10000000 ${target} ${arglist} ${poc}"
+echo " DEFAULT_INPUT_MAXSIZE=10000000 gdb --args ${target} ${arglist} ${poc}"

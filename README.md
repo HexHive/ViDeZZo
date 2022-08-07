@@ -42,7 +42,7 @@ features to ViDeZZo, e.g., add new virtual device target.
 >Build both QEMU and VirtualBox targets, and fuzz all virtual devices on a
 machine. Usually, we enable ASAN and UBSAN. Considering the number of resources,
 virtual devices, and hours we have, we deploy the fuzzing campaign
-automatically.
+automatically. Use `-detect_leaks=0` as we do not prefer small leakages.
 
 + Build: `cd videzzo`, and then `make qemu` or `make vbox`.
 
@@ -56,11 +56,12 @@ virtual device, start with `sudo`.
 discuss in communities. Apply for CVE and advertise if it is necessary.
 
 + Collect historical seeds: run the crashed fuzz target with `CORPUS`,
-`DEFAULT_INPUT_MAXSIZE=10000000`, and `-max_len=10000000`, where `10000000` is
-decided by the running status.
+`DEFAULT_INPUT_MAXSIZE=10000000`, and `-max_len=10000000`, where `10000000` is a
+large value decided by the running status to make sure every event is dumped.
 
 ``` bash
-DEFAULT_INPUT_MAXSIZE=10000000 ./qemu-videzzo-i386-target-videzzo-fuzz-ohci -max_len=10000000 ohci
+DEFAULT_INPUT_MAXSIZE=10000000 \
+./qemu-videzzo-i386-target-videzzo-fuzz-ohci -max_len=10000000 -detect_leaks=0 ohci
 ```
 
 + Delta-debug and gen a PoC: run `02-dd.sh -t ABS_PATH_TO_BINARY -s

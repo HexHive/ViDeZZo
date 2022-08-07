@@ -11,7 +11,14 @@
 #include <argp.h>
 #include <string.h>
 
+extern int get_default_input_maxsize();
+static int DEFAULT_INPUT_MAXSIZE = 0x1000;
+
+// some thing we should defined
+// which means these should not be in videzzo-core
 FeedbackHandler group_mutator_miss_handlers[0xff] = {};
+size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize) { return 0; }
+void __free_memory_blocks() {}
 
 static size_t dump_to_file(uint8_t *Data, size_t Size, const char *output) {
     FILE *f = fopen(output, "wb");
@@ -48,6 +55,7 @@ int main(int argc, char **argv) {
     }
 
     videzzo_set_merge();
+    DEFAULT_INPUT_MAXSIZE = get_default_input_maxsize();
 
     Input *input = init_input(NULL, DEFAULT_INPUT_MAXSIZE);
 
