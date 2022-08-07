@@ -921,11 +921,8 @@ static uint32_t serialize_group_event(Event *event, uint8_t *Data, size_t Offset
                 n_events - input->n_events, n_events, input->size);
         fprintf(stderr, ", but space is not enough\n");
         Event *last_event = get_event(input, input->n_events - 1);
+        // serialize_xxx will print event, so we don't print it here
         return event_ops[last_event->type].serialize(last_event, Data, Offset, MaxSize);
-#ifdef VIDEZZO_DEBUG
-        event_ops[last_event->type].print_event(last_event);
-#endif
-        return 0;
     }
 
     Data[Offset] = event->type;
@@ -1665,6 +1662,8 @@ static size_t Mutate_InsertRepeatedEvent(Input *input) { // duplicate
     size_t N = (rand() - N_MIN_EVENTS_TO_INSERT) %
         (N_MAX_EVENTS_TO_INSERT - N_MIN_EVENTS_TO_INSERT) + N_MIN_EVENTS_TO_INSERT; // insert N events
     Event *event = get_event(input, Idx); // get this event
+    if (event->type == EVENT_TYPE_GROUP_EVENT_RS || event->type == EVENT_TYPE_GROUP_EVENT_LM)
+        return 0;
     Event *copy;
     for (int i = 0; i < N; i++) {
         copy = (Event *)calloc(sizeof(Event), 1);
