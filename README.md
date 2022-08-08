@@ -6,8 +6,8 @@ inter-message dependencies to balance fuzzing scalability and efficiency.
 Currently, ViDeZZo supports libFuzzer in combination with ASAN and UBSAN.
 
 Currently, ViDeZZo supports QEMU (C) and VirtualBox (C++) covering Audio,
-Storage, Network, USB, and Graphics virtual devices, and covering i386, ARM, and
-AArch64 builds.
+Storage, Network, USB, and Graphics virtual devices, and covering i386, x86_64,
+ARM, and AArch64 builds.
 
 More technical details go in to our paper. The usage of ViDeZZo is as follows.
 

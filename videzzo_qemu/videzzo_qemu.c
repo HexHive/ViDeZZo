@@ -1435,12 +1435,19 @@ static QGuestAllocator *get_qemu_alloc(QTestState *qts) {
     QOSGraphNode *node;
     QOSGraphObject *obj;
 
-    // TARGET_NAME=i386 -> i386/pc
-    // TARGET_NAME=arm  -> arm/raspi2b
+    // TARGET_NAME=i386    -> i386/pc
+    // TARGET_NAME=arm     -> arm/raspi2b
+    // TARGET_NAME=aarch64 -> aarch64/xlnx-zcu102
+    // TODO: we may want to have customized allocator
+    // for each arm and aarch64 virtual devices
     if (strcmp(TARGET_NAME, "i386") == 0) {
         node = qos_graph_get_node("i386/pc");
     } else if (strcmp(TARGET_NAME, "arm") == 0) {
         node = qos_graph_get_node("arm/raspi2b");
+    } else if (strcmp(TARGET_NAME, "aarch64") == 0) {
+        node = qos_graph_get_node("aarch64/xlnx-zcu102");
+    } else if (strcmp(TARGET_NAME, "x86_64") == 0) {
+        node = qos_graph_get_node("x86_64/pc");
     } else {
         g_assert(1 == 0);
     }
@@ -1478,7 +1485,7 @@ static void videzzo_qemu_pre() {
         locate_fuzzable_objects(qdev_get_machine(), mrnames[i]);
     }
 
-    if (strcmp(TARGET_NAME, "i386") == 0) {
+    if (strcmp(TARGET_NAME, "i386") == 0 || strcmp(TARGET_NAME, "x86_64") == 0) {
         pcibus = qpci_new_pc(s, NULL);
         g_ptr_array_foreach(fuzzable_pci_devices, pci_enum, pcibus);
         qpci_free_pc(pcibus);
@@ -1585,8 +1592,13 @@ static void register_videzzo_qemu_targets(void) {
 
     for (int i = 0; i < sizeof(predefined_configs) / sizeof(ViDeZZoFuzzTargetConfig); i++) {
         config = predefined_configs + i;
-        if (strcmp(TARGET_NAME, config->arch) != 0)
-            continue;
+        // We haven't found a virtual device that is x86_64 only.
+        // The reason why we support x86_64 is to show scalability of ViDeZZo.
+        if (strcmp(TARGET_NAME, "x86_64") == 0) {
+            if (strcmp(config->arch, "i386")) continue;
+        } else {
+            if (strcmp(TARGET_NAME, config->arch)) continue;
+        }
         name = g_string_new("videzzo-fuzz");
         g_string_append_printf(name, "-%s", config->name);
         videzzo_add_fuzz_target(&(ViDeZZoFuzzTarget){

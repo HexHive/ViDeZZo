@@ -10,7 +10,7 @@ mkdir $DEST_DIR
 
 pushd qemu/build-$CONTROL-6
 cp -r ../pc-bios $DEST_DIR/pc-bios
-archs=(i386 arm)
+archs=(i386 x86_64 arm aarch64)
 for arch in ${archs[@]}; do
     targets=$(./qemu-videzzo-$arch | awk '$1 ~ /\*/  {print $2}')
     for target in $(echo "$targets" | head -n -1); do
