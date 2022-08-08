@@ -1,5 +1,6 @@
 # QEMU
 pc-bios
+qemu-videzzo-x86_64-target-videzzo-fuzz-*
 
 # VBox
 vbox_vm_*
