@@ -351,57 +351,74 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .mrnames = "*rocker-mmio*",
         .file = "hw/net/rocker/rocker.c",
         .socket = true,
-    }, /*{
-        .name = "virtio-net-pci-slirp",
+    },{
+        .arch = "i386",
+        .name = "virtio-net",
         .args = "-M q35 -nodefaults "
         "-device virtio-net,netdev=net0 -netdev user,id=net0",
+        .mrnames = "*virtio*",
+        .file = "hw/net/virtio-net.c",
         .socket = false,
     },{
+        .arch = "i386",
         .name = "virtio-blk",
         .args = "-machine q35 -device virtio-blk,drive=disk0 "
         "-drive file=null-co://,id=disk0,if=none,format=raw",
+        .mrnames = "*virtio*",
+        .file = "hw/block/virtio-blk.c",
         .socket = false,
     },{
+        .arch = "i386",
         .name = "virtio-scsi",
         .args = "-machine q35 -device virtio-scsi,num_queues=8 "
         "-device scsi-hd,drive=disk0 "
         "-drive file=null-co://,id=disk0,if=none,format=raw",
+        .mrnames = "*scsi*,*virtio*",
+        .file = "hw/scsi/virtio-scsi.c",
         .socket = false,
     },{
+        .arch = "i386",
         .name = "virtio-gpu",
         .args = "-machine q35 -nodefaults -device virtio-gpu",
+        .mrnames = "*virtio*",
+        .file = "hw/display/virtio-gpu.c",
         .socket = false,
     },{
+        .arch = "i386",
         .name = "virtio-vga",
         .args = "-machine q35 -nodefaults -device virtio-vga",
+        .mrnames = "*virtio*",
+        .file = "hw/display/virtio-vga.c",
         .socket = false,
     },{
+        .arch = "i386",
         .name = "virtio-rng",
         .args = "-machine q35 -nodefaults -device virtio-rng",
+        .mrnames = "*virtio*",
+        .file = "hw/virtio/virtio-rng.c",
         .socket = false,
     },{
+        .arch = "i386",
         .name = "virtio-balloon",
         .args = "-machine q35 -nodefaults -device virtio-balloon",
+        .mrnames = "*virtio*",
+        .file = "hw/virtio/virtio-balloon.c",
         .socket = false,
     },{
+        .arch = "i386",
         .name = "virtio-serial",
         .args = "-machine q35 -nodefaults -device virtio-serial",
+        .mrnames = "*virtio*",
+        .file = "hw/virtio/virtio-serial-pci.c",
         .socket = false,
     },{
+        .arch = "i386",
         .name = "virtio-mouse",
         .args = "-machine q35 -nodefaults -device virtio-mouse",
+        .mrnames = "*virtio*",
+        .file = "hw/virtio/virtio-input-pci.c",
         .socket = false,
     },{
-        .name = "virtio-9p",
-        .argfunc = generic_fuzzer_virtio_9p_args,
-        .socket = false,
-    },{
-        .name = "virtio-9p-synth",
-        .args = "-machine q35 -nodefaults "
-        "-device virtio-9p,fsdev=hshare,mount_tag=hshare "
-        "-fsdev synth,id=hshare",
-        .socket = false,
-    },*/{
         .arch = "i386",
         // the real thing we test is the fdc not the floopy
         .name = "fdc",
