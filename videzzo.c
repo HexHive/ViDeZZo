@@ -394,10 +394,11 @@ static uint64_t around_event_addr(uint8_t id, uint64_t raw_addr) {
     if (id < INTERFACE_DYNAMIC)
         return raw_addr; // do nothing
     InterfaceDescription ed = Id_Description[id];
+    uint64_t to_avoid_overflow = ed.emb.addr + ((raw_addr - ed.emb.addr) % ed.emb.size);
     if (getenv("VIDEZZO_BYTE_ALIGNED_ADDRESS")) {
-        return (ed.emb.addr + raw_addr % ed.emb.size) & 0xFFFFFFFFFFFFFFFF;
+        return to_avoid_overflow & 0xFFFFFFFFFFFFFFFF;
     } else {
-        return (ed.emb.addr + raw_addr % ed.emb.size) & 0xFFFFFFFFFFFFFFFC;
+        return to_avoid_overflow & 0xFFFFFFFFFFFFFFFC;
     }
 }
 
