@@ -22,8 +22,21 @@ static uint64_t get_bit(uint64_t data, uint32_t start, uint32_t length) {{
 // very interesting and useful function
 static void fill(uint8_t *dst, size_t dst_size, uint64_t filler, size_t filler_size) {{
     uint8_t *filler_p = (uint8_t *)&filler;
-    for (int i = 0; i < dst_size; i++)
-        dst[i] = filler_p[i % filler_size];
+
+    if (dst_size <= 2 * filler_size) {{
+        for (int i = 0; i < dst_size; i++)
+            dst[i] = filler_p[i % filler_size];
+    }} else {{
+        // we can do the copy in batches (>=2)
+        int segments = dst_size / filler_size;
+        int first = 0;
+        int segment_size = (segments / 2) * filler_size;
+        fill(dst + first, segment_size, filler, filler_size);
+        memcpy(dst + segment_size, dst + first, segment_size);
+        int third = 2 * segment_size;
+        int third_size = dst_size - third;
+        fill(dst + third, third_size, filler, filler_size);
+    }}
 }}
 
 static void refill(uint64_t *dst, size_t dst_size, uint8_t* filler_p, size_t filler_size) {{
@@ -37,11 +50,8 @@ static uint64_t EVENT_MEMALLOC(size_t size) {{
     event_ops[event->type].print_event(event);
 #endif
     uint64_t phyaddr = event_ops[EVENT_TYPE_MEM_ALLOC].dispatch(event);
-
-    int current_event = gfctx_get_current_event();
-    append_event(gfctx_get_current_input(), event);
-    current_event++;
-    gfctx_set_current_event(current_event);
+    event_ops[event->type].release(event);
+    free(event);
 
     return phyaddr;
 }}
@@ -53,11 +63,8 @@ static void EVENT_MEMFREE(uint64_t physaddr) {{
     event_ops[event->type].print_event(event);
 #endif
     event_ops[EVENT_TYPE_MEM_FREE].dispatch(event);
-
-    int current_event = gfctx_get_current_event();
-    append_event(gfctx_get_current_input(), event);
-    current_event++;
-    gfctx_set_current_event(current_event);
+    event_ops[event->type].release(event);
+    free(event);
 }}
 
 static void __EVENT_MEMREAD(uint64_t physaddr, size_t size, uint8_t *data) {{
@@ -101,12 +108,12 @@ static void append_address(uint64_t address) {{
     gmb->next = NULL;
 
     GuestMemoryBlock *tmp = guest_memory_blocks;
-    if (tmp == NULL) {{
+    if (guest_memory_blocks == NULL) {{
         guest_memory_blocks = gmb;
-        return;
+    }} else {{
+        gmb->next = guest_memory_blocks;
+        guest_memory_blocks = gmb;
     }}
-    for (; tmp->next != NULL; tmp = tmp->next) {{  }}
-    tmp->next = gmb;
 }}
 
 static void free_memory_blocks() {{

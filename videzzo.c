@@ -908,8 +908,10 @@ static uint32_t serialize_group_event(Event *event, uint8_t *Data, size_t Offset
     Input *input = (Input *)event->data;
     int n_events = input->n_events;
 
-    handle_useless_messages(input);
-    while (handle_non_address_consecutive_writes(input)) {};
+    // since this degrads the performance by 20%, I disable it
+    // handle_useless_messages(input);
+    // since this degrads the performance by 50%, I disable it
+    // while (handle_non_address_consecutive_writes(input)) {};
     // this is covered by handle_non_address_consecutive_writes
     // while (handle_consecutive_writes(input)) {};
     size_t size = input->size;
@@ -970,12 +972,10 @@ static void deep_copy_with_grouped_input(Event *orig, Event *copy) {
     // copy Event
     memcpy(copy, orig, sizeof(Event));
 
-    // copy Input
-    copy->data = calloc(sizeof(Input), 1);
-
     // copy Input.Event
-    Input *copied_input = (Input *)copy->data;
     Input *origed_input = (Input *)orig->data;
+    Input *copied_input = init_input(NULL, origed_input->size);
+
     Event *origed_event = get_first_event(origed_input);
     for (int i = 0; origed_event != NULL; i++) {
         Event *copied_event = (Event *)calloc(sizeof(Event), 1);
@@ -983,6 +983,7 @@ static void deep_copy_with_grouped_input(Event *orig, Event *copy) {
         append_event(copied_input, copied_event);
         origed_event = get_next_event(origed_event);
     }
+    copy->data = copied_input;
 }
 
 // Weak definitations - to make videzz.c realy VMM-independent
