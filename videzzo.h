@@ -69,7 +69,7 @@ typedef struct Event {
     };
     uint32_t offset;                    /* event offset in the input */
     uint32_t event_size;                /* event size */
-    struct Event *next;                 /* event linker */
+    TAILQ_ENTRY(Event) links;           /* event links */
 } Event;
 
 typedef struct EventOps {
@@ -93,12 +93,13 @@ void videzzo_dispatch_event(Event *event);
 //
 // Input
 //
+typedef TAILQ_HEAD(EventHead, Event) EventHead;
 typedef struct {
     size_t limit;                       /* input size   */
     void *buf;                          /* input data   */
     int index;                          /* input cursor */
     size_t size;                        /* real input size */
-    Event *events;                      /* corresponding events */
+    EventHead *head;                    /* the link head */
     int n_events;                       /* number of events
                                            (all grouped events is one event) */
     int n_groups;                       /* number of groups*/
@@ -111,13 +112,11 @@ uint32_t deserialize(Input *input);
 uint32_t serialize(Input *input, uint8_t *Data, uint32_t MaxSize);
 Event *get_event(Input *input, uint32_t index);
 Event *get_next_event(Event *event);
+Event *get_first_event(Input *input);
 void remove_event(Input *input, uint32_t idx);
 void insert_event(Input *input, Event *event, uint32_t idx);
 void append_event(Input *input, Event *event);
 size_t reset_data(uint8_t *Data, size_t MaxSize);
-// we validate the input for [remove|insert|append]_event and serialize
-bool validate_input_size(Input *input, size_t groundtruth);
-bool validate_input_n_events(Input *input, int groundtruth);
 
 //
 // Interface

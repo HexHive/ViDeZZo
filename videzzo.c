@@ -166,13 +166,13 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
     if (trigger_event->type == EVENT_TYPE_GROUP_EVENT_LM) {
         // apprantly, we are in a loop
         Input *group_event_input = (Input* )trigger_event->data;
-        Event *injected_event = input->events, *tmp_event;
+        Event *injected_event = get_first_event(input), *tmp_event;
         // copy event from the injected input to the group event input
         while (injected_event != NULL) {
             Event *tmp_event = (Event *)calloc(sizeof(Event), 1);
             event_ops[injected_event->type].deep_copy(injected_event, tmp_event);
             insert_event(group_event_input, tmp_event, group_event_input->n_events - 1);
-            injected_event = injected_event->next;
+            injected_event = get_next_event(injected_event);
         }
         free_input(input);
     } else {
@@ -245,7 +245,7 @@ size_t ViDeZZoCustomMutator(uint8_t *Data, size_t Size,
 }
 
 static void __videzzo_execute_one_input(Input *input) {
-    Event *event = input->events;
+    Event *event = get_first_event(input);
 #ifdef VIDEZZO_DEBUG
     fprintf(stderr, "- dispatching events\n");
 #endif
@@ -764,16 +764,16 @@ static int handle_non_address_consecutive_writes(Input *input) {
 
     Event *head = NULL, *next = NULL;
 
-    e = input->events;
+    e = get_first_event(input);
 
     for (int i = 0; e != NULL; i++) {
         if (delete[i] || e->type != EVENT_TYPE_MEM_WRITE) {
-            e = e->next;
+            e = get_next_event(e);
             continue;
         }
         // for each write, we search
         head = e;
-        next = head->next;
+        next = get_next_event(head);
         for (int j = i + 1; next != NULL; j++) {
             if (head && delete[j] == 0 && next->addr == head->addr + head->size) {
                 uint32_t new_size = head->size + next->size;
@@ -791,9 +791,9 @@ static int handle_non_address_consecutive_writes(Input *input) {
                 n_delete += 1;
                 break;
             }
-            next = next->next;
+            next = get_next_event(next);
         }
-        e = e->next;
+        e = get_next_event(e);
     }
 
     for (int i = input->n_events - 1; i >= 0; i--) {
@@ -821,7 +821,7 @@ static int handle_consecutive_writes(Input *input) {
     int n_delete = 0;
     uint8_t *delete = (uint8_t *)calloc(input->n_events, 1);
 
-    e = input->events;
+    e = get_first_event(input);
 
     for (int i = 0; e != NULL; i++) {
         if (e->type != EVENT_TYPE_MEM_WRITE) {
@@ -866,7 +866,7 @@ static int handle_consecutive_writes(Input *input) {
             additional_size = 0;
             memset(additional_data, 0, 1024);
         }
-        e = e->next;
+        e = get_next_event(e);
     }
 
     for (int i = input->n_events - 1; i >= 0; i--) {
@@ -884,7 +884,7 @@ static int handle_useless_messages(Input *input) {
     int n_delete = 0;
     uint8_t *delete = (uint8_t *)calloc(input->n_events, 1);
 
-    e = input->events;
+    e = get_first_event(input);
     for (int i = 0; e != NULL; i++) {
         if (e->type == EVENT_TYPE_MEM_ALLOC ||
                 e->type == EVENT_TYPE_MEM_READ ||
@@ -892,7 +892,7 @@ static int handle_useless_messages(Input *input) {
             delete[i] = 0xde; // let's mark this
             n_delete += 1;
         }
-        e = e->next;
+        e = get_next_event(e);
     }
     for (int i = input->n_events - 1; i >= 0; i--) {
         if (delete[i] == 0xde)
@@ -976,12 +976,12 @@ static void deep_copy_with_grouped_input(Event *orig, Event *copy) {
     // copy Input.Event
     Input *copied_input = (Input *)copy->data;
     Input *origed_input = (Input *)orig->data;
-    Event *origed_event = origed_input->events;
+    Event *origed_event = get_first_event(origed_input);
     for (int i = 0; origed_event != NULL; i++) {
         Event *copied_event = (Event *)calloc(sizeof(Event), 1);
         event_ops[origed_event->type].deep_copy(origed_event, copied_event);
         append_event(copied_input, copied_event);
-        origed_event = origed_event->next;
+        origed_event = get_next_event(origed_event);
     }
 }
 
@@ -1004,7 +1004,7 @@ static uint64_t dispatch_group_event(Event *event) {
 #ifdef VIDEZZO_DEBUG
     fprintf(stderr, "- dispatching events\n");
 #endif
-    for (e = input->events, i = 0;
+    for (e = get_first_event(input), i = 0;
             e != NULL; i++) {
 #ifdef VIDEZZO_DEBUG
         event_ops[e->type].print_event(e);
@@ -1127,53 +1127,44 @@ size_t get_input_size(Input *input) {
     return input->size;
 }
 
-static uint32_t get_event_size(Input *input, uint32_t index) {
-    // event->next, event->event_size are used
-    Event *event = input->events;
-    for (int i = 0; i < index; i++) {
-        if (!event->next)
-            break;
-        event = event->next;
-    }
-    return event->event_size;
+Event *get_next_event(Event *event) {
+    return TAILQ_NEXT(event, links);
 }
 
-static uint32_t get_event_offset(Input *input, uint32_t index) {
-    // event->next, event->offset are used
-    Event *event = input->events;
-    for (int i = 0; i < index; i++) {
-        if (!event->next)
-            break;
-        event = event->next;
-    }
-    return event->offset;
+Event *get_first_event(Input *input) {
+    return TAILQ_FIRST(input->head);
+}
+
+Event *get_prev_event(Event *event) {
+    return TAILQ_PREV(event, EventHead, links);
 }
 
 Event *get_event(Input *input, uint32_t index) {
-    Event *event = input->events;
-    for (int i = 0; i != index; i++)
-        event = event->next;
+    Event *event;
+    if (index > input->n_events / 2) {
+        // search from the end
+        event = TAILQ_LAST(input->head, EventHead);
+        for (int i = input->n_events - 1; i != index; i--) {
+            event = get_prev_event(event);
+        }
+    } else {
+        // search from the beginning
+        event = get_first_event(input);
+        for (int i = 0; i != index; i++) {
+            event = get_next_event(event);
+        }
+    }
     return event;
 }
 
-Event *get_next_event(Event *event) {
-    return event->next;
-}
-
 void append_event(Input *input, Event *event) {
-    Event *last_event = input->events;
-    if (!last_event) {
-        input->events = event;
-    } else {
-        while (last_event->next) {
-            last_event = last_event->next;
-        }
-        last_event->next = event;
-    }
-    event->next = NULL;
+    TAILQ_INSERT_TAIL(input->head, event, links);
     input->n_events++;
+
+    // update offset
     event->offset = input->size; // should be in advance
-    input->size += event->event_size; // DataSize
+    // update input size
+    input->size += event->event_size;
 }
 
 void insert_event(Input *input, Event *event, uint32_t idx) {
@@ -1181,21 +1172,16 @@ void insert_event(Input *input, Event *event, uint32_t idx) {
         append_event(input, event);
         return;
     }
-    // single linked list insertion
     idx = idx % input->n_events; // don't overflow
-    if (idx == 0) {
-        event->next = input->events;
-        input->events = event;
-    } else {
-        Event *head = get_event(input, idx - 1);
-        event->next = head->next;
-        head->next = event;
-    }
+    Event *after = get_event(input, idx);
+    TAILQ_INSERT_BEFORE(after, event, links);
     input->n_events++;
+
     // update offset
-    event->offset = event->next->offset; // won't overflow
-    for (Event *following_event = event->next;
-            following_event != NULL; following_event = following_event->next) {
+    event->offset = get_next_event(event)->offset; // won't overflow
+    for (Event *following_event = get_next_event(event);
+            following_event != NULL;
+            following_event = get_next_event(following_event)) {
         following_event->offset += event->event_size;
     }
     // update input size
@@ -1203,22 +1189,16 @@ void insert_event(Input *input, Event *event, uint32_t idx) {
 }
 
 static Event *__delink_event(Input *input, uint32_t idx) {
-    // remove
-    Event *before, *target, *after;
-    if (idx == 0) {
-        target = input->events;
-        input->events = target->next;
-        after = target->next;
-    } else {
-        before = get_event(input, idx - 1);
-        target = before->next;
-        after = target->next;
-        before->next = after;
-    }
+    Event *target = get_event(input, idx);
+    Event *before = get_prev_event(target);
+    Event *after = get_next_event(target);
+    TAILQ_REMOVE(input->head, target, links);
     input->n_events--;
+
     // update offset
     for (Event *following_event = after;
-            following_event != NULL; following_event = following_event->next) {
+            following_event != NULL;
+            following_event = get_next_event(following_event)) {
         following_event->offset -= target->event_size;
     }
     // update input size
@@ -1290,7 +1270,6 @@ static void swap_events(Input *input,
 }
 
 static void copy_event_to(Input *input, uint32_t from, uint32_t to) {
-    fprintf(stderr, "%d, %d\n", from, to);
     // copy
     Event *orig = get_event(input, from);
     Event *copy= (Event *)calloc(sizeof(Event), 1);
@@ -1307,7 +1286,7 @@ static void copy_event_to(Input *input, uint32_t from, uint32_t to) {
 
 
 Input *init_input(const uint8_t *Data, size_t Size) {
-    if (Size < 13)
+    if (Size < 10)
         return NULL;
     Input *input = (Input *)calloc(sizeof(Input), 1);
     if (Data != NULL) { /* this is only for deserialization */
@@ -1317,46 +1296,28 @@ Input *init_input(const uint8_t *Data, size_t Size) {
     }
     input->index = 0;
     input->size = 0;
-    input->events = NULL;
+    input->head = (EventHead *)calloc(sizeof(EventHead), 1);
+    TAILQ_INIT(input->head);
     input->n_events = 0;
     input->n_groups = 0;
     return input;
 }
 
 static void free_events(Input *input) {
-    Event *event = input->events, *tmp;
-    while ((tmp = event)) {
-        event_ops[tmp->type].release(tmp);
-        event = tmp->next;
-        free(tmp);
+    Event *event;
+    while (!TAILQ_EMPTY(input->head)) {
+        event = get_first_event(input);
+        TAILQ_REMOVE(input->head, event, links);
+        event_ops[event->type].release(event);
+        free(event);
     }
 }
 
 void free_input(Input *input) {
     free(input->buf);
     free_events(input);
+    free(input->head);
     free(input);
-}
-
-bool validate_input_size(Input *input, size_t groundtruth) {
-    size_t real_size = 0;
-    Event *event = input->events;
-    while (event) {
-        fprintf(stderr, "- 0x%x\n", event->event_size);
-        real_size += event->event_size;
-        event = event->next;
-    }
-    return real_size == groundtruth;
-}
-
-bool validate_input_n_events(Input *input, int groundtruth) {
-    int real_n_events = 0;
-    Event *event = input->events, *tmp;
-    while (event) {
-        real_n_events++;
-        event = event->next;
-    }
-    return real_n_events == groundtruth;
 }
 
 //
@@ -1546,13 +1507,13 @@ uint32_t deserialize(Input *input) {
 uint32_t serialize(Input *input, uint8_t *Data, uint32_t MaxSize) {
     size_t Offset = 0;
 
-    Event *event = input->events;
+    Event *event = get_first_event(input);
 #ifdef VIDEZZO_DEBUG
     fprintf(stderr, "- serialize\n");
 #endif
     for (int i = 0; event != NULL; i++) {
         Offset += event_ops[event->type].serialize(event, Data, Offset, MaxSize);
-        event = event->next;
+        event = get_next_event(event);
     }
 #ifdef VIDEZZO_DEBUG
     fprintf(stderr, "- serialize done (%zu)\n", Offset);
