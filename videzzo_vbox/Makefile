@@ -57,5 +57,7 @@ clusterfuzz-coverage:
 clusterfuzz-debug:
 	bash -x 0004-zip-vbox-targets.sh deb
 
-clean:
-	# do nothing
+distclean:
+	rm *.h *.yaml
+	rm -r out-*
+	rm -r vbox

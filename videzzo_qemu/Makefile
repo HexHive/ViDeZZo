@@ -59,5 +59,7 @@ clusterfuzz-coverage:
 clusterfuzz-debug:
 	bash -x 0004-zip-qemu-targets.sh deb
 
-clean:
-	# do nothing
+distclean:
+	rm *.h *.yaml
+	rm -r out-*
+	rm -r qemu

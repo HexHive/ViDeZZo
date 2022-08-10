@@ -61,7 +61,15 @@ vbox-debug: videzzo-vbox-debug
 clean:
 	rm -rf *.o *.a.* *.i
 
-distclean: clean
-	make -C videzzo_qemu clean
-	make -C videzzo_vbox clean
+toolclean:
 	make -C videzzo_tool clean
+
+qemudistclean:
+	make -C videzzo_qemu distclean
+
+vboxdistclean:
+	make -C videzzo_vbox distclean
+
+distclean: clean toolclean
+	make -C videzzo_qemu distclean
+	make -C videzzo_vbox distclean
