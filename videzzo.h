@@ -343,4 +343,26 @@ uint8_t __disimm_around_event_interface(uint8_t interface);
 }  // extern "C"
 #endif  // __cplusplus
 
+
+//
+// ViDeZZo tools
+//
+static size_t load_from_seed(const char *pathname, uint8_t *buf, size_t size) {
+    FILE *f = fopen(pathname, "rb");
+    if (f == NULL) {
+        printf("[-] %s failed to open. Exit.\n", pathname);
+        exit(1);
+    }
+    return fread(buf, 1, size, f);
+}
+
+static size_t dump_to_file(uint8_t *Data, size_t Size, const char *output) {
+    FILE *f = fopen(output, "wb");
+    if (f == NULL) {
+        printf("[-] %s failed to open. Exit.\n", output);
+        exit(1);
+    }
+    return fwrite(Data, 1, Size, f);
+}
+
 #endif /* VIDEZZO_H */

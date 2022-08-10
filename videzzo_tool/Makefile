@@ -15,4 +15,4 @@ videzzo-poc-gen:
 all: videzzo-merge videzzo-poc-gen
 
 clean:
-	rm videzzo-merge videzzo-poc-gen
+	rm -f videzzo-merge videzzo-poc-gen

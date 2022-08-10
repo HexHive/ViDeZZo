@@ -19,24 +19,6 @@ FeedbackHandler group_mutator_miss_handlers[0xff] = {};
 size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize) { return 0; }
 void __free_memory_blocks() {}
 
-static size_t load_from_seed(const char *pathname, uint8_t *buf, size_t size) {
-    FILE *f = fopen(pathname, "rb");
-    if (f == NULL) {
-        printf("[-] %s failed to open. Exit.\n", pathname);
-        exit(1);
-    }
-    return fread(buf, 1, size, f);
-}
-
-static size_t dump_to_file(uint8_t *Data, size_t Size, const char *output) {
-    FILE *f = fopen(output, "wb");
-    if (f == NULL) {
-        printf("[-] %s failed to open. Exit.\n", output);
-        exit(1);
-    }
-    return fwrite(Data, 1, Size, f);
-}
-
 int main(int argc, char **argv) {
     // This small program accepts a set of seed pathnames to merge them to a
     // unique seed. This tool can generate a PoC when reproducation needs
@@ -92,13 +74,13 @@ int main(int argc, char **argv) {
             printf("[-] Input deserialization failed. Exit.\n");
             exit(1);
         }
-        Event *event = input->events;
+        Event *event = get_first_event(input);
         for (int j = 0; event != NULL; j++) {
             event_ops[event->type].print_event(event);
             Event *copy = (Event *)calloc(sizeof(Event), 1);
             event_ops[event->type].deep_copy(event, copy);
             append_event(monolithic_input, copy);
-            event = event->next;
+            event = get_next_event(event);
         }
         free_input(input);
     }

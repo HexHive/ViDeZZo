@@ -983,7 +983,7 @@ static void deep_copy_with_grouped_input(Event *orig, Event *copy) {
         append_event(copied_input, copied_event);
         origed_event = get_next_event(origed_event);
     }
-    copy->data = copied_input;
+    copy->data = (uint8_t *)copied_input;
 }
 
 // Weak definitations - to make videzz.c realy VMM-independent
