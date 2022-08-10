@@ -1,19 +1,6 @@
-# In this file, we construct a PoC consisting of several events following
-# ViDeZZo's protocol. A line starts with # is a comment. Other lines start
-# with a EVENT_TYPE and parameters follow (common separated values). This
-# protocol fits both QEMU and VBox.
+# This is an example.
+
+# The above is a blank line.
 #
-# Here is a list of EVENT_TYPEs and their parameters
-# EVENT_TYPE_MMIO_WRITE, addr, size, value
-# EVENT_TYPE_MMIO_READ, addr, size
-#
-# Note that the interface is automatically identified.
-#
-# Usage:
-# 1. generate ViDeZZo's PoC (binary)
-#   videzzo-poc-gen -o poc-name < poc-gen.txt
-# 2. generate QEMU's PoC (qtest, text)
-#   videzzo-poc-gen -b qemu -o poc-name < poc-gen.txt
-# 3. generate VBox's PoC (?, ?)
-#   videzzo-poc-gen -b vbox -o poc-name < poc-gen.txt
-EVENT_TYPE_MMIO_WRITE, 0xfd4a0100, 4, 0x7e04
+# This is a comment line.
+009, EVENT_TYPE_MMIO_WRITE, 0xfd4a0100, 4, 0x7e04
