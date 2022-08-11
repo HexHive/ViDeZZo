@@ -240,6 +240,56 @@ static void fprintf_data(Event *event, FILE *fp) {
     free(enc);
 }
 
+static void __output_to_text(Input *input, FILE *fp) {
+    Input *grouped_input;
+    Event *event = get_first_event(input);
+    for (int i = 0; event != NULL; i++) {
+        switch (event->type) {
+            case EVENT_TYPE_MMIO_READ:
+            case EVENT_TYPE_PIO_READ:
+                fprintf(fp, "    %03d, %s", event->interface, EventTypeNames[event->type]);
+                fprintf(fp, ", 0x%lx, 0x%x", event->addr, event->size);
+                fprintf(fp, "\n");
+                break;
+            case EVENT_TYPE_MMIO_WRITE:
+            case EVENT_TYPE_PIO_WRITE:
+                fprintf(fp, "    %03d, %s", event->interface, EventTypeNames[event->type]);
+                fprintf(fp, ", 0x%lx, 0x%x", event->addr, event->size);
+                fprintf(fp, ", 0x%lx", event->valu);
+                fprintf(fp, "\n");
+                break;
+            case EVENT_TYPE_MEM_READ:
+                fprintf(fp, "    %03d, %s", event->interface, EventTypeNames[event->type]);
+                fprintf(fp, ", 0x%lx, 0x%x", event->addr, event->size);
+                fprintf(fp, "\n");
+                break;
+            case EVENT_TYPE_MEM_WRITE:
+                fprintf(fp, "    %03d, %s", event->interface, EventTypeNames[event->type]);
+                fprintf(fp, ", 0x%lx, 0x%x", event->addr, event->size);
+                fprintf_data(event, fp);
+                fprintf(fp, "\n");
+                break;
+            case EVENT_TYPE_SOCKET_WRITE:
+                fprintf(fp, "    %03d, %s", event->interface, EventTypeNames[event->type]);
+                fprintf(fp, ", 0x%x", event->size);
+                fprintf_data(event, fp);
+                fprintf(fp, "\n");
+                break;
+            case EVENT_TYPE_CLOCK_STEP:
+                fprintf(fp, "    %03d, %s", event->interface, EventTypeNames[event->type]);
+                fprintf(fp, ", 0x%lx", event->valu);
+                fprintf(fp, "\n");
+                break;
+            case EVENT_TYPE_GROUP_EVENT_LM:
+            case EVENT_TYPE_GROUP_EVENT_RS:
+                grouped_input = (Input *)event->data;
+                __output_to_text(grouped_input, fp);
+                break;
+        }
+        event = get_next_event(event);
+    }
+}
+
 static void output_to_text(Input *input, const char *pathname) {
     FILE *fp = fopen(pathname, "w");
     if (fp == NULL) {
@@ -247,42 +297,7 @@ static void output_to_text(Input *input, const char *pathname) {
         exit(1);
     }
 
-    Event *event = get_first_event(input);
-    for (int i = 0; event != NULL; i++) {
-        fprintf(fp, "    %03d, %s", event->interface, EventTypeNames[event->type]);
-        switch (event->type) {
-            case EVENT_TYPE_MMIO_READ:
-            case EVENT_TYPE_PIO_READ:
-                fprintf(fp, ", 0x%lx, 0x%x", event->addr, event->size);
-                fprintf(fp, "\n");
-                break;
-            case EVENT_TYPE_MMIO_WRITE:
-            case EVENT_TYPE_PIO_WRITE:
-                fprintf(fp, ", 0x%lx, 0x%x", event->addr, event->size);
-                fprintf(fp, ", 0x%lx", event->valu);
-                fprintf(fp, "\n");
-                break;
-            case EVENT_TYPE_MEM_READ:
-                fprintf(fp, ", 0x%lx, 0x%x", event->addr, event->size);
-                fprintf(fp, "\n");
-                break;
-            case EVENT_TYPE_MEM_WRITE:
-                fprintf(fp, ", 0x%lx, 0x%x", event->addr, event->size);
-                fprintf_data(event, fp);
-                fprintf(fp, "\n");
-                break;
-            case EVENT_TYPE_SOCKET_WRITE:
-                fprintf(fp, ", 0x%x", event->size);
-                fprintf_data(event, fp);
-                fprintf(fp, "\n");
-                break;
-            case EVENT_TYPE_CLOCK_STEP:
-                fprintf(fp, ", 0x%lx", event->valu);
-                fprintf(fp, "\n");
-                break;
-        }
-        event = get_next_event(event);
-    }
+    __output_to_text(input, fp);
 
     fclose(fp);
 }
