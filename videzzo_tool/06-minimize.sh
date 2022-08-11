@@ -58,22 +58,25 @@ poc_gen=$(realpath $(dirname $0)/videzzo-poc-gen)
 echo "#!/bin/bash" > $ws/picire_tester.sh
 echo "export ASAN_OPTIONS=detect_leaks=0" >> $ws/picire_tester.sh
 echo "export DEFAULT_INPUT_MAXSIZE=10000000" >> $ws/picire_tester.sh
-echo "$poc_gen -i text -o binary -O $ws/poc-bin \$1" >> $ws/picire_tester.sh
-echo "$target $ws/poc-bin $arglist 2>&1 | grep -q -e \"ERROR\";" >> $ws/picire_tester.sh
+echo "poc_bin=\$(cat /proc/sys/kernel/random/uuid)" >> $ws/picire_tester.sh
+echo "$poc_gen -i text -o binary -O $ws/\$poc_bin \$1" >> $ws/picire_tester.sh
+echo "$target $ws/\$poc_bin $arglist 2>&1 | grep -q -e \"ERROR\";" >> $ws/picire_tester.sh
 chmod +x $ws/picire_tester.sh
 echo [-] created $ws/picire_tester.sh
 echo "#!/bin/bash" > $ws/picire_reproduce.sh
 echo "export ASAN_OPTIONS=detect_leaks=0" >> $ws/picire_reproduce.sh
 echo "export DEFAULT_INPUT_MAXSIZE=10000000" >> $ws/picire_reproduce.sh
-echo "$poc_gen -i text -o binary -O $ws/poc-bin \$1" >> $ws/picire_reproduce.sh
-echo "$target $ws/poc-bin $arglist" >> $ws/picire_reproduce.sh
+echo "poc_bin=\$(cat /proc/sys/kernel/random/uuid)" >> $ws/picire_reproduce.sh
+echo "$poc_gen -i text -o binary -O $ws/\$poc_bin \$1" >> $ws/picire_reproduce.sh
+echo "$target $ws/\$poc_bin $arglist" >> $ws/picire_reproduce.sh
 chmod +x $ws/picire_reproduce.sh
 echo [-] created $ws/picire_reproduce.sh
 echo "#!/bin/bash" > $ws/picire_latest.sh
 echo "export ASAN_OPTIONS=detect_leaks=0" >> $ws/picire_latest.sh
 echo "export DEFAULT_INPUT_MAXSIZE=10000000" >> $ws/picire_latest.sh
-echo "$poc_gen -i text -o binary -O $ws/poc-bin \$1" >> $ws/picire_latest.sh
-echo "$target $ws/poc-bin $arglist" >> $ws/picire_latest.sh
+echo "poc_bin=\$(cat /proc/sys/kernel/random/uuid)" >> $ws/picire_latest.sh
+echo "$poc_gen -i text -o binary -O $ws/\$poc_bin \$1" >> $ws/picire_latest.sh
+echo "$target $ws/\$poc_bin $arglist" >> $ws/picire_latest.sh
 chmod +x $ws/picire_latest.sh
 echo [-] created $ws/picire_latest.sh
 
@@ -89,3 +92,13 @@ time picire --input=$ws/picire_inputs --test=$ws/picire_tester.sh \
 echo [-] save output to $ws/picire_inputs.*/picire_inputs
 echo [-] run $ws/picire_reproduce.sh $ws/picire_inputs.*/picire_inputs
 echo [-] modify and run $ws/picire_latest.sh $ws/picire_inputs.*/picire_inputs
+
+# step 5: let's serialize
+poc=$crash.minimized
+export DEFAULT_INPUT_MAXSIZE=10000000
+$poc_gen -i text -o binary -O $poc $ws/picire_inputs.*/picire_inputs
+unset DEFAULT_INPUT_MAXSIZE
+echo [-] generate PoC to ${poc}
+echo [-] please debug via the following command
+echo " DEFAULT_INPUT_MAXSIZE=10000000 ${target} ${arglist} ${poc}"
+echo " DEFAULT_INPUT_MAXSIZE=10000000 gdb --args ${target} ${arglist} ${poc}"
