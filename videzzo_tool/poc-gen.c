@@ -83,9 +83,9 @@ static Event *parse_line(char *line, size_t len) {
     SKIP_SPACE(line);
     // get interface
     char s_interface[4] = {'\0'};
-    int i_interface = get_next_token(line, s_interface, 4);
-    line += 3;
-    int interface = atoi(s_interface);
+    int l_interface = get_next_token(line, s_interface, 4);
+    line += l_interface;
+    int i_interface = atoi(s_interface);
     SKIP(line);
     // get event type
     char s_event_type[32] = {'\0'};
@@ -128,7 +128,7 @@ static Event *parse_line(char *line, size_t len) {
             SKIP(line);
             // get size
             l_size = get_next_token(line, s_size, 32);
-            i_addr = strtol(s_addr, &endptr, 0);
+            i_size= strtol(s_size, &endptr, 0);
             line += l_size;
             SKIP(line);
             // get valu
@@ -222,13 +222,69 @@ static void input_from_text(Input *input, const char *pathname) {
 static void input_from_binary(Input *input, const char *pathname) {
     uint8_t *poc = (uint8_t *)calloc(DEFAULT_INPUT_MAXSIZE, 1);
     size_t ret = load_from_seed(pathname, poc, DEFAULT_INPUT_MAXSIZE);
+    input->limit= ret;
+    input->buf = poc;
     // deserialize
     size_t DeserializationSize = deserialize(input);
     assert(ret == DeserializationSize);
 }
 
-static void output_to_text(Input *input, const char *pathname) {
+static void fprintf_data(Event *event, FILE *fp) {
+    char *enc;
+    uint32_t size = event->size;
+    enc = calloc(2 * size + 1, 1);
+    for (int i = 0; i < size; i++) {
+        sprintf(&enc[i * 2], "%02x", event->data[i]);
+    }
+    fprintf(fp, ", %s", enc);
+    free(enc);
+}
 
+static void output_to_text(Input *input, const char *pathname) {
+    FILE *fp = fopen(pathname, "w");
+    if (fp == NULL) {
+        printf("[-] %s failed to open. Exit.\n", pathname);
+        exit(1);
+    }
+
+    Event *event = get_first_event(input);
+    for (int i = 0; event != NULL; i++) {
+        fprintf(fp, "    %03d, %s", event->interface, EventTypeNames[event->type]);
+        switch (event->type) {
+            case EVENT_TYPE_MMIO_READ:
+            case EVENT_TYPE_PIO_READ:
+                fprintf(fp, ", 0x%lx, 0x%x", event->addr, event->size);
+                fprintf(fp, "\n");
+                break;
+            case EVENT_TYPE_MMIO_WRITE:
+            case EVENT_TYPE_PIO_WRITE:
+                fprintf(fp, ", 0x%lx, 0x%x", event->addr, event->size);
+                fprintf(fp, ", 0x%lx", event->valu);
+                fprintf(fp, "\n");
+                break;
+            case EVENT_TYPE_MEM_READ:
+                fprintf(fp, ", 0x%lx, 0x%x", event->addr, event->size);
+                fprintf(fp, "\n");
+                break;
+            case EVENT_TYPE_MEM_WRITE:
+                fprintf(fp, ", 0x%lx, 0x%x", event->addr, event->size);
+                fprintf_data(event, fp);
+                fprintf(fp, "\n");
+                break;
+            case EVENT_TYPE_SOCKET_WRITE:
+                fprintf(fp, ", 0x%x", event->size);
+                fprintf_data(event, fp);
+                fprintf(fp, "\n");
+                break;
+            case EVENT_TYPE_CLOCK_STEP:
+                fprintf(fp, ", 0x%lx", event->valu);
+                fprintf(fp, "\n");
+                break;
+        }
+        event = get_next_event(event);
+    }
+
+    fclose(fp);
 }
 
 static void output_to_binary(Input *input, const char *pathname) {
@@ -243,8 +299,8 @@ int main(int argc, char **argv) {
     //
     // This program deserialize and serialize events between text and binary
     // Usage:
-    //   ./poc-gen -i text -o binary path/to/input
-    //   ./poc-gen -o text -i binary path/to/input
+    //   ./poc-gen -i text -o binary -O path/to/output path/to/input
+    //   ./poc-gen -o text -i binary -O path/to/output path/to/input
     //
     // This program maintains the text formats of events. Don't worry.
     //
@@ -263,6 +319,7 @@ int main(int argc, char **argv) {
 
     // 0 for text, 1 for binary
     char input_format = 0, output_format = 0;
+    char output_pathname[256] = {'\0'};
     size_t optind;
     for (optind = 1; optind < argc && argv[optind][0] == '-'; optind++) {
         switch (argv[optind][1]) {
@@ -288,26 +345,23 @@ int main(int argc, char **argv) {
                     exit(1);
                 }
                 break;
+            case 'O':
+                optind++;
+                memcpy(output_pathname, argv[optind], strlen(argv[optind]));
+                break;
             default:
                 printf("[-] Usage: %s -i text|binary -o binary|text path/to/input\n", argv[0]);
                 exit(1);
         }
     }
-    if (input_format == output_format) {
-        printf("[-] Format of input and output should be different.\n");
-        exit(1);
-    }
-    if (argv[5] == NULL) {
+
+    if (argv[7] == NULL) {
         printf("[-] Path to input is missing\n");
         exit(1);
     }
-    char input_pathname[256] = {'\0'};
-    memcpy(input_pathname, argv[5], strlen(argv[5]));
 
-    if (input_pathname[0] == '\0') {
-        printf("[-] Path to input is not valid\n");
-        exit(1);
-    }
+    char input_pathname[256] = {'\0'};
+    memcpy(input_pathname, argv[7], strlen(argv[7]));
 
     videzzo_set_merge();
     DEFAULT_INPUT_MAXSIZE = get_default_input_maxsize();
@@ -320,15 +374,10 @@ int main(int argc, char **argv) {
         input_from_binary(input, input_pathname);
     }
 
-
-    free_input(input);
-
-    return 0;
-
     if (output_format == 0) {
-        output_to_text(input, input_pathname);
+        output_to_text(input, output_pathname);
     } else {
-        output_to_binary(input, input_pathname);
+        output_to_binary(input, output_pathname);
     }
 
     free_input(input);
