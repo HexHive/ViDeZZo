@@ -91,6 +91,11 @@ enable "halt_on_error" and the check of "runtime error".
 ABS_PATH_TO_CRASHING_POC`. Note that UBSAN bugs need to enable "halt_on_error"
 and the check of "runtime error".
 
++ How to modify the PoC: run `./videzzo_tool/videzzo-poc-gen -i binary
+-o text -O path/to/text path/to/poc` to deserialize a PoC to a plan text file.
+Modify the text file and then serialize it: `./videzzo_tool/videzzo-poc-gen -i
+text -o binary -O path/to/poc path/to/binary`.
+
 ## Advanced usage: Source code coverage profiling
 
 With source code coverage profiling, we know what we can or cannot improve. To
