@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
     // This small program accepts a set of seed pathnames to merge them to a
     // unique seed. This tool can generate a PoC when reproducation needs
     // multiple seeds after delta-debugging.
-    const char output[256] = {'\0'};
+    char output[256] = {'\0'};
     size_t optind;
     for (optind = 1; optind < argc && argv[optind][0] == '-'; optind++) {
         switch (argv[optind][1]) {
