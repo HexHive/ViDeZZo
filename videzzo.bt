@@ -1,0 +1,68 @@
+//------------------------------------------------
+//--- 010 Editor v12.0.1 Binary Template
+//
+//      File: videzz.bt
+//   Authors: Qiang Liu <cyruscyliu@gmail.com>
+//   Version: 1.0
+//   Purpose: Display messages in a binary seed to help debug
+//  Category: Fuzzing
+// File Mask:
+//  ID Bytes:
+//   History:
+//------------------------------------------------
+typedef unsigned char uint8_t;
+typedef unsigned int32 uint32_t;
+typedef unsigned int64 uint64_t;
+
+typedef enum <uchar> EvenType {
+   EVENT_TYPE_MMIO_READ      = 0,      //*
+   EVENT_TYPE_MMIO_WRITE,              //*
+   EVENT_TYPE_PIO_READ,                //*
+   EVENT_TYPE_PIO_WRITE,               //*
+   EVENT_TYPE_CLOCK_STEP,              //*
+   EVENT_TYPE_SOCKET_WRITE   = 5,      //*
+   EVENT_TYPE_MEM_READ       = 6,      //*
+   EVENT_TYPE_MEM_WRITE,               //*
+   EVENT_TYPE_MEM_ALLOC,               //*
+   EVENT_TYPE_MEM_FREE,                //*
+   EVENT_TYPE_GROUP_EVENT_LM = 10,     //-
+   EVENT_TYPE_GROUP_EVENT_RS = 11,     //-
+} EventType;
+
+typedef struct Event {
+    EventType type;
+    uint8_t interface;
+    switch (type) {
+        case EVENT_TYPE_PIO_READ:
+        case EVENT_TYPE_MMIO_READ:
+            uint64_t addr;
+            uint32_t size;
+            break;
+        case EVENT_TYPE_PIO_WRITE:
+        case EVENT_TYPE_MMIO_WRITE:
+            uint64_t addr;
+            uint32_t size;
+            uint64_t value;
+            break;
+        case EVENT_TYPE_CLOCK_STEP:
+            uint64_t value;
+            break;
+        case EVENT_TYPE_GROUP_EVENT_RS:
+        case EVENT_TYPE_GROUP_EVENT_LM:
+            uint32_t size;
+            uint8_t data[size];
+            break;
+    }
+} Event;
+
+/**** PARSING CODE ****/
+LittleEndian();
+Printf("ViDeZZo.bt Begin\n");
+
+local int i;
+
+while (!FEof()) {
+    Event input;
+}
+
+Printf("ViDeZZo.bt End\n");
