@@ -85,7 +85,7 @@ void GroupMutatorOrder(uint8_t id) {
         current_event_e = gfctx_get_current_event();
     }
 
-    if (status == 2) {
+    if (status == 2 && current_event_s < current_event_e) {
         // we want to group any events between (_s, _e]
         Input *input = gfctx_get_current_input();
 
