@@ -1481,6 +1481,10 @@ uint32_t deserialize(Input *input) {
                 }
                 // basically, we want to unflatten sub events
                 size = input_next_32(input);
+                if (!input_check_index(input, size)) {
+                    input->index -= 6;
+                    return get_input_size(input);
+                }
                 uint8_t *sub_events = (uint8_t *)calloc(size, 1);
                 input_next(input, sub_events, size); // get their data
                 Input *grouped_input = init_input(sub_events, size); // make it an input
