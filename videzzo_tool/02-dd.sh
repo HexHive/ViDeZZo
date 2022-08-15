@@ -18,7 +18,7 @@ HEREDOC
   exit 1
 }
 
-while getopts ":t:a:c:s:" o; do
+while getopts ":t:a:e:c:s:" o; do
   case "${o}" in
     t)
       target=${OPTARG}

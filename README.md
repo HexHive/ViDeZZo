@@ -91,10 +91,10 @@ advertise if it is necessary. See
 [this](https://github.com/HexHive/virtfuzz-bugs) project for more information.
 
 + 3.5 modify this PoC to exploit the primitive capability: run
-`./videzzo_tool/videzzo-poc-gen -i binary -o text -O path/to/text path/to/poc`
-to deserialize a PoC to a plan text file.  Modify the text file and then
-serialize it: `./videzzo_tool/videzzo-poc-gen -i text -o binary -O path/to/poc
-path/to/binary`.
+`DEFAULT_INPUT_MAXSIZE=10000000 ./videzzo_tool/videzzo-poc-gen -i binary -o text
+-O path/to/text path/to/poc` to deserialize a PoC to a plan text file.  Modify
+the text file and then serialize it: `DEFAULT_INPUT_MAXSIZE=10000000
+./videzzo_tool/videzzo-poc-gen -i text -o binary -O path/to/poc path/to/binary`.
 
 ## Advanced usage: Source code coverage profiling
 
