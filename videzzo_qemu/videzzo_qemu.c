@@ -35,6 +35,11 @@
 #include "videzzo.h"
 #ifdef CLANG_COV_DUMP
 #include "clangcovdump.h"
+#ifdef __cplusplus
+extern "C" int __llvm_profile_runtime;
+#else
+int __llvm_profile_runtime;
+#endif
 #endif
 
 //
