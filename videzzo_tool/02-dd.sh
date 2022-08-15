@@ -7,6 +7,7 @@ Usage: $0 -t TARGET_PATH -c CRASH_PATH -s SEEDS_PATH
 positional arguments:
   -t, TARGET_PATH  absolute pathname of the fuzz target
   -a, ARG_LIST     argument list for the fuzz target, e.g., "-L pathname/to/pc-bios"
+  -e, ERROR        error information to identify the same crash, e.g., "heap-user-after-free"
   -c, CRASH_PATH   absolute pathname of the crashing test case
   -s, SEEDS_PATH   absolute pathname of the corpus
 
@@ -24,6 +25,9 @@ while getopts ":t:a:c:s:" o; do
       ;;
     a)
       arglist=${OPTARG}
+      ;;
+    e)
+      error=${OPTARG}
       ;;
     c)
       crash=${OPTARG}
@@ -53,7 +57,11 @@ if [[ -z $seeds ]]; then
 fi
 
 seeds=${seeds}*
-arglist="$arglist -max_len=10000000"
+arglist="$arglist -max_len=10000000 -detect_leaks=0"
+
+if [[ -z $error ]]; then
+    error="ERROR"
+fi
 
 echo "[-] target = $target"
 echo "[-] crash  = $crash"
@@ -67,7 +75,7 @@ echo [-] working in $ws
 echo "#!/bin/bash" > $ws/picire_tester.sh
 echo "export ASAN_OPTIONS=detect_leaks=0" >> $ws/picire_tester.sh
 echo "export DEFAULT_INPUT_MAXSIZE=10000000" >> $ws/picire_tester.sh
-echo "$target $crash $arglist -pre_seed_inputs=@\$1 2>&1 | grep -q -e \"ERROR\";" >> $ws/picire_tester.sh
+echo "$target $crash $arglist -pre_seed_inputs=@\$1 2>&1 | grep -q -e \"$error\";" >> $ws/picire_tester.sh
 chmod +x $ws/picire_tester.sh
 echo [-] created $ws/picire_tester.sh
 echo "#!/bin/bash" > $ws/picire_reproduce.sh
@@ -91,7 +99,7 @@ echo [-] created $ws/picire_inputs
 # step 4: let's start dd
 echo [-] starting delta debugging!
 time picire --input=$ws/picire_inputs --test=$ws/picire_tester.sh \
-	--parallel --subset-iterator=skip --complement-iterator=backward
+	--parallel --subset-iterator=skip --complement-iterator=backward --no-cleanup
 
 echo [-] save output to $ws/picire_inputs.*/picire_inputs
 echo [-] run $ws/picire_reproduce.sh $ws/picire_inputs.*/picire_inputs
