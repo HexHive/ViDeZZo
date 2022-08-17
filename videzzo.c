@@ -60,7 +60,7 @@ static int status = 0; // 0 -> 1/2 -> 2/1 -> bingo
 
 // TODO: change the API convetion and API name
 void GroupMutatorOrder(uint8_t id) {
-    if (getenv("VIDEZZO_DISABLE_INTRA_MESSAGE_ANNOTATION"))
+    if (getenv("VIDEZZO_DISABLE_GROUP_MUTATOR_RS") || getenv("VIDEZZO_DISABLE_INTRA_MESSAGE_ANNOTATION"))
         return;
     if (DisableGroupMutator)
         return;
@@ -131,7 +131,7 @@ void GroupMutatorOrder(uint8_t id) {
 
 // TODO: change the API convention and API name
 void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
-    if (getenv("VIDEZZO_DISABLE_INTRA_MESSAGE_ANNOTATION"))
+    if (getenv("VIDEZZO_DISABLE_GROUP_MUTATOR_LM") || getenv("VIDEZZO_DISABLE_INTRA_MESSAGE_ANNOTATION"))
         return;
     if (DisableGroupMutator)
         return;
