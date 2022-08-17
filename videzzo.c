@@ -41,17 +41,16 @@ void videzzo_clear_merge() {
 //
 // GroupMutator Feedback
 //
-// TODO: Somehow, we want to disable all group mutators. We use this variable or
-// an environment variable to control this. Apparantly, they are duplicated. In
-// the future, we want remove one of them.
-bool DisableGroupMutator = false;
+// We want to disable the trigger-action protocol.
+//
+static bool DisableTriggerActionProtocol = false;
 
 void disable_group_mutator(void) {
-    DisableGroupMutator = true;
+    DisableTriggerActionProtocol = true;
 }
 
 void enable_group_mutator(void) {
-    DisableGroupMutator = false;
+    DisableTriggerActionProtocol = false;
 }
 
 static int in_one_iteration = 0;
@@ -60,10 +59,13 @@ static int status = 0; // 0 -> 1/2 -> 2/1 -> bingo
 
 // TODO: change the API convetion and API name
 void GroupMutatorOrder(uint8_t id) {
-    if (getenv("VIDEZZO_DISABLE_GROUP_MUTATOR_RS") || getenv("VIDEZZO_DISABLE_INTRA_MESSAGE_ANNOTATION"))
+    if (DisableTriggerActionProtocol)
         return;
-    if (DisableGroupMutator)
+
+    if (getenv("VIDEZZO_DISABLE_GROUP_MUTATOR_RS") ||
+            getenv("VIDEZZO_DISABLE_INTER_MESSAGE_MUTATORS"))
         return;
+
 #ifdef VIDEZZO_DEBUG
     fprintf(stderr, "- GroupMutatorOrder: %d\n", status);
 #endif
@@ -131,9 +133,10 @@ void GroupMutatorOrder(uint8_t id) {
 
 // TODO: change the API convention and API name
 void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
-    if (getenv("VIDEZZO_DISABLE_GROUP_MUTATOR_LM") || getenv("VIDEZZO_DISABLE_INTRA_MESSAGE_ANNOTATION"))
+    if (DisableTriggerActionProtocol)
         return;
-    if (DisableGroupMutator)
+
+    if (getenv("VIDEZZO_DISABLE_INTRA_MESSAGE_ANNOTATION"))
         return;
 
     // save context
@@ -144,10 +147,6 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
     Event *trigger_event = get_event(old_input, old_current_event);
     if (trigger_event->type == EVENT_TYPE_GROUP_EVENT_LM && loop_counter == 0)
         return;
-
-#ifdef VIDEZZO_DEBUG
-    fprintf(stderr, "- GroupMutatorMiss: %d\n", loop_counter);
-#endif
 
     // create new context
     // so all injected events will go into here
@@ -160,6 +159,16 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
     // in this handler, the current input will be updated
     // Don't delete any events from the current event to the end
     group_mutator_miss_handlers[id](physaddr);
+
+    if (getenv("VIDEZZO_DISABLE_GROUP_MUTATOR_LM") ||
+            getenv("VIDEZZO_DISABLE_INTER_MESSAGE_MUTATORS")) {
+        free_input(input);
+        goto recover;
+    }
+
+#ifdef VIDEZZO_DEBUG
+    fprintf(stderr, "- GroupMutatorMiss: %d\n", loop_counter);
+#endif
 
     // nice, all events go into our new input
     // we construct the group event
@@ -190,13 +199,13 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
     }
     loop_counter += 1;
 
-    // recover
-    gfctx_set_current_input(old_input);
-    gfctx_set_current_event(old_current_event);
-
 #ifdef VIDEZZO_DEBUG
     fprintf(stderr, "- GroupMutatorMiss Done\n");
 #endif
+
+recover:
+    gfctx_set_current_input(old_input);
+    gfctx_set_current_event(old_current_event);
 }
 
 //
