@@ -266,18 +266,18 @@ extern "C" {
 #endif  // __cplusplus
 
 //
-// Weak VMM specific
+// Define following functions in ViDeZZo-VMM
 //
-uint64_t dispatch_mmio_read(Event *event) __attribute__((weak));
-uint64_t dispatch_mmio_write(Event *event) __attribute__((weak));
-uint64_t dispatch_pio_read(Event *event) __attribute__((weak));
-uint64_t dispatch_pio_write(Event *event) __attribute__((weak));
-uint64_t dispatch_mem_read(Event *event) __attribute__((weak));
-uint64_t dispatch_mem_write(Event *event) __attribute__((weak));
-uint64_t dispatch_clock_step(Event *event) __attribute__((weak));
-uint64_t dispatch_socket_write(Event *event) __attribute__((weak));
-uint64_t dispatch_mem_alloc(Event *event) __attribute__((weak));
-uint64_t dispatch_mem_free(Event *event) __attribute__((weak));
+extern uint64_t dispatch_mmio_read(Event *event);
+extern uint64_t dispatch_mmio_write(Event *event);
+extern uint64_t dispatch_pio_read(Event *event);
+extern uint64_t dispatch_pio_write(Event *event);
+extern uint64_t dispatch_mem_read(Event *event);
+extern uint64_t dispatch_mem_write(Event *event);
+extern uint64_t dispatch_clock_step(Event *event);
+extern uint64_t dispatch_socket_write(Event *event);
+extern uint64_t dispatch_mem_alloc(Event *event);
+extern uint64_t dispatch_mem_free(Event *event);
 
 //
 // Interfaces

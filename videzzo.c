@@ -986,18 +986,6 @@ static void deep_copy_with_grouped_input(Event *orig, Event *copy) {
     copy->data = (uint8_t *)copied_input;
 }
 
-// Weak definitations - to make videzz.c realy VMM-independent
-uint64_t dispatch_mmio_read(Event *event) { return 0; }
-uint64_t dispatch_mmio_write(Event *event) { return 0; }
-uint64_t dispatch_pio_read(Event *event) { return 0; }
-uint64_t dispatch_pio_write(Event *event) { return 0; }
-uint64_t dispatch_mem_read(Event *event) { return 0; }
-uint64_t dispatch_mem_write(Event *event) { return 0; }
-uint64_t dispatch_clock_step(Event *event) { return 0; }
-uint64_t dispatch_socket_write(Event *event) { return 0; }
-uint64_t dispatch_mem_alloc(Event *event) { return 0; }
-uint64_t dispatch_mem_free(Event *event) { return 0; }
-
 static uint64_t dispatch_group_event(Event *event) {
     Input *input = (Input *)event->data;
     Event *e;

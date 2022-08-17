@@ -18,6 +18,16 @@ static int DEFAULT_INPUT_MAXSIZE = 0x1000;
 FeedbackHandler group_mutator_miss_handlers[0xff] = {};
 size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize) { return 0; }
 void __free_memory_blocks() {}
+uint64_t dispatch_mmio_read(Event *event) { return 0; }
+uint64_t dispatch_mmio_write(Event *event) { return 0; }
+uint64_t dispatch_pio_read(Event *event) { return 0; }
+uint64_t dispatch_pio_write(Event *event) { return 0; }
+uint64_t dispatch_mem_read(Event *event) { return 0; }
+uint64_t dispatch_mem_write(Event *event) { return 0; }
+uint64_t dispatch_clock_step(Event *event) { return 0; }
+uint64_t dispatch_socket_write(Event *event) { return 0; }
+uint64_t dispatch_mem_alloc(Event *event) { return 0; }
+uint64_t dispatch_mem_free(Event *event) { return 0; }
 
 #define __EVENT_TYPE_IO_WRITE(interface, type, addr, size, valu) \
     event = event_ops[type].construct( \
