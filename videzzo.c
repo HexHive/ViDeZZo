@@ -57,8 +57,18 @@ static int in_one_iteration = 0;
 static int loop_counter = 0;
 static int status = 0; // 0 -> 1/2 -> 2/1 -> bingo
 
+typedef struct Record {
+    int id;
+    int status;  // 0 -> 1/2 -> 2/1 -> bingo
+    int last_status;
+    int current_event_s;
+    int current_event_e;
+} Record;
+
+static Record records[32] = {{ 0 }};
+
 // TODO: change the API convetion and API name
-void GroupMutatorOrder(uint8_t id) {
+void GroupMutatorOrder(int id, int status) {
     if (DisableTriggerActionProtocol)
         return;
 
@@ -69,25 +79,23 @@ void GroupMutatorOrder(uint8_t id) {
 #ifdef VIDEZZO_DEBUG
     fprintf(stderr, "- GroupMutatorOrder: %d\n", status);
 #endif
-    static int current_event_s = 0;
-    static int current_event_e = 0;
-    static int last_id = 0;
+    Record *r = &records[id];
 
-    if (status == 0 && (id == 1 || id == 2)) {
-        status = 1;
-        last_id = id;
+    if (r->status == 0 && (status == 1 || status == 2)) {
+        r->status = 1;
+        r->last_status = status;
         // start to record
-        current_event_s = gfctx_get_current_event();
-    } else if (status == 1 && in_one_iteration) {
-        if (id == 2 && last_id == 1)
-            status = 2;
-        else if (id == 1 && last_id == 2)
-            status = 2;
+        r->current_event_s = gfctx_get_current_event();
+    } else if (r->status == 1 && in_one_iteration) {
+        if (status == 2 && r->last_status == 1)
+            r->status = 2;
+        else if (status == 1 && r->last_status == 2)
+            r->status = 2;
         // end the record
-        current_event_e = gfctx_get_current_event();
+        r->current_event_e = gfctx_get_current_event();
     }
 
-    if (status == 2 && current_event_s < current_event_e) {
+    if (r->status == 2 && r->current_event_s < r->current_event_e) {
         // we want to group any events between (_s, _e]
         Input *input = gfctx_get_current_input();
 
@@ -99,7 +107,7 @@ void GroupMutatorOrder(uint8_t id) {
         // create new context
         Input *new_input = init_input(NULL, DEFAULT_INPUT_MAXSIZE);
         Event *event, *event_copy;
-        for (int i = current_event_s + 1; i <= current_event_e; ++i) {
+        for (int i = r->current_event_s + 1; i <= r->current_event_e; ++i) {
             event = get_event(input, i);
             // if any EVENT_TYPE_GROUP_EVENT_RS, we drop this
             if (event->type == EVENT_TYPE_GROUP_EVENT_RS)
@@ -124,7 +132,8 @@ void GroupMutatorOrder(uint8_t id) {
         // let's find a place to inject the group event
         // currently, we don't want to make it a next event
         // let's insert it after current_event_s
-        insert_event(input, group_event, current_event_s + 1);
+        insert_event(input, group_event, r->current_event_s + 1);
+        memset(r, 0, sizeof(Record));
     }
 #ifdef VIDEZZO_DEBUG
     fprintf(stderr, "- GroupMutatorOrder Done\n");
