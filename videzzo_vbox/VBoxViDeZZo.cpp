@@ -507,7 +507,6 @@ static void vbox_writeq(uint64_t addr, uint64_t value) {
     PGMPhysWrite(pVM, addr, &value, 8, PGMACCESSORIGIN_HM);
 }
 
-static bool xhci = false;
 static bool pcnet = false;
 static bool e1000e = false;
 static bool vmxnet3 = false;
@@ -516,12 +515,6 @@ static bool dwc2 = false;
 uint64_t dispatch_mmio_write(Event *event) {
     unsigned int pid, len;
 
-    if (xhci && event->addr > 0xe0006100) {
-        event->addr = 0xe0006000;
-        event->valu = 0;
-    }
-    if (xhci && ((event->addr - 0xe0004020) % 0x20) == 0x8)
-        event->valu = rand() % 3;
     if (pcnet && event->addr == 0xe0001010) {
         uint64_t tmp = (event->valu & 0xff) % 5;
         event->valu = (event->valu & 0xffffffffffffff00) | tmp;

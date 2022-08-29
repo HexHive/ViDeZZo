@@ -76,7 +76,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         "-device usb-braille,chardev=cd0 -device usb-ccid -device usb-ccid "
         "-device usb-kbd -device usb-mouse -device usb-serial,chardev=cd1 "
         "-device usb-tablet -device usb-wacom-tablet -device usb-audio",
-        .mrnames = "*capabilities*,*operational*,*runtime*,*doorbell*",
+        .mrnames = "*capabilities*,*operational*,*runtime*,*doorbell*,*usb3 port*",
         .file = "hw/usb/hcd-xhci.c",
         .socket = false,
     },{
@@ -1089,8 +1089,35 @@ uint64_t dispatch_mmio_write(Event *event) {
         event->addr = 0xe0006000;
         event->valu = 0;
     }
-    if (xhci && ((event->addr - 0xe0004020) % 0x20) == 0x8)
+    if (xhci && (event->addr >= 0xe0004020) && (event->addr <= 0xe0006100) &&
+            ((event->addr - 0xe0004020) % 0x20) == 0x8) {
         event->valu = rand() % 3;
+    }
+    if (xhci && (event->addr >= 0xe0002000) && (event->addr < 0xe0004020) &&
+            event->addr == 0xe0002000 && (event->valu % 1000)) {
+        event->valu = 0;
+    }
+    if (xhci && (event->addr >= 0xe0000440) && (event->addr < 0xe0002000) &&
+            ((event->addr - 0xe0000440) % 0x10 == 0)) {
+        // 0: 1, 1: 2, 3: 1, 4: 1, 5: 4, 9: 1, 10: 1
+        // 11: 1, 12: 1: 13: 1
+        // 14: 2, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1
+        // 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 3, 30: 1, 31: 1
+        event->valu = ((rand() % (1 << 1)) << 0)
+            | ((rand() % (1 << 2)) << 1)  | ((rand() % (1 << 1)) << 3)
+            | ((rand() % (1 << 1)) << 4)  | ((rand() % (1 << 4)) << 5)
+            | ((rand() % (1 << 4)) << 5)  | ((rand() % (1 << 1)) << 9)
+            | ((rand() % (1 << 1)) << 10) | ((rand() % (1 << 1)) << 11)
+            | ((rand() % (1 << 1)) << 12) | ((rand() % (1 << 1)) << 13)
+            | ((rand() % (1 << 2)) << 14) | ((rand() % (1 << 1)) << 16)
+            | ((rand() % (1 << 1)) << 17) | ((rand() % (1 << 1)) << 18)
+            | ((rand() % (1 << 1)) << 19) | ((rand() % (1 << 1)) << 20)
+            | ((rand() % (1 << 1)) << 21) | ((rand() % (1 << 1)) << 22)
+            | ((rand() % (1 << 1)) << 23) | ((rand() % (1 << 1)) << 24)
+            | ((rand() % (1 << 1)) << 25) | ((rand() % (1 << 1)) << 26)
+            | ((rand() % (1 << 3)) << 27) | ((rand() % (1 << 1)) << 30)
+            | ((rand() % (1 << 1)) << 31);
+    }
     if (pcnet && event->addr == 0xe0001010) {
         uint64_t tmp = (event->valu & 0xff) % 5;
         event->valu = (event->valu & 0xffffffffffffff00) | tmp;
