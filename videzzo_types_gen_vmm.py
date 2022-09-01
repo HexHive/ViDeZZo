@@ -621,8 +621,18 @@ megasas_60.add_instrumentation_point('megasas.c', ['megasas_handle_frame', 'mega
 xhci_70 = Model('xhci', 70)
 xhci_70.add_struct('XHCI_BUF2', {'buf#0x100': FIELD_RANDOM})
 xhci_70.add_struct('XHCITRB0', {
-    'parameter#0x8': FIELD_POINTER, 'status#0x4': FIELD_FLAG, 'control#0x4': FIELD_FLAG, 'addr#0x8': FIELD_RANDOM, 'ccs#0x1': FIELD_RANDOM})
-xhci_70.add_flag('XHCITRB0.control', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 9: 1, 10: 6, 16: 5, 21: 3, 24: 6, 30: '2@0'})
+    'parameter#0x8': FIELD_POINTER, 'status#0x4': FIELD_FLAG, 'control#0x4': FIELD_CONSTANT | FIELD_FLAG, 'addr#0x8': FIELD_RANDOM, 'ccs#0x1': FIELD_RANDOM})
+xhci_70.add_constant('XHCITRB0.control', [
+    0 << 10, 1 << 10, 2 << 10, 3 << 10, 4 << 10, 5 << 10,
+    6 << 10, 6 << 10, 6 << 10, 6 << 10, 6 << 10, 6 << 10, 6 << 10, 6 << 10, 6 << 10, 6 << 10,
+    7 << 10, 8 << 10,
+    9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10,
+    9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10,
+   10 << 10, 11 << 10, 12 << 10, 13 << 10, 14 << 10, 15 << 10, 16 << 10, 17 << 10, 18 << 10,
+   19 << 10, 20 << 10, 21 << 10, 22 << 10, 23 << 10, 32 << 10, 33 << 10, 34 << 10, 35 << 10,
+   36 << 10, 37 << 10, 38 << 10, 39 << 10, 49 << 10, 50 << 10,
+])
+xhci_70.add_flag('XHCITRB0.control', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 9: 1, 10: '6@0', 16: 5, 21: 3, 24: 6, 30: '2@0'})
 xhci_70.add_flag('XHCITRB0.status', {0: 16, 16: 6, 22: 10})
 xhci_70.add_point_to('XHCITRB0.parameter', ['XHCI_BUF2'])
 xhci_70.add_head(['XHCITRB0'])
@@ -631,8 +641,18 @@ xhci_70.add_instrumentation_point('hcd-xhci.c', ['xhci_ring_chain_length', 'dma_
 ###################################################################################################################
 xhci_71 = Model('xhci', 71)
 xhci_71.add_struct('XHCITRB1', {
-    'parameter#0x8': FIELD_POINTER, 'status#0x4': FIELD_FLAG, 'control#0x4': FIELD_FLAG, 'addr#0x8': FIELD_RANDOM, 'ccs#0x1': FIELD_RANDOM})
-xhci_71.add_flag('XHCITRB1.control', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 9: 1, 10: 6, 16: 5, 21: 3, 24: 6, 30: '2@0'})
+    'parameter#0x8': FIELD_POINTER, 'status#0x4': FIELD_FLAG, 'control#0x4': FIELD_CONSTANT | FIELD_FLAG, 'addr#0x8': FIELD_RANDOM, 'ccs#0x1': FIELD_RANDOM})
+xhci_71.add_constant('XHCITRB1.control', [
+    0 << 10, 1 << 10, 2 << 10, 3 << 10, 4 << 10, 5 << 10,
+    6 << 10, 6 << 10, 6 << 10, 6 << 10, 6 << 10, 6 << 10, 6 << 10, 6 << 10, 6 << 10, 6 << 10,
+    7 << 10, 8 << 10,
+    9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10,
+    9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10, 9 << 10,
+   10 << 10, 11 << 10, 12 << 10, 13 << 10, 14 << 10, 15 << 10, 16 << 10, 17 << 10, 18 << 10,
+   19 << 10, 20 << 10, 21 << 10, 22 << 10, 23 << 10, 32 << 10, 33 << 10, 34 << 10, 35 << 10,
+   36 << 10, 37 << 10, 38 << 10, 39 << 10, 49 << 10, 50 << 10,
+])
+xhci_71.add_flag('XHCITRB1.control', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 9: 1, 10: '6@0', 16: 5, 21: 3, 24: 6, 30: '2@0'})
 xhci_71.add_flag('XHCITRB1.status', {0: 16, 16: 6, 22: 10})
 xhci_71.add_struct('XHCI_BUF0', {'buf#0x100': FIELD_RANDOM})
 xhci_71.add_point_to('XHCITRB1.parameter', ['XHCI_BUF0'])
@@ -676,9 +696,11 @@ xhci_76.add_head(['XHCI_CTL_CTX_76'])
 xhci_76.add_instrumentation_point('hcd-xhci.c', ['xhci_configure_slot', 'xhci_dma_read_u32s', 1, 1])
 ###################################################################################################################
 xhci_94 = Model('xhci', 94) # 77 is available
-xhci_94.add_struct('XHCI_SLOT_CTX', {'slot_ctx0#0x4': FIELD_FLAG, 'slot_ctx1#0x4': FIELD_FLAG, 'slot_ctx2#0x4': FIELD_FLAG, 'slot_ctx3#0x4': FIELD_FLAG})
-xhci_94.add_flag('XHCI_SLOT_CTX.slot_ctx0', {0: 4, 8: 4, 12: 4, 16: 4, 20: 4, 24: 8})
-xhci_94.add_flag('XHCI_SLOT_CTX.slot_ctx1', {0: 16, 16: 6, 22: '2@0', 24: 8})
+xhci_94.add_struct('XHCI_SLOT_CTX', {'slot_ctx0#0x4': FIELD_FLAG, 'slot_ctx1#0x4': FIELD_CONSTANT | FIELD_FLAG,
+                                     'slot_ctx2#0x4': FIELD_FLAG, 'slot_ctx3#0x4': FIELD_FLAG})
+xhci_94.add_flag('XHCI_SLOT_CTX.slot_ctx0', {0: '4@0', 8: 4, 12: 4, 16: 4, 20: 4, 24: 8})
+xhci_94.add_constant('XHCI_SLOT_CTX.slot_ctx1', [i << 16 for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]])
+xhci_94.add_flag('XHCI_SLOT_CTX.slot_ctx1', {0: 16, 16: '8@0', 24: 8})
 xhci_94.add_flag('XHCI_SLOT_CTX.slot_ctx2', {0: 22, 22: 10})
 xhci_94.add_flag('XHCI_SLOT_CTX.slot_ctx3', {0: 27, 27: 5})
 xhci_94.add_head(['XHCI_SLOT_CTX'])

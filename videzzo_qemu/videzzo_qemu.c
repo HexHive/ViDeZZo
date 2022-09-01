@@ -70,8 +70,8 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "xhci",
         .args = "-machine q35 -nodefaults "
         "-drive file=null-co://,if=none,format=raw,id=disk0 "
-        "-device qemu-xhci,id=xhci -device usb-tablet,bus=xhci.0 "
-        "-device usb-bot -device usb-storage,drive=disk0 "
+        "-device qemu-xhci,id=xhci -device usb-storage,drive=disk0 "
+        "-device usb-bot -device usb-tablet,bus=xhci.0 "
         "-chardev null,id=cd0 -chardev null,id=cd1 "
         "-device usb-braille,chardev=cd0 -device usb-ccid -device usb-ccid "
         "-device usb-kbd -device usb-mouse -device usb-serial,chardev=cd1 "
@@ -1085,19 +1085,23 @@ static bool dwc2 = false;
 uint64_t dispatch_mmio_write(Event *event) {
     unsigned int pid, len;
 
-    if (xhci && event->addr > 0xe0006100) {
-        event->addr = 0xe0006000;
-        event->valu = 0;
+    if (xhci && (event->addr >= 0xe0002000) && (event->addr < 0xe0004020)) {
+        event->addr = 0xe0002000 + (event->addr - 0xe0002000) % 0x110;
+        if (event->addr == 0xe0002000 && (event->valu % 100)) {
+            event->valu = 0;
+        } else {
+            uint32_t epid = event->valu & 0xff;
+            event->valu &= 0xffffffffffffff00;
+            epid = (epid - 1) % (35 - 1) + 1;
+            event->valu |= epid;
+        }
     }
-    if (xhci && (event->addr >= 0xe0004020) && (event->addr <= 0xe0006100) &&
-            ((event->addr - 0xe0004020) % 0x20) == 0x8) {
-        event->valu = rand() % 3;
+    if (xhci && (event->addr >= 0xe0001000) && (event->addr < 0xe0002000)) {
+        if (((event->addr - 0xe0001000) % 0x20) == 0x8) {
+            event->valu = rand() % 3;
+        }
     }
-    if (xhci && (event->addr >= 0xe0002000) && (event->addr < 0xe0004020) &&
-            event->addr == 0xe0002000 && (event->valu % 1000)) {
-        event->valu = 0;
-    }
-    if (xhci && (event->addr >= 0xe0000440) && (event->addr < 0xe0002000) &&
+    if (xhci && (event->addr >= 0xe0000440) && (event->addr < 0xe0001000) &&
             ((event->addr - 0xe0000440) % 0x10 == 0)) {
         // 0: 1, 1: 2, 3: 1, 4: 1, 5: 4, 9: 1, 10: 1
         // 11: 1, 12: 1: 13: 1

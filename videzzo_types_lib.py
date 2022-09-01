@@ -296,10 +296,18 @@ class Model(object):
     def gen_constant(self, struct_name, field_name, metadata):
         field_value = metadata['field_value']
         struct_type = self.recover_struct_type_from_name(struct_name)
+
+        flag_value = '0x0'
+        if 'flags' in metadata:
+            flags = metadata['flags']
+            if flags:
+                flag_value = self.__gen_flag_value(flags)
+
         # MAGIC
         # self.append_code('{}->{} = {};'.format(struct_name, field_name, 'urand32()'))
         self.__gen_event_memwrite(
-            struct_name, field_name, '{}_{}_constant[urand32() % {}]'.format(struct_type, field_name, len(field_value)), 4)
+            struct_name, field_name, '{}_{}_constant[urand32() % {}] | ({})'.format(
+                struct_type, field_name, len(field_value), flag_value), 4)
 
     def __gen_point_to(self, struct_name, field_name, metadata, flag_value):
         """
@@ -437,7 +445,8 @@ class Model(object):
         self.append_code('if (physaddr == INVALID_ADDRESS) {{ {0} = (uint64_t)EVENT_MEMALLOC(sizeof({1})); }} else {{ {0} = physaddr; }}'.format(struct_name, struct_type))
         for field_name, metadata in self.get_struct(struct_type).items():
             field_type = metadata['field_type']
-            if (field_type & FIELD_FLAG) and (not field_type & FIELD_POINTER):
+            if (field_type & FIELD_FLAG) and \
+                    (not field_type & FIELD_POINTER) and (not field_type & FIELD_CONSTANT):
                 assert 'flags' in metadata, 'flag {}.{} is not set up'.format(struct_type, field_name)
                 self.gen_flag(struct_name, field_name, metadata['flags'])
             elif field_type & FIELD_RANDOM:

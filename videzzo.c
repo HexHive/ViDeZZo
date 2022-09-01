@@ -81,15 +81,13 @@ void GroupMutatorOrder(int id, int status) {
 #endif
     Record *r = &records[id];
 
-    if (r->status == 0 && (status == 1 || status == 2)) {
+    if (r->status == 0 && status == 1) {
         r->status = 1;
         r->last_status = status;
         // start to record
         r->current_event_s = gfctx_get_current_event();
     } else if (r->status == 1 && in_one_iteration) {
         if (status == 2 && r->last_status == 1)
-            r->status = 2;
-        else if (status == 1 && r->last_status == 2)
             r->status = 2;
         // end the record
         r->current_event_e = gfctx_get_current_event();
