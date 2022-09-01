@@ -11,8 +11,10 @@ CFLAGS ?=
 patch:
 	cp 0001-Update-QEMU-to-support-ViDeZZo-as-a-library.patch qemu/
 	cp 0001-fix-assertion-in-hw-usb-core.c.patch qemu/
+	cp 0001-hw-display-ati_2d-Fix-buffer-overflow-in-ati_2d_blt.patch qemu/
 	cd qemu && patch -p 1 < 0001-Update-QEMU-to-support-ViDeZZo-as-a-library.patch && \
 		patch -p 1 < 0001-fix-assertion-in-hw-usb-core.c.patch && \
+		patch -p 1 < 0001-hw-display-ati_2d-Fix-buffer-overflow-in-ati_2d_blt.patch && \
 		./configure && make update-buildoptions && \
 		cd $(OLDPWD)
 
