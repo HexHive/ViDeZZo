@@ -15,7 +15,12 @@ videzzo-tool:
 
 tool: videzzo-tool
 
+toolclean:
+	make -C videzzo_tool clean
+
 videzzo-core:
+	make toolclean
+	make tool
 	python3 videzzo_types_gen.py ${HYPERVISOR}
 	clang ${CFLAGS} -o videzzo.o -c videzzo.c
 	clang ${CFLAGS} -o videzzo_types.i -E videzzo_types.c
@@ -60,9 +65,6 @@ vbox-debug: videzzo-vbox-debug
 
 clean:
 	rm -rf *.o *.a.* *.i
-
-toolclean:
-	make -C videzzo_tool clean
 
 qemudistclean:
 	make -C videzzo_qemu distclean
