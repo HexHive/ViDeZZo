@@ -364,6 +364,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .mrnames = "*virtio*",
         .file = "hw/net/virtio-net.c",
         .socket = false,
+        .byte_address = true,
     },{
         .arch = "i386",
         .name = "virtio-blk",
@@ -372,6 +373,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .mrnames = "*virtio*",
         .file = "hw/block/virtio-blk.c",
         .socket = false,
+        .byte_address = true,
     },{
         .arch = "i386",
         .name = "virtio-scsi",
@@ -381,6 +383,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .mrnames = "*scsi*,*virtio*",
         .file = "hw/scsi/virtio-scsi.c",
         .socket = false,
+        .byte_address = true,
     },{
         .arch = "i386",
         .name = "virtio-gpu",
@@ -388,6 +391,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .mrnames = "*virtio*",
         .file = "hw/display/virtio-gpu.c",
         .socket = false,
+        .byte_address = true,
     },{
         .arch = "i386",
         .name = "virtio-vga",
@@ -395,6 +399,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .mrnames = "*virtio*",
         .file = "hw/display/virtio-vga.c",
         .socket = false,
+        .byte_address = true,
     },{
         .arch = "i386",
         .name = "virtio-rng",
@@ -402,6 +407,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .mrnames = "*virtio*",
         .file = "hw/virtio/virtio-rng.c",
         .socket = false,
+        .byte_address = true,
     },{
         .arch = "i386",
         .name = "virtio-balloon",
@@ -409,6 +415,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .mrnames = "*virtio*",
         .file = "hw/virtio/virtio-balloon.c",
         .socket = false,
+        .byte_address = true,
     },{
         .arch = "i386",
         .name = "virtio-serial",
@@ -416,6 +423,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .mrnames = "*virtio*",
         .file = "hw/virtio/virtio-serial-pci.c",
         .socket = false,
+        .byte_address = true,
     },{
         .arch = "i386",
         .name = "virtio-mouse",
@@ -423,6 +431,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .mrnames = "*virtio*",
         .file = "hw/virtio/virtio-input-pci.c",
         .socket = false,
+        .byte_address = true,
     },{
         .arch = "i386",
         // the real thing we test is the fdc not the floopy
