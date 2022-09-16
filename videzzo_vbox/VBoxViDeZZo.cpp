@@ -515,18 +515,18 @@ static bool dwc2 = false;
 uint64_t dispatch_mmio_write(Event *event) {
     unsigned int pid, len;
 
-    if (pcnet && event->addr == 0xe0001010) {
-        uint64_t tmp = (event->valu & 0xff) % 5;
+    if ((!DisableInputProcessing) && pcnet && event->addr == 0xe0001010) {
+        uint64_t tmp = rand() % 5;
         event->valu = (event->valu & 0xffffffffffffff00) | tmp;
     }
-    if (vmxnet3 && event->addr == 0xe0002020) {
+    if ((!DisableInputProcessing) && vmxnet3 && event->addr == 0xe0002020) {
         if (rand() % 2) {
             event->valu = 0xCAFE0000 + rand() % 11;
         } else {
             event->valu = 0xF00D0000 + rand() % 10;
         }
     }
-    if (dwc2 && (event->addr >= 0x3f980500) &&
+    if ((!DisableInputProcessing) && dwc2 && (event->addr >= 0x3f980500) &&
             (event->addr < 0x3f980800)) {
         switch (event->addr & 0x1c) {
             case 0x0:
@@ -583,6 +583,7 @@ uint64_t dispatch_mmio_write(Event *event) {
                 break;
         }
     }
+
     switch (__disimm_around_event_size(event->size, 8)) {
         case ViDeZZo_Byte: vbox_writeb(event->addr, event->valu & 0xFF); break;
         case ViDeZZo_Word: vbox_writew(event->addr, event->valu & 0xFFFF); break;

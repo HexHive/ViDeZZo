@@ -1094,109 +1094,108 @@ static bool dwc2 = false;
 uint64_t dispatch_mmio_write(Event *event) {
     unsigned int pid, len;
 
-    if (xhci && (event->addr >= 0xe0002000) && (event->addr < 0xe0004020)) {
+    if ((!DisableInputProcessing) && xhci && (event->addr >= 0xe0002000) && (event->addr < 0xe0004020)) {
         event->addr = 0xe0002000 + (event->addr - 0xe0002000) % 0x110;
-        if (event->addr == 0xe0002000 && (event->valu % 100)) {
+        if (event->addr == 0xe0002000 && (rand() % 100)) {
             event->valu = 0;
         } else {
-            uint32_t epid = event->valu & 0xff;
+            uint32_t epid = (rand() - 1) % (35 - 1) + 1;
             event->valu &= 0xffffffffffffff00;
-            epid = (epid - 1) % (35 - 1) + 1;
             event->valu |= epid;
         }
     }
-    if (xhci && (event->addr >= 0xe0001000) && (event->addr < 0xe0002000)) {
+    if ((!DisableInputProcessing) && xhci && (event->addr >= 0xe0001000) && (event->addr < 0xe0002000)) {
         event->addr = (event->addr - 0xe0001000) % 0x24 + 0xe000101c;
         if (((event->addr - 0xe0001000) % 0x20) == 0x8) {
             event->valu %= 3;
         }
     }
-    if (xhci && (event->addr >= 0xe0000440) && (event->addr < 0xe0001000) &&
+    if ((!DisableInputProcessing) && xhci && (event->addr >= 0xe0000440) && (event->addr < 0xe0001000) &&
             ((event->addr - 0xe0000440) % 0x10 == 0)) {
         // 0: 1, 1: 2, 3: 1, 4: 1, 5: 4, 9: 1, 10: 1
         // 11: 1, 12: 1: 13: 1
         // 14: 2, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1
         // 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 3, 30: 1, 31: 1
-        event->valu = ((event->valu % (1 << 1)) << 0)
-            | ((event->valu % (1 << 2)) << 1)  | ((event->valu % (1 << 1)) << 3)
-            | ((event->valu % (1 << 1)) << 4)  | ((event->valu % (1 << 4)) << 5)
-            | ((event->valu % (1 << 4)) << 5)  | ((event->valu % (1 << 1)) << 9)
-            | ((event->valu % (1 << 1)) << 10) | ((event->valu % (1 << 1)) << 11)
-            | ((event->valu % (1 << 1)) << 12) | ((event->valu % (1 << 1)) << 13)
-            | ((event->valu % (1 << 2)) << 14) | ((event->valu % (1 << 1)) << 16)
-            | ((event->valu % (1 << 1)) << 17) | ((event->valu % (1 << 1)) << 18)
-            | ((event->valu % (1 << 1)) << 19) | ((event->valu % (1 << 1)) << 20)
-            | ((event->valu % (1 << 1)) << 21) | ((event->valu % (1 << 1)) << 22)
-            | ((event->valu % (1 << 1)) << 23) | ((event->valu % (1 << 1)) << 24)
-            | ((event->valu % (1 << 1)) << 25) | ((event->valu % (1 << 1)) << 26)
-            | ((event->valu % (1 << 3)) << 27) | ((event->valu % (1 << 1)) << 30)
-            | ((event->valu % (1 << 1)) << 31);
+        event->valu = ((rand() % (1 << 1)) << 0)
+            | ((rand() % (1 << 2)) << 1)  | ((rand() % (1 << 1)) << 3)
+            | ((rand() % (1 << 1)) << 4)  | ((rand() % (1 << 4)) << 5)
+            | ((rand() % (1 << 4)) << 5)  | ((rand() % (1 << 1)) << 9)
+            | ((rand() % (1 << 1)) << 10) | ((rand() % (1 << 1)) << 11)
+            | ((rand() % (1 << 1)) << 12) | ((rand() % (1 << 1)) << 13)
+            | ((rand() % (1 << 2)) << 14) | ((rand() % (1 << 1)) << 16)
+            | ((rand() % (1 << 1)) << 17) | ((rand() % (1 << 1)) << 18)
+            | ((rand() % (1 << 1)) << 19) | ((rand() % (1 << 1)) << 20)
+            | ((rand() % (1 << 1)) << 21) | ((rand() % (1 << 1)) << 22)
+            | ((rand() % (1 << 1)) << 23) | ((rand() % (1 << 1)) << 24)
+            | ((rand() % (1 << 1)) << 25) | ((rand() % (1 << 1)) << 26)
+            | ((rand() % (1 << 3)) << 27) | ((rand() % (1 << 1)) << 30)
+            | ((rand() % (1 << 1)) << 31);
     }
-    if (pcnet && event->addr == 0xe0001010) {
-        uint64_t tmp = (event->valu & 0xff) % 5;
+    if ((!DisableInputProcessing) && pcnet && event->addr == 0xe0001010) {
+        uint64_t tmp = rand() % 5;
         event->valu = (event->valu & 0xffffffffffffff00) | tmp;
     }
-    if (vmxnet3 && event->addr == 0xe0002020) {
-        if (event->valu % 2) {
-            event->valu = 0xCAFE0000 + event->valu % 11;
+    if ((!DisableInputProcessing) && vmxnet3 && event->addr == 0xe0002020) {
+        if (rand() % 2) {
+            event->valu = 0xCAFE0000 + rand() % 11;
         } else {
-            event->valu = 0xF00D0000 + event->valu % 10;
+            event->valu = 0xF00D0000 + rand() % 10;
         }
     }
-    if (dwc2 && (event->addr >= 0x3f980500) &&
+    if ((!DisableInputProcessing) && dwc2 && (event->addr >= 0x3f980500) &&
             (event->addr < 0x3f980800)) {
         switch (event->addr & 0x1c) {
             case 0x0:
                 // 0: 11, 11: 4, 15: 1, 16: 1, 17: 1, 18: 1
                 // 18: 2, 20: 2, 22: 7, 29: 1, 30: 1, 31: 1
-                event->valu = ((event->valu % (1 << 11)) << 0)
-                     | ((event->valu % (1 << 4)) << 11)
-                     | ((event->valu % (1 << 1)) << 15)
-                     | ((event->valu % (1 << 1)) << 16)
-                     | ((event->valu % (1 << 1)) << 17)
-                     | ((event->valu % (1 << 2)) << 18)
-                     | ((event->valu % (1 << 2)) << 20)
+                event->valu = ((rand() % (1 << 11)) << 0)
+                     | ((rand() % (1 << 4)) << 11)
+                     | ((rand() % (1 << 1)) << 15)
+                     | ((rand() % (1 << 1)) << 16)
+                     | ((rand() % (1 << 1)) << 17)
+                     | ((rand() % (1 << 2)) << 18)
+                     | ((rand() % (1 << 2)) << 20)
                      | (0) << 22 // dwc2 -> storage.addr (0)
-                     | ((event->valu % (1 << 1)) << 29)
-                     | ((event->valu % (1 << 1)) << 30)
-                     | ((event->valu % (1 << 1)) << 31);
+                     | ((rand() % (1 << 1)) << 29)
+                     | ((rand() % (1 << 1)) << 30)
+                     | ((rand() % (1 << 1)) << 31);
                 break;
             case 0x4:
                 // 0: 7, 7: 7, 14: 2, 16: 1, 17: 14, 31: 1
-                event->valu = ((event->valu % (1 << 7)) << 0)
-                     | ((event->valu % (1 << 7)) << 7)
-                     | ((event->valu % (1 << 2)) << 14)
-                     | ((event->valu % (1 << 1)) << 16)
-                     | ((event->valu % (1 << 14)) << 17)
-                     | ((event->valu % (1 << 1)) << 31);
+                event->valu = ((rand() % (1 << 7)) << 0)
+                     | ((rand() % (1 << 7)) << 7)
+                     | ((rand() % (1 << 2)) << 14)
+                     | ((rand() % (1 << 1)) << 16)
+                     | ((rand() % (1 << 14)) << 17)
+                     | ((rand() % (1 << 1)) << 31);
                 break;
             case 0x8:
                 // 0...14, 14: 14, 18
-                event->valu = ((event->valu % (1 << 1)) << 0)
-                     | ((event->valu % (1 << 1)) << 1)
-                     | ((event->valu % (1 << 1)) << 2)
-                     | ((event->valu % (1 << 1)) << 3)
-                     | ((event->valu % (1 << 1)) << 4)
-                     | ((event->valu % (1 << 1)) << 5)
-                     | ((event->valu % (1 << 1)) << 6)
-                     | ((event->valu % (1 << 1)) << 7)
-                     | ((event->valu % (1 << 1)) << 8)
-                     | ((event->valu % (1 << 1)) << 9)
-                     | ((event->valu % (1 << 1)) << 10)
-                     | ((event->valu % (1 << 1)) << 11)
-                     | ((event->valu % (1 << 1)) << 12)
-                     | ((event->valu % (1 << 1)) << 13)
-                     | ((event->valu % (1 << 18)) << 14);
+                event->valu = ((rand() % (1 << 1)) << 0)
+                     | ((rand() % (1 << 1)) << 1)
+                     | ((rand() % (1 << 1)) << 2)
+                     | ((rand() % (1 << 1)) << 3)
+                     | ((rand() % (1 << 1)) << 4)
+                     | ((rand() % (1 << 1)) << 5)
+                     | ((rand() % (1 << 1)) << 6)
+                     | ((rand() % (1 << 1)) << 7)
+                     | ((rand() % (1 << 1)) << 8)
+                     | ((rand() % (1 << 1)) << 9)
+                     | ((rand() % (1 << 1)) << 10)
+                     | ((rand() % (1 << 1)) << 11)
+                     | ((rand() % (1 << 1)) << 12)
+                     | ((rand() % (1 << 1)) << 13)
+                     | ((rand() % (1 << 18)) << 14);
                 break;
             case 0x10:
                 // 0: 19, 19: 10, 29: 2, 31: 1
-                pid = event->valu % 4;
+                pid = rand() % 4;
                 // check and fault injection
-                len = (pid == 3 ? 8 : (event->valu % 2 ? 31 : event->valu % (65536 + 65553)));
+                len = (pid == 3 ? 8 : (rand() % 2 ? 31 : rand() % (65536 + 65553)));
                 event->valu = (len << 0)
-                     | ((event->valu % (1 << 10)) << 19)
+                     | ((rand() % (1 << 10)) << 19)
                      | (pid << 29)
-                     | ((event->valu % (1 << 1)) << 31);
+                     | ((rand() % (1 << 1)) << 31);
                 break;
         }
     }

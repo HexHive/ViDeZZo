@@ -214,6 +214,7 @@ size_t LLVMFuzzerCustomMutator(
 //
 void videzzo_set_merge(void);
 void videzzo_clear_merge(void);
+extern bool DisableInputProcessing;
 
 //
 // Fuzz Targets

@@ -26,7 +26,7 @@ int get_default_input_maxsize() {
 static int DEFAULT_INPUT_MAXSIZE = 0x1000;
 
 //
-// Reproducer
+// Merge
 //
 int merge = 0;
 
@@ -41,16 +41,16 @@ void videzzo_clear_merge() {
 //
 // GroupMutator Feedback
 //
-// We want to disable the trigger-action protocol.
+// We want to disable the trigger-action protocol and other advanced features.
 //
-static bool DisableTriggerActionProtocol = false;
+bool DisableInputProcessing = false;
 
 void disable_group_mutator(void) {
-    DisableTriggerActionProtocol = true;
+    DisableInputProcessing = true;
 }
 
 void enable_group_mutator(void) {
-    DisableTriggerActionProtocol = false;
+    DisableInputProcessing = false;
 }
 
 static int in_one_iteration = 0;
@@ -69,7 +69,7 @@ static Record records[32] = {{ 0 }};
 
 // TODO: change the API convetion and API name
 void GroupMutatorOrder(int id, int status) {
-    if (DisableTriggerActionProtocol)
+    if (DisableInputProcessing)
         return;
 
     if (getenv("VIDEZZO_DISABLE_GROUP_MUTATOR_RS") ||
@@ -140,7 +140,7 @@ void GroupMutatorOrder(int id, int status) {
 
 // TODO: change the API convention and API name
 void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
-    if (DisableTriggerActionProtocol)
+    if (DisableInputProcessing)
         return;
 
     if (getenv("VIDEZZO_DISABLE_INTRA_MESSAGE_ANNOTATION"))
@@ -821,7 +821,7 @@ static int handle_non_address_consecutive_writes(Input *input) {
     return n_delete;
 }
 
-// For consecutive writes, we will merge them into one message, and this will
+// For consecutive writes, we will concat them into one message, and this will
 // reduce the number of messages by 80%. However, this handler should be fast.
 //
 // The following is the nearest neighbor solution.
