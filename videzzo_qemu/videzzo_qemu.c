@@ -1099,15 +1099,25 @@ uint64_t dispatch_mmio_write(Event *event) {
         if (event->addr == 0xe0002000 && (rand() % 100)) {
             event->valu = 0;
         } else {
-            uint32_t epid = (rand() - 1) % (35 - 1) + 1;
-            event->valu &= 0xffffffffffffff00;
+            uint32_t epid = (rand() - 1) % (5 - 1) + 1;
+            uint32_t streamid = (rand() - 1) % (4 - 1) + 1;
+            event->valu &= 0xffffffff0000ff00;
             event->valu |= epid;
+            event->valu |= (streamid << 16);
         }
     }
     if ((!DisableInputProcessing) && xhci && (event->addr >= 0xe0001000) && (event->addr < 0xe0002000)) {
         event->addr = (event->addr - 0xe0001000) % 0x24 + 0xe000101c;
-        if (((event->addr - 0xe0001000) % 0x20) == 0x8) {
-            event->valu %= 3;
+        switch ((event->addr - 0xe0001000) % 0x20) {
+            case 0x8:
+                event->valu = 1;
+                break;
+            case 0x18:
+                event->valu = 0x100000;
+                break;
+            case 0x1c:
+                event->valu = 0;
+                break;
         }
     }
     if ((!DisableInputProcessing) && xhci && (event->addr >= 0xe0000440) && (event->addr < 0xe0001000) &&
