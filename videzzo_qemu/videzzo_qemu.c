@@ -1091,12 +1091,19 @@ static bool e1000e = false;
 static bool vmxnet3 = false;
 static bool dwc2 = false;
 
+#define XHCI_CAP_BASE (0xe0004000)
+#define XHCI_OPE_BASE (XHCI_CAP_BASE + 0x0040)
+#define XHCI_POR_BASE (XHCI_CAP_BASE + 0x0440)
+#define XHCI_RUN_BASE (XHCI_CAP_BASE + 0x1000)
+#define XHCI_DOO_BASE (XHCI_CAP_BASE + 0x2000)
+#define XHCI_DOO_END  (XHCI_DOO_BASE + 0x0040)
+
 uint64_t dispatch_mmio_write(Event *event) {
     unsigned int pid, len;
 
-    if ((!DisableInputProcessing) && xhci && (event->addr >= 0xe0002000) && (event->addr < 0xe0004020)) {
-        event->addr = 0xe0002000 + (event->addr - 0xe0002000) % 0x110;
-        if (event->addr == 0xe0002000 && (rand() % 100)) {
+    if ((!DisableInputProcessing) && xhci && (event->addr >= XHCI_DOO_BASE) && (event->addr < XHCI_DOO_END)) {
+        event->addr = XHCI_DOO_BASE + (event->addr - XHCI_DOO_BASE) % 0x40;
+        if (event->addr == XHCI_DOO_BASE && (rand() % 100)) {
             event->valu = 0;
         } else {
             uint32_t epid = (rand() - 1) % (5 - 1) + 1;
@@ -1106,9 +1113,9 @@ uint64_t dispatch_mmio_write(Event *event) {
             event->valu |= (streamid << 16);
         }
     }
-    if ((!DisableInputProcessing) && xhci && (event->addr >= 0xe0001000) && (event->addr < 0xe0002000)) {
-        event->addr = (event->addr - 0xe0001000) % 0x24 + 0xe000101c;
-        switch ((event->addr - 0xe0001000) % 0x20) {
+    if ((!DisableInputProcessing) && xhci && (event->addr >= XHCI_RUN_BASE) && (event->addr < XHCI_DOO_BASE)) {
+        event->addr = (event->addr - XHCI_RUN_BASE) % 0x24 + XHCI_RUN_BASE + 0x001c;
+        switch ((event->addr - XHCI_RUN_BASE) % 0x20) {
             case 0x8:
                 event->valu = 1;
                 break;
@@ -1120,8 +1127,8 @@ uint64_t dispatch_mmio_write(Event *event) {
                 break;
         }
     }
-    if ((!DisableInputProcessing) && xhci && (event->addr >= 0xe0000440) && (event->addr < 0xe0001000) &&
-            ((event->addr - 0xe0000440) % 0x10 == 0)) {
+    if ((!DisableInputProcessing) && xhci && (event->addr >= XHCI_POR_BASE) && (event->addr < XHCI_RUN_BASE) &&
+            ((event->addr - XHCI_POR_BASE) % 0x10 == 0)) {
         // 0: 1, 1: 2, 3: 1, 4: 1, 5: 4, 9: 1, 10: 1
         // 11: 1, 12: 1: 13: 1
         // 14: 2, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1
