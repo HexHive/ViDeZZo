@@ -757,7 +757,7 @@ t = {}
 for i in range(0, 32):
     t['intr{}#0x4'.format(i)] = FIELD_POINTER
 t.update({'frame#0x2': FIELD_RANDOM, 'pad#0x2': FIELD_RANDOM, 'done#0x4': FIELD_RANDOM})
-ohci_80.add_struct('OHCI_HCCA', t)
+ohci_80.add_struct('OHCI_HCCA', t) # AUTO
 for i in range(0, 32):
     ohci_80.add_point_to('OHCI_HCCA.intr{}'.format(i), ['OHCI_BUF0'])
 ohci_80.add_head(['OHCI_HCCA'])
@@ -776,10 +776,15 @@ ohci_81.add_flag('OHCI_BUF2.flags', {0: 7, 7: 1})
 ohci_81.add_constant('OHCI_BUF2.cmd1', [0x12, 0x03])
 ohci_81.add_constant('OHCI_BUF2.sig2', [0x43425355])
 ohci_81.add_constant('OHCI_BUF2.data_len', [0, 100])
-ohci_81.add_struct('OHCI_ED', {'flags#0x4': FIELD_FLAG, 'tail#0x4': FIELD_POINTER , 'head#0x4': FIELD_POINTER, 'next#0x4': FIELD_POINTER})
-ohci_81.add_flag('OHCI_ED.flags', {0: '7@0x0', 7: 2, 9: '2@0', 11: 2, 13: 1, 14: 1, 15: 1, 16: 11, 27: 5})
+ohci_81.add_struct('OHCI_ED', {
+    'flags#0x4': FIELD_FLAG, 'tail#0x4': FIELD_POINTER ,
+    'head#0x4': FIELD_POINTER, 'next#0x4': FIELD_POINTER})
+ohci_81.add_flag('OHCI_ED.flags', {
+    0: '7@0x0', 7: 2, 9: '2@0', 11: 2, 13: 1, 14: 1, 15: 1, 16: 11, 27: 5})
 ohci_81.add_point_to('OHCI_ED.next', ['OHCI_BUF1'], alignment=4)
-ohci_81.add_struct('OHCI_TD', {'flags#0x4': FIELD_FLAG, 'cbp#0x4': FIELD_POINTER | FIELD_FLAG, 'next#0x4': FIELD_POINTER, 'be#0x4': FIELD_POINTER | FIELD_FLAG})
+ohci_81.add_struct('OHCI_TD', {
+    'flags#0x4': FIELD_FLAG, 'cbp#0x4': FIELD_POINTER | FIELD_FLAG,
+     'next#0x4': FIELD_POINTER, 'be#0x4': FIELD_POINTER | FIELD_FLAG})
 ohci_81.add_flag('OHCI_TD.cbp', {0: '12@0xffc'})
 ohci_81.add_flag('OHCI_TD.be', {0: '4@a', 4: 2, 6: '6@0'})
 ohci_81.add_point_to('OHCI_TD.cbp', ['OHCI_BUF2'], alignment=12, immediate=True)
