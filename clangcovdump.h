@@ -38,13 +38,20 @@ void __llvm_profile_set_filename(char *);
 int __llvm_profile_write_file(void);
 #endif
 
+extern int __llvm_state_write_file(char *);
+
 static int llvm_profile_dump() {
     char filename[256];
+    char filename_state[256];
     time_t now;
 
     time(&now);
     snprintf(filename, 256, "%s-%ld", llvm_profile_file, now);
     __llvm_profile_set_filename(filename);
+
+    snprintf(filename_state, 256, "s%s-%ld", llvm_profile_file, now);
+    __llvm_state_write_file(filename_state);
+
     return __llvm_profile_write_file();
 }
 
