@@ -1,0 +1,56 @@
+|     name      |   source    |            sink            |  stripedType   |
++---------------+-------------+----------------------------+----------------+
+| e1000_tx_desc | buffer_addr | call to pci_dma_read       | unsigned char  |
+| EHCIqtd       | next        | call to get_dwords         | EHCIqtd        |
+| EHCIqtd       | token       | call to get_dwords         | unsigned int   |
+| EHCIqtd       | next        | call to get_dwords         | unsigned int   |
+| EHCIqtd       | altnext     | call to get_dwords         | unsigned int   |
+| EHCIqtd       | bufptr      | call to get_dwords         | unsigned int   |
+| EHCIqh        | next        | call to get_dwords         | EHCIqh         |
+| ohci_iso_td   | next        | call to dma_memory_read    | unsigned short |
+| ohci_iso_td   | next        | call to dma_memory_read    | unsigned short |
+| ohci_iso_td   | offset      | call to dma_memory_read    | unsigned short |
+| ohci_td       | next        | call to dma_memory_read    | unsigned short |
+| ohci_ed       | next        | call to ohci_read_ed       | ohci_ed        |
+| ohci_ed       | head        | call to dma_memory_read    | unsigned short |
+| ohci_ed       | head        | call to dma_memory_read    | unsigned short |
+| ohci_ed       | head        | call to dma_memory_read    | unsigned short |
+| ohci_ed       | head        | call to dma_memory_read    | unsigned short |
+| ohci_ed       | head        | call to dma_memory_read    | unsigned short |
+| ohci_ed       | head        | call to dma_memory_read    | unsigned short |
+| ohci_ed       | head        | call to dma_memory_read    | unsigned short |
+| ohci_ed       | head        | call to dma_memory_read    | unsigned short |
+| ohci_ed       | head        | call to dma_memory_read    | unsigned short |
+| ohci_ed       | head        | call to dma_memory_read    | unsigned short |
+| ohci_ed       | head        | call to ohci_read_ed       | ohci_ed        |
+| ohci_hcca     | intr        | call to ohci_read_ed       | ohci_ed        |
+| UHCI_QH       | link        | call to pci_dma_read       | UHCI_QH        |
+| UHCI_QH       | link        | call to pci_dma_read       | UHCI_TD        |
+| UHCI_QH       | el_link     | call to pci_dma_read       | UHCI_QH        |
+| UHCI_QH       | el_link     | call to pci_dma_read       | UHCI_TD        |
+| UHCI_QH       | link        | call to pci_dma_read       | UHCI_QH        |
+| UHCI_QH       | link        | call to pci_dma_read       | UHCI_TD        |
+| UHCI_QH       | el_link     | call to pci_dma_read       | UHCI_QH        |
+| UHCI_QH       | el_link     | call to pci_dma_read       | UHCI_TD        |
+| UHCI_QH       | link        | call to pci_dma_read       | UHCI_QH        |
+| UHCI_QH       | link        | call to pci_dma_read       | UHCI_TD        |
+| UHCI_QH       | link        | call to pci_dma_read       | UHCI_QH        |
+| UHCI_QH       | link        | call to pci_dma_read       | UHCI_TD        |
+| UHCI_QH       | link        | call to pci_dma_read       | UHCI_QH        |
+| UHCI_QH       | link        | call to pci_dma_read       | UHCI_TD        |
+| UHCI_TD       | link        | call to pci_dma_read       | UHCI_QH        |
+| UHCI_TD       | link        | call to pci_dma_read       | UHCI_TD        |
+| UHCI_TD       | link        | call to pci_dma_read       | UHCI_QH        |
+| UHCI_TD       | link        | call to pci_dma_read       | UHCI_TD        |
+| UHCI_TD       | link        | call to pci_dma_read       | UHCI_QH        |
+| UHCI_TD       | link        | call to pci_dma_read       | UHCI_TD        |
+| UHCI_TD       | link        | call to pci_dma_read       | UHCI_TD        |
+| UHCI_TD       | link        | call to pci_dma_read       | UHCI_TD        |
+| XHCITRB       | parameter   | call to xhci_dma_read_u32s | unsigned int   |
+| XHCITRB       | parameter   | call to dma_memory_read    | XHCITRB        |
+| XHCITRB       | parameter   | call to dma_memory_read    | XHCITRB        |
+| XHCITRB       | parameter   | call to xhci_dma_read_u32s | unsigned int   |
+| XHCITRB       | parameter   | call to dma_memory_read    | XHCITRB        |
+| XHCITRB       | parameter   | call to dma_memory_read    | XHCITRB        |
+| XHCITRB       | parameter   | call to dma_memory_read    | XHCITRB        |
+| XHCITRB       | parameter   | call to dma_memory_read    | XHCITRB        |

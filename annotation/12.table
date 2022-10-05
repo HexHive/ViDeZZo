@@ -1,0 +1,75 @@
+|    name     |    field    |       bits       |
++-------------+-------------+------------------+
+| EHCIsitd    | results     | 0x00000001 << 7  |
+| EHCIqtd     | next        | 0x00000001       |
+| EHCIqtd     | token       | 0x00000001 << 7  |
+| EHCIqtd     | token       | 0x00000001 << 7  |
+| EHCIqtd     | token       | 0x00000001 << 7  |
+| EHCIqtd     | token       | 0x00000001 << 7  |
+| EHCIqtd     | token       | 0x7FFF0000       |
+| EHCIqtd     | altnext     | 0x00000001       |
+| EHCIqtd     | token       | 0x00000001 << 15 |
+| EHCIqtd     | token       | 0x00007000       |
+| EHCIqtd     | token       | 0x7FFF0000       |
+| EHCIqtd     | next        | 0x00000001       |
+| EHCIqtd     | altnext     | 0x00000001       |
+| EHCIqh      | token       | 0x00000001 << 6  |
+| EHCIqh      | token       | 0x7FFF0000       |
+| EHCIqh      | altnext_qtd | 0x00000001       |
+| EHCIqh      | next_qtd    | 0x00000001       |
+| EHCIqh      | epchar      | 0x0000007F       |
+| EHCIqh      | epchar      | 0x00000001 << 15 |
+| EHCIqh      | token       | 0x00000001 << 6  |
+| EHCIqh      | token       | 0x00000001 << 7  |
+| EHCIqh      | current_qtd | 0x00000001       |
+| EHCIqh      | epchar      | 0x00000001 << 15 |
+| EHCIqh      | epchar      | 0x00000F00       |
+| EHCIqh      | token       | 0x7FFF0000       |
+| EHCIqh      | token       | 0x00000001 << 15 |
+| EHCIqh      | token       | 0x00007000       |
+| EHCIqh      | token       | 0x00000001 << 31 |
+| EHCIqh      | token       | 0x00000001 << 0  |
+| EHCIqh      | epchar      | 0x00003000       |
+| EHCIqh      | epchar      | 0x00000001 << 14 |
+| EHCIqh      | epchar      | 0x00000F00       |
+| EHCIqh      | token       | 0x00000001 << 6  |
+| EHCIqh      | epchar      | 0x00000F00       |
+| EHCIqh      | token       | 0x00000001 << 6  |
+| EHCIqh      | epchar      | 0x00000F00       |
+| EHCIqh      | epchar      | 0x0000007F       |
+| EHCIqh      | epchar      | 0x00000F00       |
+| ohci_iso_td | flags       | 0x0000FFFF << 0  |
+| ohci_iso_td | flags       | 0x00000007 << 24 |
+| ohci_iso_td | flags       | 0x0000000F << 28 |
+| ohci_iso_td | flags       | 0x00000007 << 21 |
+| ohci_iso_td | flags       | 0x00000007 << 21 |
+| ohci_iso_td | flags       | 0x00000007 << 21 |
+| ohci_td     | flags       | 0x00000003 << 19 |
+| ohci_td     | be          | 0x00000FFF       |
+| ohci_td     | cbp         | 0x00000FFF       |
+| ohci_td     | flags       | 0x00000001 << 18 |
+| ohci_td     | flags       | 0x00000007 << 21 |
+| ohci_td     | cbp         | 0x00000FFF       |
+| ohci_td     | flags       | 0x00000001 << 24 |
+| ohci_td     | flags       | 0x00000007 << 21 |
+| ohci_td     | flags       | 0x0000000F << 28 |
+| ohci_ed     | head        | 0x00000001       |
+| ohci_ed     | flags       | 0x00000001 << 14 |
+| ohci_ed     | head        | 0x00000001       |
+| ohci_ed     | head        | 0x00000002       |
+| ohci_ed     | flags       | 0x0000007F << 0  |
+| ohci_ed     | flags       | 0x0000000F << 7  |
+| ohci_ed     | flags       | 0x00000003 << 11 |
+| ohci_ed     | flags       | 0x00000001 << 13 |
+| ohci_ed     | flags       | 0x00000001 << 14 |
+| ohci_ed     | flags       | 0x00000001 << 15 |
+| ohci_ed     | flags       | 0x000007FF << 16 |
+| ohci_ed     | flags       | 0x00000001 << 15 |
+| UHCI_TD     | ctrl        | 0x000007FF       |
+| UHCI_TD     | ctrl        | 0x00000001 << 23 |
+| XHCITRB     | control     | 0x00000001 << 9  |
+| XHCITRB     | control     | 0x00000001 << 9  |
+| XHCITRB     | control     | 0x00000001 << 31 |
+| XHCITRB     | control     | 0x00000001 << 0  |
+| XHCITRB     | control     | 0x00000001 << 1  |
+| XHCITRB     | control     | 0x00000001 << 4  |
