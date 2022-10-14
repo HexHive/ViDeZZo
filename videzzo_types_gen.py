@@ -178,21 +178,6 @@ uint32_t urand32() {{
             f.write('    [{0}] = videzzo_group_mutator_miss_handler_{0},\n'.format(model.index))
         f.write('};')
 
-def update_stat(stats, new_stat):
-    # name, #-of-head-objects, #-of-structs, #-of-flag-fields, #-of-pointer-fields, #-of-fields
-    name = new_stat[0]
-    if name in stats:
-        stats[name]['#-of-head-objects'] += 1
-        stats[name]['#-of-structs'] += new_stat[2]
-        stats[name]['#-of-flag-fields'] += new_stat[3]
-        stats[name]['#-of-pointer-fields'] += new_stat[4]
-        stats[name]['#-of-fields'] += new_stat[5]
-    else:
-        stats[name] = {
-            '#-of-head-objects': 1,
-            '#-of-structs': new_stat[2], '#-of-flag-fields': new_stat[3],
-            '#-of-pointer-fields': new_stat[4], '#-of-fields': new_stat[5]}
-
 def gen_types(hypervisor, summary=True):
     """
     file orgranization
@@ -210,54 +195,24 @@ def gen_types(hypervisor, summary=True):
         if isinstance(v, Model):
             models[k] = v
             instrumentation_points.extend(v.get_instrumentation_points())
+    if summary:
+        print(' & '.join(['Device', 'Struct', '# of Flags', '# of Pointers', "# of Fields"]))
+        for model in models.values():
+            for name, struct_type, n_flags, n_pointers, n_fields in model.get_stats():
+                print(' & '.join([
+                    name.upper().replace('_', '\_'),
+                    struct_type.replace('_', '\_'), str(n_flags), '', str(n_pointers), '', str(n_fields), '\\\\']))
+        return
     yaml.safe_dump(instrumentation_points, open('./{0}/videzzo_{1}_types.yaml'.format(hypervisor_dir, hypervisor), 'w'))
-    if summary:
-        stats = {}
-        for model in models.values():
-            update_stat(stats, model.get_stats())
-        print('name, #-of-head-objects, #-of-structs, #-of-flag-fields, #-of-pointer-fields, #-of-fields')
-        for k, v in stats.items():
-            print(','.join([str(i) for i in [k, v['#-of-head-objects'], v['#-of-structs'], v['#-of-flag-fields'], v['#-of-pointer-fields'], v['#-of-fields']]]))
-        return
     __gen_code(models, hypervisor_dir)
-
-def gen_vmm(summary=False):
-    vmm_00 = Model('vmm', 0)
-    vmm_00.add_struct('VMM_BD', {'addr0#0x4': FIELD_POINTER | FIELD_FLAG, 'addr1#0x4': FIELD_POINTER, 'ctl_len#0x4': FIELD_FLAG})
-    vmm_00.add_flag('VMM_BD.addr0', {1: 1})
-    vmm_00.add_flag('VMM_BD.ctl_len', {0: 16, 16: 14, 30: 1, 31: 1})
-    vmm_00.add_struct('VMM_BUF0', {'buf#0x1000': FIELD_RANDOM, 'constant#0x4': FIELD_CONSTANT})
-    vmm_00.add_constant('VMM_BUF0.constant', [0xdeadbeef])
-    vmm_00.add_struct('VMM_BUF1', {'buf#0x1000': FIELD_RANDOM})
-    vmm_00.add_struct('VMM_BUF2', {'next#0x4': FIELD_POINTER})
-    vmm_00.add_point_to('VMM_BUF2.next', ['VMM_BUF2'])
-    vmm_00.add_point_to('VMM_BD.addr0', ['VMM_BUF0', 'VMM_BUF1'], flags=['VMM_BD.ctl_len.31'], alignment=2)
-    vmm_00.add_point_to_single_linked_list('VMM_BD.addr1', None, ['VMM_BUF2'], ['next'], alignment=2)
-    vmm_00.add_head(['VMM_BD'])
-    vmm_00.add_instrumentation_point('videzzo_vmm.c', ['generic_pio_write', 'dma_memory_read', 0, 0])
-    vmm_00.add_instrumentation_point('videzzo_vmm.c', ['generic_mmio_write', 'dma_memory_read', 0, 0])
-
-    instrumentation_points = vmm_00.get_instrumentation_points()
-    yaml.safe_dump(instrumentation_points, open('./videzzo_vmm_types.yaml', 'w'))
-
-    models = {'videzzo_vmm-00': vmm_00}
-    if summary:
-        print('name, id, #-of-structs, #-of-flag-fields, #-of-pointer-fields, #-of-fields')
-        for model in models.values():
-            model.get_stats()
-        return
-    __gen_code(models, '.')
 
 def main(argv):
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-s', '--summary', action='store_true', default=False, help='Print summary rather than build')
-    parser.add_argument('vmm', help='Hypervisors', choices=['vmm', 'qemu', 'byhve', 'vbox'])
+    parser.add_argument('vmm', help='Hypervisors', choices=['qemu', 'vbox'])
     args = parser.parse_args()
 
-    if args.vmm == 'vmm':
-        gen_vmm(summary=args.summary)
-    else:
-        gen_types(args.vmm, summary=args.summary)
+    gen_types(args.vmm, summary=args.summary)
 
     if not args.summary:
         print('Please check videzzo_types.c in the root directory of the current project.')

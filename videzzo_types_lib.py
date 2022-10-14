@@ -37,20 +37,16 @@ class Model(object):
         return 'v' + self.last_uuid
 
     def get_stats(self):
-        # stats: name, idx, # of structs, # of flag fields, # of pointer fields, # of fields
-        n_structs, n_fields, n_flag_fields, n_pointer_fields = 0, 0, 0, 0
         for struct_type, struct_metadata in self.structs.items():
-            n_structs += 1
+            n_fields, n_flag_fields, n_pointer_fields = 0, 0, 0
             for field_name, metadata in struct_metadata.items():
                 n_fields += 1
                 field_type = metadata['field_type']
                 if field_type & FIELD_FLAG:
                     n_flag_fields += 1
-                elif field_type & FIELD_POINTER:
+                if field_type & FIELD_POINTER:
                     n_pointer_fields += 1
-                else:
-                    pass
-        return [self.name, self.index, n_structs, n_flag_fields, n_pointer_fields, n_fields]
+            yield self.name, struct_type, n_flag_fields, n_pointer_fields, n_fields
 
 ###########################################################################################
 ### Construct
