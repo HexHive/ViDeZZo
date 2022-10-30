@@ -318,6 +318,7 @@ static void output_to_binary(Input *input, const char *pathname) {
     size_t SerializationSize = serialize(input, poc, DEFAULT_INPUT_MAXSIZE);
     size_t ret = dump_to_file(poc, SerializationSize, pathname);
     assert(SerializationSize == ret);
+    free(poc);
 }
 
 int main(int argc, char **argv) {

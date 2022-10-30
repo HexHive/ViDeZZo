@@ -103,6 +103,7 @@ int main(int argc, char **argv) {
 
     // dump
     dump_to_file(monolith, SerializationSize, output);
+    free(monolith);
     printf("[+] Dump to %s\n", output);
 
     return 0;
