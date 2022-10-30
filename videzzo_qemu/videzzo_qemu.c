@@ -92,9 +92,9 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         "multifunction=on,masterbus=ich9-ehci-1.0,firstport=2 "
         "-device ich9-usb-uhci3,bus=pcie.0,addr=1d.2,"
         "multifunction=on,masterbus=ich9-ehci-1.0,firstport=4 "
-        "-drive if=none,id=usbcdrom,media=cdrom "
-        "-device usb-tablet,bus=ich9-ehci-1.0,port=1,usb_version=1 "
-        "-device usb-storage,bus=ich9-ehci-1.0,port=2,drive=usbcdrom",
+        "-drive file=null-co://,if=none,format=raw,id=disk0 "
+        "-device usb-storage,bus=ich9-ehci-1.0,port=1,drive=disk0 "
+        "-device usb-tablet,bus=ich9-ehci-1.0,port=2,usb_version=1",
         .mrnames = "*capabilities*,*operational*,*ports*",
         .file = "hw/usb/hcd-ehci.c",
         .socket = false,
@@ -692,9 +692,15 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .file = "hw/net/allwinner-emac.c",
         .socket = false,
     },{
+        // https://patchwork.ozlabs.org/project/qemu-devel/patch/1596575505-163040-2-git-send-email-fnu.vikram@xilinx.com/
+        // apt-get install iproute2
+        // ip link add dev vcan0 type vcan
+        // ip link set up vcan0
         .arch = "aarch64",
         .name = "xlnx-zynqmp-can",
-        .args = "-machine xlnx-zcu102",
+        .args = "-machine xlnx-zcu102,canbus0=canbus0 "
+        "-object can-bus,id=canbus0",
+        // "-object can-host-socketcan,id=socketcan0,if=vcan0,canbus=canbus0",
         .mrnames = "*xlnx.zynqmp-can*",
         .file = "hw/net/can/xlnx-zynqmp-can.c",
         .socket = false,
@@ -747,6 +753,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .mrnames = "*tc6393xb*",
         .file = "hw/display/tc6393xb.c",
         .socket = false,
+        .byte_address = true,
     },{
         .arch = "arm",
         .name = "pl041",

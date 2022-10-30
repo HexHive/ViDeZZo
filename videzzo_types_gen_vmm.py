@@ -21,10 +21,10 @@ ac97_00.add_head(['AC97_BD'])
 ac97_00.add_instrumentation_point('ac97.c', ['fetch_bd', 'pci_dma_read', 0, 1])
 ac97_00.add_instrumentation_point('DevIchAc97.cpp', ['_ZL28ichac97R3StreamFetchNextBdleP11PDMDEVINSR3P10AC97STREAMP12AC97STREAMR3', '_ZL20PDMDevHlpPCIPhysReadP11PDMDEVINSR3mPvm', 0, 1])
 ac97_00.add_instrumentation_point('DevIchAc97.cpp', ['_ZL20ichac97R3StreamSetUpP11PDMDEVINSR3P9AC97STATEP11AC97STATER3P10AC97STREAMP12AC97STREAMR3b', '_ZL20PDMDevHlpPCIPhysReadP11PDMDEVINSR3mPvm', 0, 1])
-ac97_01 = Model('ac97', 1)
-ac97_01.add_struct('AC97_TMPBUF', {'tmpbuf#0x1000': FIELD_RANDOM})
-ac97_01.add_head(['AC97_TMPBUF'])
-ac97_01.add_instrumentation_point('ac97.c', ['write_audio', 'pci_dma_read', 0, 1])
+ac97_06 = Model('ac97', 6)
+ac97_06.add_struct('AC97_TMPBUF', {'tmpbuf#0x1000': FIELD_RANDOM})
+ac97_06.add_head(['AC97_TMPBUF'])
+ac97_06.add_instrumentation_point('ac97.c', ['write_audio', 'pci_dma_read', 0, 1])
 ###################################################################################################################
 cs4231a_01 = Model('cs4231a', 1)
 cs4231a_01.add_struct('CS4231A_BUF0', {'buf#0x100': FIELD_RANDOM}) # AUTO MISSING
@@ -820,13 +820,11 @@ ohci_81.add_instrumentation_point('hcd-ohci.c', ['ohci_service_ed_list', 'ohci_r
 ohci_81.add_instrumentation_point('DevOHCI.cpp', ['_ZL25ohciR3ServicePeriodicListP11PDMDEVINSR3P4OHCIP6OHCIR3', '_ZL12ohciR3ReadEdP11PDMDEVINSR3jP6OHCIED', 0, 1])
 ###################################################################################################################
 ehci_82 = Model('ehci', 82)
-ehci_82.add_struct('list', {'list#0x4': FIELD_POINTER}) # AUTO MISSING
-ehci_82.add_struct('list_buf', {'buf#0x100': FIELD_RANDOM})
 ehci_82.add_struct('entry', {'entry#0x4': FIELD_POINTER | FIELD_FLAG})
+ehci_82.add_struct('entry_buf', {'buf#0x100': FIELD_RANDOM})
 ehci_82.add_flag('entry.entry', {0: 1, 1: 2}) # AUTO MISSING
-ehci_82.add_point_to('entry.entry', ['list_buf'])
-ehci_82.add_point_to('list.list', ['entry'])
-ehci_82.add_head(['list'])
+ehci_82.add_point_to('entry.entry', ['entry_buf'])
+ehci_82.add_head(['entry'])
 ehci_82.add_instrumentation_point('hcd-ehci.c', ['ehci_advance_periodic_state', 'get_dwords', 0, 1])
 ###################################################################################################################
 ehci_87 = Model('ehci', 87)
@@ -901,7 +899,7 @@ for i in range(0, 5):
 ehci_88.add_head(['EHCIqh'])
 ehci_88.add_instrumentation_point('hcd-ehci.c', ['ehci_writeback_async_complete_packet', 'get_dwords', 0, 1])
 ehci_88.add_instrumentation_point('hcd-ehci.c', ['ehci_state_waitlisthead', 'get_dwords', 0, 1])
-ehci_88.add_instrumentation_point('hci-ehci.c', ['ehci_state_fetchqh', 'get_dwords', 0, 1])
+ehci_88.add_instrumentation_point('hcd-ehci.c', ['ehci_state_fetchqh', 'get_dwords', 0, 1])
 ###################################################################################################################
 ehci_85 = Model('ehci', 85)
 ehci_85.add_struct('EHCIitd_BUF0', {'buf#0x100': FIELD_RANDOM})
@@ -918,9 +916,9 @@ ehci_85.add_flag('EHCIitd.bufptr0', {0: '7@0', 8: 4}) # AUTO MISS
 ehci_85.add_flag('EHCIitd.bufptr1', {0: 11, 11: 1}) # AUTO MISS
 ehci_85.add_flag('EHCIitd.bufptr2', {0: 2}) # AUTO MISS
 for i in range(0, 7):
-    ehci_85.add_point_to('EHCIitd.bufptr{}'.format(i), ['EHCIitd_BUF']) # AUTO MISS
-ehci_85.add_point_to('EHCIitd.next', ['EHCIitd_BUF']) # AUTO MISS
-ehci_85.add_head(['EHCIitd_BUF0'])
+    ehci_85.add_point_to('EHCIitd.bufptr{}'.format(i), ['EHCIitd_BUF0']) # AUTO MISS
+ehci_85.add_point_to('EHCIitd.next', ['EHCIitd_BUF0']) # AUTO MISS
+ehci_85.add_head(['EHCIitd'])
 ehci_85.add_instrumentation_point('hcd-ehci.c', ['ehci_state_fetchitd', 'get_dwords', 0, 1])
 ###################################################################################################################
 ehci_86 = Model('ehci', 86)
