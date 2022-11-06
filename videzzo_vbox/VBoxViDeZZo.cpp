@@ -216,7 +216,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "pcnet", // Am79C970A, Am79C973, and Am79C960 share this
-        .args = "--nic1 nat --nictype1 Am79C970",
+        .args = "--nic1 nat --nictype1 Am79C970A",
         .file = "srv/VBox/Devices/Network/DevPCNet.cpp",
         .mrnames = "*PCnet*,*PCnet APROM*",
         .byte_address = true,
