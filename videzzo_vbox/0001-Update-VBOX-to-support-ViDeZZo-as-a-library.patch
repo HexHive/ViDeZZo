@@ -542,9 +542,9 @@ Index: src/VBox/Devices/Makefile.kmk
    VBoxDD_TEMPLATE         = VBoxR3DllWarnNoPic
   endif
 + ifdef VBOXDD_SANITIZER
-+  VBoxDD_CFLAGS         += -fsanitize=address,undefined -fno-sanitize=alignment
-+  VBoxDD_CXXFLAGS       += -fsanitize=address,undefined -fno-sanitize=alignment
-+  VboxDD_LDFLAGS        += -fsanitize=address,undefined -fno-sanitize=alignment
++  VBoxDD_CFLAGS         += -fsanitize=address,undefined -fno-sanitize=alignment -fsanitize-recover=address
++  VBoxDD_CXXFLAGS       += -fsanitize=address,undefined -fno-sanitize=alignment -fsanitize-recover=address
++  VboxDD_LDFLAGS        += -fsanitize=address,undefined -fno-sanitize=alignment -fsanitize-recover=address
 + endif
   VBoxDD_SDKS.win         = ReorderCompilerIncs $(VBOX_WINPSDK) $(VBOX_WINDDK) VBOX_NTDLL
   Storage/DrvHostDVD.cpp_SDKS.win = ReorderCompilerIncs $(VBOX_WINDDK)
@@ -570,7 +570,7 @@ Index: src/VBox/Devices/build/VBoxDD.cpp
 +    // HACK
 +    // we want to dump the coverage in VBoxDD.so
 +#ifdef CLANG_COV_DUMP
-+    llvm_profile_initialize_file(true);
++    llvm_profile_initialize_file(false);
 +#endif
 +
      LogFlow(("VBoxDevicesRegister: u32Version=%#x\n", u32Version));

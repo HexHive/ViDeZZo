@@ -811,15 +811,6 @@ static void videzzo_vbox_pre() {
     
     // step 2: get allocator
     pc_alloc_init(&vbox_malloc, 128 * 1024 * 1024, ALLOC_NO_FLAGS);
-
-    // step 3: enable source coverage collection
-    // this main thread musked SIGALRM in rtThreadPosixBlockSignals
-    // for timer-posix.cpp, but I have to unmusk this to receive SIGALRM
-    // any side effects? no idea
-    sigset_t SigSet;
-    sigemptyset(&SigSet);
-    sigaddset(&SigSet, SIGALRM);
-    sigprocmask(SIG_UNBLOCK, &SigSet, NULL);
 }
 
 static ComPtr<IVirtualBoxClient> virtualBoxClient;
