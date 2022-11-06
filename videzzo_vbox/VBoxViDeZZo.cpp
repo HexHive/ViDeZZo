@@ -1078,7 +1078,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     gEventQ = com::NativeEventQueue::getMainEventQueue();
 
     // or VBoxManage startvm UUID --type headless
-    hrc = console->PowerUpPaused(progress.asOutParam());
+    hrc = console->PowerUp(progress.asOutParam());
 
     hrc = showProgress1(progress);
 
