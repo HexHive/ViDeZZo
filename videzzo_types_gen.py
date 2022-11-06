@@ -75,10 +75,10 @@ static void __EVENT_MEMREAD(uint64_t physaddr, size_t size, uint8_t *data) {{
 #endif
     event_ops[EVENT_TYPE_MEM_READ].dispatch(event);
 
-    int current_event = gfctx_get_current_event();
-    append_event(gfctx_get_current_input(), event);
+    int current_event = gfctx_get_current_event(1);
+    append_event(gfctx_get_current_input(1), event);
     current_event++;
-    gfctx_set_current_event(current_event);
+    gfctx_set_current_event(current_event, 1);
 }}
 
 static void __EVENT_MEMWRITE(uint64_t physaddr, size_t size, uint8_t *data) {{
@@ -89,10 +89,10 @@ static void __EVENT_MEMWRITE(uint64_t physaddr, size_t size, uint8_t *data) {{
 #endif
     event_ops[EVENT_TYPE_MEM_WRITE].dispatch(event);
 
-    int current_event = gfctx_get_current_event();
-    append_event(gfctx_get_current_input(), event);
+    int current_event = gfctx_get_current_event(1);
+    append_event(gfctx_get_current_input(1), event);
     current_event++;
-    gfctx_set_current_event(current_event);
+    gfctx_set_current_event(current_event, 1);
 }}
 
 typedef struct GuestMemoryBlock {{

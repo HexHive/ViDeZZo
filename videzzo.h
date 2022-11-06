@@ -175,16 +175,16 @@ typedef struct GenericFeedbackContext {
     void *object;
 } GenericFeedbackContext;
 
-void gfctx_set_current_input(Input *input);
-Input *gfctx_get_current_input(void);
-void gfctx_set_current_event(int idx);
-int gfctx_get_current_event(void);
-void gfctx_set_object(void *object);
-void *gfctx_get_object(void);
-void gfctx_set_data(uint8_t *Data);
-uint8_t *gfctx_get_data(void);
-void gfctx_set_size(uint32_t MaxSize);
-uint32_t gfctx_get_size(void);
+void gfctx_set_current_input(Input *input, int gfctx_id);
+Input *gfctx_get_current_input(int gfctx_id);
+void gfctx_set_current_event(int idx, int gfctx_id);
+int gfctx_get_current_event(int gfctx_id);
+void gfctx_set_object(void *object, int gfctx_id);
+void *gfctx_get_object(int gfctx_id);
+void gfctx_set_data(uint8_t *Data, int gfctx_id);
+uint8_t *gfctx_get_data(int gfctx_id);
+void gfctx_set_size(uint32_t MaxSize, int gfctx_id);
+uint32_t gfctx_get_size(int gfctx_id);
 typedef void (*__flush)(void *object);
 void gfctx_set_flush(__flush);
 __flush gfctx_get_flush(void);

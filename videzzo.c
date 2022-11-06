@@ -69,6 +69,7 @@ static Record records[32] = {{ 0 }};
 
 // TODO: change the API convetion and API name
 void GroupMutatorOrder(int id, int status) {
+    // TODO: this is not thread-safe (vbox)
     if (DisableInputProcessing)
         return;
 
@@ -85,20 +86,20 @@ void GroupMutatorOrder(int id, int status) {
         r->status = 1;
         r->last_status = status;
         // start to record
-        r->current_event_s = gfctx_get_current_event();
+        r->current_event_s = gfctx_get_current_event(0);
     } else if (r->status == 1 && in_one_iteration) {
         if (status == 2 && r->last_status == 1)
             r->status = 2;
         // end the record
-        r->current_event_e = gfctx_get_current_event();
+        r->current_event_e = gfctx_get_current_event(0);
     }
 
     if (r->status == 2 && r->current_event_s < r->current_event_e) {
         // we want to group any events between (_s, _e]
-        Input *input = gfctx_get_current_input();
+        Input *input = gfctx_get_current_input(0);
 
         // we dislike a group event to trigger this Order
-        Event *trigger_event = get_event(input, gfctx_get_current_event());
+        Event *trigger_event = get_event(input, gfctx_get_current_event(0));
         if (trigger_event->type == EVENT_TYPE_GROUP_EVENT_RS)
             return;
 
@@ -143,32 +144,35 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
     if (DisableInputProcessing)
         return;
 
+    // let's first handle intra-message annotation
     if (getenv("VIDEZZO_DISABLE_INTRA_MESSAGE_ANNOTATION"))
         return;
 
-    // save context
-    Input *old_input = gfctx_get_current_input();
-    int old_current_event = gfctx_get_current_event();
-
     // we dislike a group event to trigger this Miss
-    Event *trigger_event = get_event(old_input, old_current_event);
-    if (trigger_event->type == EVENT_TYPE_GROUP_EVENT_LM && loop_counter == 0)
-        return;
+    Input *old_input = gfctx_get_current_input(0);
+    int old_current_event = gfctx_get_current_event(0);
+    Event *trigger_event = NULL;
+    if (old_input != NULL) {
+        trigger_event = get_event(old_input, old_current_event);
+        if (trigger_event->type == EVENT_TYPE_GROUP_EVENT_LM && loop_counter == 0)
+            return;
+    }
 
     // create new context
     // so all injected events will go into here
     Input *input = init_input(NULL, DEFAULT_INPUT_MAXSIZE);
     int current_event = 0;
 
-    gfctx_set_current_input(input);
-    gfctx_set_current_event(current_event);
+    gfctx_set_current_input(input, 1);
+    gfctx_set_current_event(current_event, 1);
 
     // in this handler, the current input will be updated
     // Don't delete any events from the current event to the end
     group_mutator_miss_handlers[id](physaddr);
 
+    // let's group messages
     if (getenv("VIDEZZO_DISABLE_GROUP_MUTATOR_LM") ||
-            getenv("VIDEZZO_DISABLE_INTER_MESSAGE_MUTATORS")) {
+            getenv("VIDEZZO_DISABLE_INTER_MESSAGE_MUTATORS") || old_input == NULL) {
         free_input(input);
         goto recover;
     }
@@ -211,8 +215,8 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
 #endif
 
 recover:
-    gfctx_set_current_input(old_input);
-    gfctx_set_current_event(old_current_event);
+    gfctx_set_current_input(old_input, 0);
+    gfctx_set_current_event(old_current_event, 0);
 }
 
 //
@@ -268,7 +272,7 @@ static void __videzzo_execute_one_input(Input *input) {
     int i;
     for (i = 0; event != NULL; i++) {
         // set up feedback context
-        gfctx_set_current_event(i);
+        gfctx_set_current_event(i, 0);
         videzzo_dispatch_event(event);
 #ifdef VIDEZZO_DEBUG
         event_ops[event->type].print_event(event);
@@ -279,7 +283,7 @@ static void __videzzo_execute_one_input(Input *input) {
         }
         loop_counter = 0;
     }
-    gfctx_set_current_event(0);
+    gfctx_set_current_event(0, 0);
 #ifdef VIDEZZO_DEBUG
     fprintf(stderr, "- dispatching events done\n");
 #endif
@@ -299,8 +303,8 @@ int videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush 
     // deserialize Data to Events
     input->size = deserialize(input);
     // set up feedback context
-    gfctx_set_current_input(input);
-    gfctx_set_object(object);
+    gfctx_set_current_input(input, 0);
+    gfctx_set_object(object, 0);
     gfctx_set_flush(flush);
     if (getenv("VIDEZZO_FORK")) {
         if (fork() == 0) {
@@ -313,8 +317,8 @@ int videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush 
         __videzzo_execute_one_input(input);
     }
     size_t SerializationSize = serialize(input, Data, DEFAULT_INPUT_MAXSIZE);
-    gfctx_set_current_input(NULL);
-    gfctx_set_object(NULL);
+    gfctx_set_current_input(NULL, 0);
+    gfctx_set_object(NULL, 0);
     gfctx_set_flush(NULL);
     free_input(input);
     //
@@ -1122,7 +1126,7 @@ void videzzo_dispatch_event(Event *event) {
     event_ops[event->type].dispatch(event);
     __flush flush = gfctx_get_flush();
     if (flush != NULL)
-        flush(gfctx_get_object());
+        flush(gfctx_get_object(0));
 }
 
 //
@@ -1784,46 +1788,46 @@ int select_weighted_mutators(int rand) {
 //
 // Generic Feedback Context
 //
-static GenericFeedbackContext gfctx;
+static GenericFeedbackContext gfctx[2];
 
-void gfctx_set_current_input(Input *input) {
-    gfctx.current_input = input;
+void gfctx_set_current_input(Input *input, int gfctx_id) {
+    gfctx[gfctx_id].current_input = input;
 }
 
-Input *gfctx_get_current_input() {
-    return gfctx.current_input;
+Input *gfctx_get_current_input(int gfctx_id) {
+    return gfctx[gfctx_id].current_input;
 }
 
-void gfctx_set_current_event(int idx) {
-    gfctx.current_event = idx;
+void gfctx_set_current_event(int idx, int gfctx_id) {
+    gfctx[gfctx_id].current_event = idx;
 }
 
-int gfctx_get_current_event() {
-    return gfctx.current_event;
+int gfctx_get_current_event(int gfctx_id) {
+    return gfctx[gfctx_id].current_event;
 }
 
-void gfctx_set_object(void *object) {
-    gfctx.object = object;
+void gfctx_set_object(void *object, int gfctx_id) {
+    gfctx[gfctx_id].object = object;
 }
 
-void *gfctx_get_object() {
-    return gfctx.object;
+void *gfctx_get_object(int gfctx_id) {
+    return gfctx[gfctx_id].object;
 }
 
-void gfctx_set_data(uint8_t *Data) {
-    gfctx.Data = Data;
+void gfctx_set_data(uint8_t *Data, int gfctx_id) {
+    gfctx[gfctx_id].Data = Data;
 }
 
-uint8_t *gfctx_get_data() {
-    return gfctx.Data;
+uint8_t *gfctx_get_data(int gfctx_id) {
+    return gfctx[gfctx_id].Data;
 }
 
-void gfctx_set_size(uint32_t MaxSize) {
-    gfctx.MaxSize = MaxSize;
+void gfctx_set_size(uint32_t MaxSize, int gfctx_id) {
+    gfctx[gfctx_id].MaxSize = MaxSize;
 }
 
-uint32_t gfctx_get_size() {
-    return gfctx.MaxSize;
+uint32_t gfctx_get_size(int gfctx_id) {
+    return gfctx[gfctx_id].MaxSize;
 }
 
 static __flush vmm_flush;
