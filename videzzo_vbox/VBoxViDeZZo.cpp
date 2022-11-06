@@ -146,7 +146,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "sb16",
         .args = "--audio-controller=sb16",
         .file = "src/VBox/Devices/Audio/DevSB16.cpp",
-        .mrnames = "*SB16 - Mixer*,*SB16 - DSP*",
+        .mrnames = "*SB16 - Mixer*,*SB16 - DSP*,*DMA*",
         .byte_address = true,
         .socket = false,
         .display = false,
@@ -154,7 +154,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "i386",
         .name = "vga",
         .args = "--graphicscontroller=vmsvga", // vboxvga, vmsvga, and vboxsvga share this
-        .file = "src/VBox/Devices/Audio/DevVGA.cpp",
+        .file = "src/VBox/Devices/Graphics/DevVGA.cpp",
         .mrnames = "*VRam*,*VGA*", // *VMSVGA*
         .byte_address = false, // TODO: PIO and MMIO should be seperated!
         .socket = false,
@@ -216,7 +216,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "pcnet", // Am79C970A, Am79C973, and Am79C960 share this
-        .args = "--nic1 nat --nictype1 Am79C970A",
+        .args = "--nic1 nat --nictype1 Am79C970",
         .file = "srv/VBox/Devices/Network/DevPCNet.cpp",
         .mrnames = "*PCnet*,*PCnet APROM*",
         .byte_address = true,
@@ -368,7 +368,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .name = "floppy",
         .args = "--floppy none",
         .file = "src/VBox/Devices/Storage/DevFdc.cpp",
-        .mrnames = "*FDC*",
+        .mrnames = "*FDC*,*DMA*",
         .byte_address = true,
         .socket = false,
         .display = false,
