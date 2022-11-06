@@ -32,13 +32,13 @@ static int coverage_dump_precision_th = 600;
 extern "C" void __llvm_profile_initialize_file(void);
 extern "C" void __llvm_profile_set_filename(char *);
 extern "C" int __llvm_profile_write_file(void);
+extern "C" int __llvm_state_write_file(char *);
 #else
 void __llvm_profile_initialize_file(void);
 void __llvm_profile_set_filename(char *);
 int __llvm_profile_write_file(void);
+int __llvm_state_write_file(char *);
 #endif
-
-extern int __llvm_state_write_file(char *);
 
 static int llvm_profile_dump() {
     char filename[256];
@@ -49,8 +49,9 @@ static int llvm_profile_dump() {
     snprintf(filename, 256, "%s-%ld", llvm_profile_file, now);
     __llvm_profile_set_filename(filename);
 
-    snprintf(filename_state, 256, "s%s-%ld", llvm_profile_file, now);
-    __llvm_state_write_file(filename_state);
+    // TODO: Disable this by default
+    // snprintf(filename_state, 256, "s%s-%ld", llvm_profile_file, now);
+    // __llvm_state_write_file(filename_state);
 
     return __llvm_profile_write_file();
 }
