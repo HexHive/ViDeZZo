@@ -1267,7 +1267,7 @@ uint64_t dispatch_mem_write(Event *event) {
 }
 
 uint64_t dispatch_clock_step(Event *event) {
-    QTestState *s = (QTestState *)gfctx_get_object();
+    QTestState *s = (QTestState *)gfctx_get_object(0);
     qtest_clock_step(s, event->valu);
     return 0;
 }
