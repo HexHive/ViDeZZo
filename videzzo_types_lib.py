@@ -519,8 +519,8 @@ class Model(object):
     uint64_t last_name = head_name, tail_name = head_name; \\
     for (int i = 0; i < (urand32() % 5 -1); i++) { \\
         uint64_t next_##type = get_##type(INVALID_ADDRESS); \\
-        next_##type |= flag_value; \\
         append_address(next_##type); \\
+        next_##type |= flag_value; \\
         EVENT_MEMWRITE(last_name + offsetof(type, field_name), 4, next_##type, 4, uuid) \\
         last_name = next_##type; \\
         tail_name = next_##type; \\
