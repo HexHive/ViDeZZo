@@ -148,14 +148,20 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
     if (getenv("VIDEZZO_DISABLE_INTRA_MESSAGE_ANNOTATION"))
         return;
 
-    // we dislike a group event to trigger this Miss
-    Input *old_input = gfctx_get_current_input(0);
-    int old_current_event = gfctx_get_current_event(0);
-    Event *trigger_event = NULL;
-    if (old_input != NULL) {
-        trigger_event = get_event(old_input, old_current_event);
-        if (trigger_event->type == EVENT_TYPE_GROUP_EVENT_LM && loop_counter == 0)
-            return;
+    Input *old_input;
+    int old_current_event;
+    Event *trigger_event;
+    if (!getenv("VIDEZZO_DISABLE_GROUP_MUTATOR_LM") &&
+            !!getenv("VIDEZZO_DISABLE_INTER_MESSAGE_MUTATORS")) {
+        // we dislike a group event to trigger this Miss
+        old_input = gfctx_get_current_input(0);
+        old_current_event = gfctx_get_current_event(0);
+        trigger_event = NULL;
+        if (old_input != NULL) {
+            trigger_event = get_event(old_input, old_current_event);
+            if (trigger_event->type == EVENT_TYPE_GROUP_EVENT_LM && loop_counter == 0)
+                return;
+        }
     }
 
     // create new context
