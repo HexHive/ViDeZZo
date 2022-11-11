@@ -810,7 +810,10 @@ static void videzzo_vbox_pre() {
     }
     
     // step 2: get allocator
-    pc_alloc_init(&vbox_malloc, 128 * 1024 * 1024, ALLOC_NO_FLAGS);
+    pc_alloc_init(&vbox_malloc, 2 * 1024 * 1024 * 1024, ALLOC_NO_FLAGS);
+
+    // step 3: get VM to be running
+    pVM->enmVMState = VMSTATE_RUNNING;
 }
 
 static ComPtr<IVirtualBoxClient> virtualBoxClient;
@@ -1069,7 +1072,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     gEventQ = com::NativeEventQueue::getMainEventQueue();
 
     // or VBoxManage startvm UUID --type headless
-    hrc = console->PowerUp(progress.asOutParam());
+    hrc = console->PowerUpPaused(progress.asOutParam());
 
     hrc = showProgress1(progress);
 
