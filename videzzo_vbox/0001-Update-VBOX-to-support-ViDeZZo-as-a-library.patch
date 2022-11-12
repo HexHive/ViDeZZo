@@ -685,6 +685,64 @@ Index: src/VBox/VMM/Makefile.kmk
  endif
  
  
+Index: src/VBox/VMM/VMMAll/PGMAllPool.cpp
+===================================================================
+--- src/VBox/VMM/VMMAll/PGMAllPool.cpp	(revision 95063)
++++ src/VBox/VMM/VMMAll/PGMAllPool.cpp	(working copy)
+@@ -5076,7 +5076,7 @@
+     {
+         STAM_PROFILE_START(&pPool->StatZeroPage, z);
+         void *pv = PGMPOOL_PAGE_2_PTR(pVM, pPage);
+-        ASMMemZeroPage(pv);
++        // ASMMemZeroPage(pv);
+         STAM_PROFILE_STOP(&pPool->StatZeroPage, z);
+     }
+ 
+Index: src/VBox/VMM/VMMR3/PGMPhys.cpp
+===================================================================
+--- src/VBox/VMM/VMMR3/PGMPhys.cpp	(revision 95063)
++++ src/VBox/VMM/VMMR3/PGMPhys.cpp	(working copy)
+@@ -5898,23 +5898,23 @@
+             && rc != VERR_LOCK_FAILED)
+             for (uint32_t i = 0; i < RT_ELEMENTS(pVM->pgm.s.aHandyPages); i++)
+             {
+-                LogRel(("PGM: aHandyPages[#%#04x] = {.HCPhysGCPhys=%RHp, .idPage=%#08x, .idSharedPage=%#08x}\n",
+-                        i, pVM->pgm.s.aHandyPages[i].HCPhysGCPhys, pVM->pgm.s.aHandyPages[i].idPage,
+-                        pVM->pgm.s.aHandyPages[i].idSharedPage));
+-                uint32_t const idPage = pVM->pgm.s.aHandyPages[i].idPage;
+-                if (idPage != NIL_GMM_PAGEID)
+-                {
+-                    for (PPGMRAMRANGE pRam = pVM->pgm.s.pRamRangesXR3;
+-                         pRam;
+-                         pRam = pRam->pNextR3)
+-                    {
+-                        uint32_t const cPages = pRam->cb >> GUEST_PAGE_SHIFT;
+-                        for (uint32_t iPage = 0; iPage < cPages; iPage++)
+-                            if (PGM_PAGE_GET_PAGEID(&pRam->aPages[iPage]) == idPage)
+-                                LogRel(("PGM: Used by %RGp %R[pgmpage] (%s)\n",
+-                                        pRam->GCPhys + ((RTGCPHYS)iPage << GUEST_PAGE_SHIFT), &pRam->aPages[iPage], pRam->pszDesc));
+-                    }
+-                }
++                // LogRel(("PGM: aHandyPages[#%#04x] = {.HCPhysGCPhys=%RHp, .idPage=%#08x, .idSharedPage=%#08x}\n",
++                        // i, pVM->pgm.s.aHandyPages[i].HCPhysGCPhys, pVM->pgm.s.aHandyPages[i].idPage,
++                        // pVM->pgm.s.aHandyPages[i].idSharedPage));
++                // uint32_t const idPage = pVM->pgm.s.aHandyPages[i].idPage;
++                // if (idPage != NIL_GMM_PAGEID)
++                // {
++                    // for (PPGMRAMRANGE pRam = pVM->pgm.s.pRamRangesXR3;
++                         // pRam;
++                         // pRam = pRam->pNextR3)
++                    // {
++                        // uint32_t const cPages = pRam->cb >> GUEST_PAGE_SHIFT;
++                        // for (uint32_t iPage = 0; iPage < cPages; iPage++)
++                            // if (PGM_PAGE_GET_PAGEID(&pRam->aPages[iPage]) == idPage)
++                                // LogRel(("PGM: Used by %RGp %R[pgmpage] (%s)\n",
++                                        // pRam->GCPhys + ((RTGCPHYS)iPage << GUEST_PAGE_SHIFT), &pRam->aPages[iPage], pRam->pszDesc));
++                    // }
++                // }
+             }
+ 
+         if (rc == VERR_NO_MEMORY)
 Index: src/libs/xpcom18a4/nsprpub/pr/src/md/unix/os_Linux_x86_64.s
 ===================================================================
 --- src/libs/xpcom18a4/nsprpub/pr/src/md/unix/os_Linux_x86_64.s	(revision 95063)
