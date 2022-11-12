@@ -126,7 +126,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     {
         .arch = "i386",
         .name = "hda",
-        .args = "--audio-controller=hda",
+        .args = "--audio-controller=hda --memory 2048",
         .file = "src/VBox/Devices/Audio/DevHda.cpp",
         .mrnames = "*HDA*",
         .byte_address = true,
@@ -135,7 +135,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "ac97",
-        .args = "--audio-controller=ac97",
+        .args = "--audio-controller=ac97 --memory 2048",
         .file = "src/VBox/Devices/Audio/DevIchAc97.cpp",
         .mrnames = "*ICHAC97 NAM*,*ICHAC97 NABM*",
         .byte_address = true,
@@ -144,7 +144,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "sb16",
-        .args = "--audio-controller=sb16",
+        .args = "--audio-controller=sb16 --memory 2048",
         .file = "src/VBox/Devices/Audio/DevSB16.cpp",
         .mrnames = "*SB16 - Mixer*,*SB16 - DSP*,*DMA*",
         .byte_address = true,
@@ -153,7 +153,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "vga",
-        .args = "--graphicscontroller=vmsvga", // vboxvga, vmsvga, and vboxsvga share this
+        .args = "--graphicscontroller=vmsvga --memory 2048", // vboxvga, vmsvga, and vboxsvga share this
         .file = "src/VBox/Devices/Graphics/DevVGA.cpp",
         .mrnames = "*VRam*,*VGA*", // *VMSVGA*
         .byte_address = false, // TODO: PIO and MMIO should be seperated!
@@ -162,7 +162,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "pckbd",
-        .args = "--keyboard ps2",
+        .args = "--keyboard ps2 --memory 2048",
         .file = "src/VBox/Devices/Input/DevPS2.cpp",
         .mrnames = "*PC Keyboard - Data*,*PC Keyboard - Command / Status*",
         .byte_address = true,
@@ -171,7 +171,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "3c501",
-        .args = "--nic1 nat --nictype1 3C501",
+        .args = "--nic1 nat --nictype1 3C501 --memory 2048",
         .file = "src/VBox/Devices/Network/Dev3C501.cpp",
         .mrnames = "*3C501*",
         .byte_address = true,
@@ -180,7 +180,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "ne2000", // ne1000 and ne2000 share this
-        .args = "--nic1 nat --nictype1 NE2000",
+        .args = "--nic1 nat --nictype1 NE2000 --memory 2048",
         .file = "src/VBox/Devices/Network/DevDP8390.cpp",
         .mrnames = "*DP8390-Core*,*DPNIC-NE*",
         .byte_address = true,
@@ -189,7 +189,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "wd8013", // wd8003 and wd8013 share this
-        .args = "--nic1 nat --nictype1 WD8013",
+        .args = "--nic1 nat --nictype1 WD8013 --memory 2048",
         .file = "src/VBox/Devices/Network/DevDP8390.cpp",
         .mrnames = "*DPNIC-WD*,*DP8390-Core*,*DPNIC - WD Shared RAM*",
         .byte_address = true,
@@ -198,7 +198,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "3c503",
-        .args = "--nic1 nat --nictype1 3C503",
+        .args = "--nic1 nat --nictype1 3C503 --memory 2048",
         .file = "src/VBox/Devices/Network/DevDP8390.cpp",
         .mrnames = "*DP8390-Core*,*DPNIC-EL*,*DPNIC - 3C503 Shared RAM*",
         .byte_address = true,
@@ -207,7 +207,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "e1000", // 82540EM, 82543GC, and 82545EM share this
-        .args = "--nic1 nat --nictype1 82540EM",
+        .args = "--nic1 nat --nictype1 82540EM --memory 2048",
         .file = "src/VBox/Devices/Network/DevE1000.cpp",
         .mrnames = "*E1000*",
         .byte_address = true,
@@ -216,7 +216,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "pcnet", // Am79C970A, Am79C973, and Am79C960 share this
-        .args = "--nic1 nat --nictype1 Am79C970A --memory 4096",
+        .args = "--nic1 nat --nictype1 Am79C970A --memory 2048",
         .file = "srv/VBox/Devices/Network/DevPCNet.cpp",
         .mrnames = "*PCnet*,*PCnet APROM*",
         .byte_address = true,
@@ -234,7 +234,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, */ {
         .arch = "i386",
         .name = "acpi",
-        .args = "--acpi on",
+        .args = "--acpi on --memory 2048",
         .file = "src/VBox/Devices/PC/DevACPI.cpp",
         .mrnames = "*ACPI*",
         .byte_address = true,
@@ -243,7 +243,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "dma",
-        .args = nullptr,
+        .args = "--memory 2048",
         .file = "src/VBox/Devices/PC/DevDMA.cpp",
         .mrnames = "*DMA*",
         .byte_address = true,
@@ -252,7 +252,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "hpet",
-        .args = "--hpet on",
+        .args = "--hpet on --memory 2048",
         .file = "src/VBox/Devices/PC/DevHPET.cpp",
         .mrnames = "*HPET Memory*",
         .byte_address = false,
@@ -261,7 +261,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "ioapic",
-        .args = "--ioapic on",
+        .args = "--ioapic on --memory 2048",
         .file = "src/VBox/Devices/PC/DevIoApic.cpp",
         .mrnames = "*APIC*",
         .byte_address = false,
@@ -270,7 +270,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "pcarch",
-        .args = nullptr,
+        .args = "--memory 2048",
         .file = "src/VBox/Devices/PC/DevPcArch.cpp",
         .mrnames = "*Math Co-Processor (DOS/OS2 mode)*,*PS/2 system control port A (A20 and more)*",
         .byte_address = true,
@@ -279,7 +279,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "pcbios",
-        .args = nullptr,
+        .args = "--memory 2048",
         .file = "src/VBox/Devices/PC/DevPcBios.cpp",
         .mrnames = "*Bochs PC BIOS*",
         .byte_address = true,
@@ -288,7 +288,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "i8259",
-        .args = nullptr,
+        .args = "--memory 2048",
         .file = "src/VBox/Devices/PC/DevPIC.cpp",
         .mrnames = "*i8259*",
         .byte_address = true,
@@ -297,7 +297,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "i8254",
-        .args = nullptr,
+        .args = "--memory 2048",
         .file = "src/VBox/Devices/PC/DevPit-i8254.cpp",
         .mrnames = "*i8254*",
         .byte_address = true,
@@ -306,7 +306,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "rtc",
-        .args = nullptr,
+        .args = "--memory 2048",
         .file = "src/VBox/Devices/PC/DevRTC.cpp",
         .mrnames = "*MC146818*",
         .byte_address = true,
@@ -315,7 +315,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "tpm",
-        .args = "--tpm-type 2.0", // 1.2, 2.0, host and swtpm share this
+        .args = "--tpm-type 2.0 --memory 2048", // 1.2, 2.0, host and swtpm share this
         .file = "src/VBox/Devices/Security/DevTpm.cpp",
         .mrnames = "*TPM MMIO*",
         .byte_address = false,
@@ -324,7 +324,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "serial",
-        .args = "--uart1 0x3f8 4 --uartmode1 disconnected --uarttype1 16550A", // 16450, 16550A, and 16750 share this
+        .args = "--uart1 0x3f8 4 --uartmode1 disconnected --uarttype1 16550A --memory 2048", // 16450, 16550A, and 16750 share this
         .file = "src/VBox/Devices/Serial/DevSerial.cpp",
         .mrnames = "*SERIAL*",
         .byte_address = true,
@@ -339,7 +339,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         // however, a usb is mapped to a certain controller
         .arch = "i386",
         .name = "ahci",
-        .args = "--sata on", // sata: IntelAhci
+        .args = "--sata on --memory 2048", // sata: IntelAhci
         .file = "src/VBox/Devices/Storage/DevAHCI.cpp",
         .mrnames = "*AHCI*",
         .byte_address = true,
@@ -357,7 +357,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, */ {
         .arch = "i386",
         .name = "buslogic",
-        .args = "--scsi on --scsitype BusLogic", // scsi: BusLogic
+        .args = "--scsi on --scsitype BusLogic --memory 2048", // scsi: BusLogic
         .file = "src/VBox/Devices/Storage/DevBusLogic.cpp",
         .mrnames = "*BusLogic*",
         .byte_address = true,
@@ -375,7 +375,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, */ {
         .arch = "i386",
         .name = "lsilogicscsi",
-        .args = "--scsi on --scsitype LsiLogic", // scsi: LsiLogic; LsiLogic and siLogicSAS share this
+        .args = "--scsi on --scsitype LsiLogic --memory 2048", // scsi: LsiLogic; LsiLogic and siLogicSAS share this
         .file = "src/VBox/Devices/Storage/DevLsiLogicSCSI.cpp",
         .mrnames = "*LsiLogic*",
         .byte_address = true,
@@ -384,7 +384,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "ohci",
-        .args = "--usbohci on",
+        .args = "--usbohci on --memory 2048",
         .file = "src/VBox/Devices/USB/DevOHCI.cpp",
         .mrnames = "*USB OHCI*",
         .byte_address = false,
@@ -393,7 +393,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "vboxvmm",
-        .args = nullptr,
+        .args = "--memory 2048",
         .file = "src/VBox/Devices/VMMDev/VMMDev.cpp",
         .mrnames = "*VMMDev*",
         .byte_address = true,
@@ -402,7 +402,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     }, {
         .arch = "i386",
         .name = "apic",
-        .args = nullptr,
+        .args = "--memory 2048",
         .file = "src/VBox/VMM/VMMAll/APICAll.cpp",
         .mrnames = "*APIC*",
         .byte_address = false,
