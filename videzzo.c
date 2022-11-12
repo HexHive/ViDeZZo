@@ -12,6 +12,7 @@
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <rfb/rfbclient.h>
+#include <semaphore.h>
 
 //
 // Default size for an input
@@ -53,6 +54,7 @@ void enable_group_mutator(void) {
     DisableInputProcessing = false;
 }
 
+static sem_t mutex;
 static int in_one_iteration = 0;
 static int loop_counter = 0;
 static int status = 0; // 0 -> 1/2 -> 2/1 -> bingo
@@ -148,6 +150,7 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
     if (getenv("VIDEZZO_DISABLE_INTRA_MESSAGE_ANNOTATION"))
         return;
 
+    sem_wait(&mutex);
     Input *old_input;
     int old_current_event;
     Event *trigger_event;
@@ -160,6 +163,7 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
         if (old_input != NULL) {
             trigger_event = get_event(old_input, old_current_event);
             if (trigger_event->type == EVENT_TYPE_GROUP_EVENT_LM && loop_counter == 0)
+                sem_post(&mutex);
                 return;
         }
     }
@@ -223,6 +227,7 @@ void GroupMutatorMiss(uint8_t id, uint64_t physaddr) {
 recover:
     gfctx_set_current_input(old_input, 0);
     gfctx_set_current_event(old_current_event, 0);
+    sem_post(&mutex);
 }
 
 //
@@ -330,7 +335,9 @@ int videzzo_execute_one_input(uint8_t *Data, size_t Size, void *object, __flush 
     //
     // We want to free all allocated blocks here to have a reliable reproducer.
     //
+    sem_wait(&mutex);
     __free_memory_blocks();
+    sem_post(&mutex);
 
     in_one_iteration = 0;
     return SerializationSize;
@@ -1895,6 +1902,7 @@ int LLVMFuzzerTestOneInput(unsigned char *Data, size_t Size) {
     if (!pre_fuzz_done && fuzz_target->pre_fuzz) {
         fuzz_target->pre_fuzz();
         pre_fuzz_done = true;
+        sem_init(&mutex, 0, 1);
     }
     // as we may append events, LLVMFuzzerTestoneInput should
     // return the size of the new input

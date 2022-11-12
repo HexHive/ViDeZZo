@@ -7,10 +7,10 @@
 #
 
 videzzo-merge:
-	clang ${CFLAGS} -I.. -o videzzo-merge merge.c ../videzzo.c -lvncclient -lgmodule-2.0 -lglib-2.0
+	clang ${CFLAGS} -I.. -o videzzo-merge merge.c ../videzzo.c -lvncclient -lgmodule-2.0 -lglib-2.0 -lpthread -lrt
 
 videzzo-poc-gen:
-	clang ${CFLAGS} -I.. -o videzzo-poc-gen poc-gen.c ../videzzo.c -lvncclient -lgmodule-2.0 -lglib-2.0
+	clang ${CFLAGS} -I.. -o videzzo-poc-gen poc-gen.c ../videzzo.c -lvncclient -lgmodule-2.0 -lglib-2.0 -lpthread -lrt
 
 all: videzzo-merge videzzo-poc-gen
 
