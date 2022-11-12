@@ -714,6 +714,7 @@ static GHashTable *fuzzable_mmioregions;
 void locate_fuzzable_objects(char *mrname) {
     PPDMDEVINS pDevIns;
     PVM internalPVM;
+    PPDMPCIDEV pPciDev;
     int i;
     uint64_t addr;
     uint32_t size;
@@ -721,6 +722,11 @@ void locate_fuzzable_objects(char *mrname) {
 
     for (pDevIns = pVM->pdm.s.pDevInstances;
             pDevIns; pDevIns = pDevIns->Internal.s.pNextR3) {
+        // set bus master bit
+        pPciDev = pDevIns->apPciDevs[0];
+        if (pPciDev != NULL) {
+            PDMPciDevSetCommand(pPciDev, PDMPciDevGetCommand(pPciDev) | VBOX_PCI_COMMAND_MASTER);
+        }
         internalPVM = pDevIns->Internal.s.pVMR3;
         // PIO
         for (i = 0; i < internalPVM->iom.s.cIoPortRegs; i++) {
