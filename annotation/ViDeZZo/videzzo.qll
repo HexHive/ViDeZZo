@@ -10,44 +10,6 @@ import cpp
 import semmle.code.cpp.dataflow.TaintTracking
 import semmle.code.cpp.dataflow.DataFlow
 
-Expr getDestination(Call call) {
-  result = call.(FunctionCall).getParent().(AssignExpr).getLValue() and
-  call.(FunctionCall).getTarget().getName() = ["pci_dma_map", "dma_memory_map"] and
-  call instanceof FunctionCall
-  or
-  result = call.getArgument(getIndexOfAddressArgument(call)) and
-  call.(FunctionCall).getTarget().getName() != ["pci_dma_map", "dma_memory_map"] and
-  call instanceof FunctionCall
-  or
-  result = call.getArgument(getIndexOfAddressArgument(call)) and call instanceof VariableCall
-}
-
-int getDestinationSize(Call call) {
-  result = call.(FunctionCall).getArgument(3).(AddressOfExpr).getOperand().toString().toInt() and
-  call.(FunctionCall).getTarget().getName() = ["pci_dma_map", "dma_memory_map"] and
-  call instanceof FunctionCall
-  or
-  result = getDestination(call).getType().getSize() and
-  not getDestination(call) instanceof AddressOfExpr and
-  call.(FunctionCall).getTarget().getName() != ["pci_dma_map", "dma_memory_map"] and
-  call instanceof FunctionCall
-  or
-  result = getDestination(call).(AddressOfExpr).getOperand().getType().getSize() and
-  getDestination(call) instanceof AddressOfExpr and
-  call.(FunctionCall).getTarget().getName() != ["pci_dma_map", "dma_memory_map"] and
-  call instanceof FunctionCall
-  or
-  result = getDestination(call).getType().getSize() and call instanceof VariableCall
-}
-
-string getCallsiteLiteral(Call call) {
-  result = call.(FunctionCall).toString() and call instanceof FunctionCall
-  or
-  result =
-    "call to " + call.(VariableCall).getExpr().(PointerFieldAccess).getQualifier() + "->" +
-      call.(VariableCall).getExpr().(PointerFieldAccess).toString()
-}
-
 string getExprLiteral(Expr expr) {
   // Liternal: FormatLiteral, HexLiteral, LabelLiteral, NULL, OctalLiteral, TextLiteral
   result = expr.(Literal).toString() and expr instanceof Literal
@@ -131,6 +93,8 @@ string getExprLiteral(Expr expr) {
       getExprLiteral(expr.(MulExpr).getRightOperand()) and
   expr instanceof MulExpr
   or
+  result = "sizeof(" + expr.(SizeofTypeOperator).getTypeOperand().toString() + ")"
+  or
   result = "Unknown" and
   not expr instanceof VariableAccess and
   not expr instanceof AddressOfExpr and
@@ -147,7 +111,88 @@ string getExprLiteral(Expr expr) {
   not expr instanceof BitwiseXorExpr and
   not expr instanceof AddExpr and
   not expr instanceof SubExpr and
-  not expr instanceof MulExpr
+  not expr instanceof MulExpr and
+  not expr instanceof SizeofTypeOperator
+}
+
+Expr getDestination(Call call) {
+  result = call.(FunctionCall).getParent().(AssignExpr).getLValue() and
+  call.(FunctionCall).getTarget().getName() = ["pci_dma_map"]  and
+  call instanceof FunctionCall
+  or
+  result = call.getArgument(1) and
+  call.(FunctionCall).getTarget().getName() = ["map_page"]  and
+  call instanceof FunctionCall
+  or
+  result = call.(FunctionCall).getParent().(AssignExpr).getLValue() and
+  call.(FunctionCall).getTarget().getName() = ["dma_memory_map"]  and
+  call.getEnclosingFunction().getName() != ["map_page"] and
+  call instanceof FunctionCall
+  or
+  result = call.getArgument(getIndexOfAddressArgument(call)) and
+  call.(FunctionCall).getTarget().getName() != ["pci_dma_map"] and
+  call.(FunctionCall).getTarget().getName() != ["dma_memory_map"] and
+  call.(FunctionCall).getTarget().getName() != ["map_page"] and
+  call instanceof FunctionCall
+  or
+  result = call.getArgument(getIndexOfAddressArgument(call)) and call instanceof VariableCall
+}
+
+string getValueOfALengthVariable2(Variable variable) {
+  result = variable.getAnAccess().getParent().(AssignExpr).getRValue().toString() and
+  exists(VariableAccess variableAccess |
+    variableAccess.getTarget() = variable |
+    variableAccess.isUsedAsLValue())
+  or
+  result = getExprLiteral(variable.getInitializer().getExpr())
+}
+
+string getValueOfALengthVariable(Expr expr) {
+  result = getValueOfALengthVariable2(
+    expr.(AddressOfExpr).getOperand().(VariableAccess).getTarget())
+  or
+  result = expr.(Literal).toString()
+  or
+  result = expr.(SizeofExprOperator).getExprOperand().(PointerFieldAccess).getType().(ArrayType).getByteSize().toString()
+    + "=sizeof(" + expr.(SizeofExprOperator).getExprOperand().(PointerFieldAccess).getType() + ")"
+  or
+  result = "Unknow" and
+  not expr instanceof AddressOfExpr and
+  not expr instanceof Literal
+}
+
+string getDestinationSize(Call call) {
+  result = getValueOfALengthVariable(call.(FunctionCall).getArgument(3)) and
+  call.(FunctionCall).getTarget().getName() = ["map_page", "pci_dma_read"] and
+  call instanceof FunctionCall
+  or
+  result = getValueOfALengthVariable(call.(FunctionCall).getArgument(2)) and
+  call.(FunctionCall).getTarget().getName() = ["pci_dma_map", "dma_memory_map"] and
+  call instanceof FunctionCall
+  or
+  result = getDestination(call).getType().getSize().toString() and
+  not getDestination(call) instanceof AddressOfExpr and
+  call.(FunctionCall).getTarget().getName() != ["pci_dma_map"] and
+  call.(FunctionCall).getTarget().getName() != ["dma_memory_map"] and
+  call.(FunctionCall).getTarget().getName() != ["map_page"] and
+  call instanceof FunctionCall
+  or
+  result = getDestination(call).(AddressOfExpr).getOperand().getType().getSize().toString() and
+  getDestination(call) instanceof AddressOfExpr and
+  call.(FunctionCall).getTarget().getName() != ["pci_dma_map"] and
+  call.(FunctionCall).getTarget().getName() != ["dma_memory_map"] and
+  call.(FunctionCall).getTarget().getName() != ["map_page"] and
+  call instanceof FunctionCall
+  or
+  result = getDestination(call).getType().getSize().toString() and call instanceof VariableCall
+}
+
+string getCallsiteLiteral(Call call) {
+  result = call.(FunctionCall).toString() and call instanceof FunctionCall
+  or
+  result =
+    "call to " + call.(VariableCall).getExpr().(PointerFieldAccess).getQualifier() + "->" +
+      call.(VariableCall).getExpr().(PointerFieldAccess).toString()
 }
 
 predicate functionCallOrVariableCall(Call call) {
@@ -215,9 +260,9 @@ predicate isTargetStruct(Struct struct) {
       "e1000_tx_desc", "e1000_rx_desc", "e1000_tx_desc", "pcnet_initblk32", "pcnet_initblk16",
       "pcnet_TMD", "pcnet_RMD", "mfi_frame", "mfi_init_qinfo", "mfi_frame_header", "mfi_pass_frame",
       "mfi_io_frame", "mfi_init_frame", "mfi_dcmd_frame", "mfi_abort_frame", "mfi_smp_frame",
-      "mfi_stp_frame", "mfi_sgl", "EHCIqh", "EHCIitd", "EHCIsitd", "EHCIqtd", "EHCIqh", "EHCIqtd",
-      "ohci_hcca", "ohci_ed", "ohci_td", "ohci_iso_td", "UHCI_QH", "UHCI_TD", "XHCIEvRingSeg",
-      "XHCITRB"
+      "mfi_stp_frame", "mfi_sgl", "EHCIqh", "EHCIitd", "EHCIsitd", "EHCIqtd", "ohci_hcca",
+      "ohci_ed", "ohci_td", "ohci_iso_td", "UHCI_QH", "UHCI_TD", "XHCIEvRingSeg", "XHCITRB",
+      "AHCI_SG"
     ]
 }
 

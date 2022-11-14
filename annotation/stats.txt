@@ -1,76 +1,73 @@
-AC97,AC97,BD.8.A,1,1,0,0,,1,0,-1,0,,2,2,0,0
-AC97,AC97,TMPBUF.8.A,0,0,0,0,,0,0,0,0,,1,1,0,0
-CS4231a,CS4231A,BUF0.8.A,0,0,0,0,,0,0,0,0,,1,0,-1,0
-ES1370,ES1370,TMPBUF.8.A,0,0,0,0,,0,0,0,0,,1,1,0,0
-Intel-HDA,INTEL_HDA,BUF0.8.A,1,0,-1,0,,1,0,-1,0,,3,4,1,1
-Intel-HDA,INTEL_HDA,VERB.32,1,1,0,0,,0,0,0,0,,1,1,0,0
-SB16,SB16,BUF0.8.A,0,0,0,0,,0,0,0,0,,1,0,-1,0
-AHCI,AHCI,CMFIS,2,2,0,0,,0,0,0,0,,9,0,-9,0
-AHCI,AHCI,SG,0,0,0,0,,1,0,-1,0,,3,0,-3,0
-AHCI,AHCI,RESFIS,0,0,0,0,,0,0,0,0,,1,0,-1,0
-AHCI,AHCI,LST,0,0,0,0,,0,0,0,0,,1,0,-1,0
-FDC,FLOPPY,BUF,0,0,0,0,,0,0,0,0,,1,0,-1,0
-MEGASAS,MEGASAS_REPLY_QUEUE_TAIL,,0,0,0,0,,0,0,0,0,,1,1,0,0
-MEGASAS,MEGASAS_REPLY_QUEUE_HEAD,,0,0,0,0,,0,0,0,0,,1,1,0,0
-MEGASAS,MEGASAS_MFI_FRAME_HEADER_SENSE,,0,0,0,0,,0,0,0,0,,1,1,0,0
-MEGASAS,MEGASAS_MFI_INIT_QINFO,,1,0,-1,0,,0,0,0,0,,5,5,0,0
-MEGASAS,MEGASAS_MFI_FRAME_INIT,,1,0,-1,0,,2,0,-2,0,,15,15,0,0
-MEGASAS,MEGASAS_MFI_FRAME_DCMD,,1,0,-1,0,,0,0,0,0,,17,17,0,0
-MEGASAS,MEGASAS_MFI_FRAME_ABORT,,1,0,-1,0,,0,0,0,0,,15,17,2,2
-MEGASAS,MEGASAS_MFI_FRAME_SCSI,,1,0,-1,0,,0,0,0,0,,12,12,0,0
-MEGASAS,MEGASAS_MFI_FRAME_IO,,1,0,-1,0,,1,0,-1,0,,17,17,0,0
-SDHCI,SDHCI_FIFO_BUFFER0.8.A,,0,0,0,0,,0,0,0,0,,1,1,0,0
-SDHCI,SDHCI_FIFO_BUFFER1.8.A,,0,0,0,0,,0,0,0,0,,1,1,0,0
-SDHCI,SDHCI_ADMA2.64,,0,0,0,0,,1,0,-1,0,,4,2,-2,0
-SDHCI,SDHCI_ADMA1.32,,1,0,-1,0,,1,0,-1,0,,1,1,0,0
-SDHCI,SDHCI_ADMA2_64.64,,0,0,0,0,,1,0,-1,0,,4,4,0,0
-E1000,E1000_RX_DESC.S,,2,0,-2,0,,1,0,-1,0,,6,6,0,0
-E1000,E1000_TX_DESC0.S,,2,0,-2,0,,1,0,-1,0,,3,3,0,0
-E1000E,E1000_TX_DESC0.S,,2,0,-2,0,,1,0,-1,0,,3,3,0,0
-E1000E,E1000_CONTEXT_DESC,,4,0,-4,0,,0,0,0,0,,4,0,-4,0
-E1000E,E1000E_READ_RX_DESC.8.A,,0,0,0,0,,1,0,-1,0,,4,4,0,0
-EEPRO100,MAC_ADDR0.8.A,,0,1,1,1,,0,0,0,0,,6,6,0,0
-EEPRO100,CONFIGURATION.8.A,,22,0,-22,0,,0,0,0,0,,22,22,0,0
-EEPRO100,TX_BUFFER_ADDRESS.32,,0,0,0,0,,1,0,-1,0,,1,1,0,0
-EEPRO100,TX_BUFFER_SIZE.16,,0,0,0,0,,0,0,0,0,,1,1,0,0
-EEPRO100,TX_BUFFER_EL.16,,0,1,1,1,,0,0,0,0,,1,1,0,0
-EEPRO100,EEPRO100_TX.S,,4,0,-4,0,,3,0,-3,0,,11,4,-7,0
-EEPRO100,MAC_ADDR1.8.A,,0,0,0,0,,0,0,0,0,,6,6,0,0
-EEPRO100,EEPRO100_RX,,2,0,-2,0,,1,0,-1,0,,6,4,-2,0
-PCNET,PCNET_XDA_2,,1,0,-1,0,,0,3,3,3,,2,0,-2,0
-PCNET,PCNET_TMD_2,,2,1,-1,0,,0,5,5,5,,5,0,-5,0
-PCNET,PCNET_RDA_2,,0,0,0,0,,0,3,3,3,,2,0,-2,0
-PCNET,PCNET_RMD_3,,4,1,-3,0,,0,5,5,5,,5,0,-5,0
-PCNET,PCNET_INITBLK32,,10,12,2,2,,0,0,0,0,,13,13,0,0
-PCNET,PCNET_INITBLK16,,3,10,7,7,,0,0,0,0,,10,10,0,0
-RTL8139,RTL8139_RX_RING_DESC_RXDW0.32,,1,1,0,0,,0,0,0,0,,1,1,0,0
-RTL8139,RTL8139_RX_RING_DESC_RXDW1.32,,1,0,-1,0,,0,0,0,0,,1,1,0,0
-RTL8139,RTL8139_RX_RING_DESC_RXBUFLO.32,,0,0,0,0,,1,0,-1,0,,1,1,0,0
-RTL8139,RTL8139_RX_RING_DESC_RXBUFHI.32,,0,0,0,0,,0,0,0,0,,1,1,0,0
-RTL8139,RTL8139_TXBUFFER.8.A,,0,0,0,0,,0,0,0,0,,1,1,0,0
-RTL8139,RTL8139_TX_RING_DESC_TXDW0.32,,1,1,0,0,,0,0,0,0,,1,1,0,0
-RTL8139,RTL8139_TX_RING_DESC_TXDW1.32,,1,1,0,0,,0,0,0,0,,1,1,0,0
-RTL8139,RTL8139_TX_RING_DESC_TXBUFLO.32,,0,1,1,1,,1,0,-1,0,,1,1,0,0
-RTL8139,RTL8139_TX_RING_DESC_TXBUFHI.32,,0,1,1,1,,0,0,0,0,,1,1,0,0
-EHCI,list.32,,0,0,0,0,,1,0,-1,0,,1,0,-1,0
-EHCI,entry.32,,1,0,-1,0,,1,0,-1,0,,1,1,0,0
-EHCI,EHCIqtd.S,,3,1,-2,0,,7,2,-5,0,,8,8,0,0
-EHCI,EHCIqh.S,,6,1,-5,0,,9,4,-5,0,,12,12,0,0
-EHCI,EHCIitd.S,,11,11,0,0,,8,0,-8,0,,16,16,0,0
-EHCI,EHCIsitd.S,,3,1,-2,0,,1,0,-1,0,,7,7,0,0
-OHCI,OHCI_HCCA.S,,0,0,0,0,,32,32,0,0,,35,35,0,0
-OHCI,OHCI_ED.S,,2,2,0,0,,3,2,-1,0,,4,4,0,0
-OHCI,OHCI_TD.S,,3,4,1,1,,3,1,-2,0,,4,4,0,0
-OHCI,OHCI_ISO,TD.S,1,3,2,2,,1,1,0,0,,12,12,0,0
-UHCI,link.32,,1,1,0,0,,1,0,-1,0,,1,1,0,0
-UHCI,UHCI_QH.S,,2,0,-2,0,,2,2,0,0,,2,2,0,0
-UHCI,UHCI_TD.S,,3,4,1,1,,2,2,0,0,,4,4,0,0
-XHCI,XHCITRB0.S,,2,3,1,1,,1,2,1,1,,5,5,0,0
-XHCI,XHCIEvRingSeg.S,,1,0,-1,0,,1,0,-1,0,,3,3,0,0
-XHCI,XHCI_POCTX.64,,0,0,0,0,,1,0,-1,0,,1,1,0,0
-XHCI,XHCI_CTX.32.A,,1,1,0,0,,0,0,0,0,,2,2,0,0
-XHCI,XHCI_SLOT,CTX.32.A,4,4,0,0,,0,0,0,0,,4,4,0,0
-XHCI,XHCI_EP0,CTX,0,3,3,3,,0,0,0,0,,5,5,0,0
-,,,118,74,-44,21,,94,64,-30,17,,367,323,-44,0
-FN,,FN,,,-0.550847457627119,,,,,-0.5,,,,,-0.119891008174387,
-FP,,FP,,,0.177966101694915,,,,,0.180851063829787,,,,,0,
+AC97      , AC97_BD.8.A                      ,1,1,1,0,2,2,0,0,0,0 \\ % pointer all missing, 2: done
+AC97      , AC97_TMPBUF.8.A                  ,0,0,0,0,1,1,0,0,0,0 \\ % 2: done,
+CS4231a   , CS4231A_BUF0.8.A                 ,0,0,0,0,1,0,-1,-1,0,0 \\ % 2: done,
+ES1370    , ES1370_TMPBUF.8.A                ,0,0,0,0,1,1,0,0,0,0 \\ % 2: done,
+Intel-HDA , INTEL_HDA_BUF0.8.A              ,1,0,1,0,3,4,1,0,0,0 \\ % 2: done,
+Intel-HDA , INTEL_HDA_VERB.32               ,1,1,0,0,1,1,0,0,0,0 \\ % 2: done,
+SB16      , SB16_BUF0.8.A                    ,0,0,0,0,1,0,-1,-1,0,0 \\ % 2: done,
+AHCI      , AHCI_CMFIS.8.A                   ,2,2,0,0,37,32,-5,-5,0,0 \\ % 2: done,
+AHCI      , AHCI_SG.S                        ,0,0,1,0,3,3,0,0,0,0 \\ % 2: done,
+AHCI      , AHCI_RESFIS.8.A                  ,0,0,0,0,1,1,0,0,0,0 \\ % 2: done,
+AHCI      , AHCI_LST.8.A                     ,0,0,0,0,1,1,0,0,0,0 \\ % 2: done,
+FDC       , FLOPPY_BUF.8.A                   ,0,0,0,0,1,0,-1,-1,0,0 \\ % 2: done,
+MEGASAS   , MEGASAS_REPLY_QUEUE_TAIL.32    ,0,0,0,0,1,1,0,0,0,0 \\ % 2: done,
+MEGASAS   , MEGASAS_REPLY_QUEUE_HEAD.32    ,0,0,0,0,1,1,0,0,0,0 \\ % 2: done,
+MEGASAS ,MEGASAS_MFI_FRAME_HEADER_SENSE.64,0,0,0,0,1,2,1,0,0,0 \\ % 2: done,
+MEGASAS   , MEGASAS_MFI_INIT_QINFO.S       ,1,0,0,0,5,5,0,0,0,0 \\ % 2: done,
+MEGASAS   , MEGASAS_MFI_FRAME_INIT.S       ,1,0,2,0,15,15,0,0,0,0  \\ % 2: done,
+MEGASAS   , MEGASAS_MFI_FRAME_DCMD.S       ,1,0,0,0,17,17,0,0,0,0  \\ % 2: done,
+MEGASAS   , MEGASAS_MFI_FRAME_ABORT.S      ,1,0,0,0,15,17,2,0,0,0  \\ % 2: done,
+MEGASAS   , MEGASAS_MFI_FRAME_SCSI.S       ,1,0,0,0,12,12,0,0,0,0  \\ % 2: done,
+MEGASAS   , MEGASAS_MFI_FRAME_IO.S         ,1,0,1,0,17,17,0,0,0,0  \\ % 2: done,
+SDHCI     , SDHCI_FIFO_BUFFER0.8.A          ,0,0,0,0,1,1,0,0,0,0 \\ % 2: done,
+SDHCI     , SDHCI_FIFO_BUFFER1.8.A          ,0,0,0,0,1,1,0,0,0,0 \\ % 2: done,
+SDHCI     , SDHCI_ADMA2.64                   ,0,0,1,0,4,2,-2,-2,0,0 \\ % 2: done,
+SDHCI     , SDHCI_ADMA1.32                   ,1,0,1,0,1,1,0,0,0,0 \\ % 2: done,
+SDHCI     , SDHCI_ADMA2_64.64               ,0,0,1,0,4,2,-2,-2,0,0 \\ % 2: done,
+E1000     , E1000_RX_DESC.S                 ,2,0,1,0,6,6,0,0,0,0 \\ % 2: done,
+E1000     , E1000_TX_DESC0.S                ,2,0,1,0,3,3,0,0,0,0 \\ % 2: done,
+E1000E    , E1000_TX_DESC0.S                ,2,0,1,0,3,3,0,0,0,0  \\ % 2: done,
+E1000E    , E1000_CONTEXT_DESC              ,4,0,0,0,4,0,-4,-4,0,0  \\ % 2: ?,
+E1000E    , E1000E_READ_RX_DESC.8.A        ,0,0,1,0,4,4,0,0,0,0 \\ % 2: done,
+EEPRO100  , MAC_ADDR0.8.A                    ,0,1,0,0,6,6,0,0,0,0  \\ % 2: done,
+EEPRO100  , CONFIGURATION.8.A                 ,22,0,0,0,22,22,0,0,0,0  \\ % 2: done,
+EEPRO100  , TX_BUFFER_ADDRESS.32            ,0,0,1,0,1,1,0,0,0,0  \\ % 2: done,
+EEPRO100  , TX_BUFFER_SIZE.16               ,0,0,0,0,1,1,0,0,0,0  \\ % 2: done,
+EEPRO100  , TX_BUFFER_EL.16                 ,0,1,0,0,1,1,0,0,0,0  \\ % 2: done,
+EEPRO100  , EEPRO100_TX.S                    ,4,0,3,0,11,4,-7,-7,0,0 \\ % 2: done,
+EEPRO100  , MAC_ADDR1.8.A                    ,0,0,0,0,6,6,0,0,0,0 \\ % 2: done,
+EEPRO100  , EEPRO100_RX                      ,2,0,1,0,6,4,-2,-2,0,0 \\ % 2: done,
+PCNET     , PCNET_XDA.8.A                    ,2,1,0,0,3,2,-1,-1,0,0 \\ % 2: done,
+PCNET     , PCNET_TMD.S                      ,2,2,1,0,5,5,0,0,0,0 \\ % 2: done,
+PCNET     , PCNET_RDA.8.A                    ,2,0,0,0,3,2,-1,-1,0,0 \\ % 2: done,
+PCNET     , PCNET_RMD.S                      ,3,4,1,0,5,5,0,0,0,0 \\ % 2: done,
+PCNET     , PCNET_INITBLK32.S                ,10,12,0,0,13,13,0,0,0,0 \\ % 2: done,
+PCNET     , PCNET_INITBLK16.S                ,3,10,0,0,10,10,0,0,0,0 \\ % 2: done,
+RTL8139   , RTL8139_RX_RING_DESC_RXDW0.32 ,1,1,0,0,1,1,0,0,0,0 \\ % 2: done,
+RTL8139   , RTL8139_RX_RING_DESC_RXDW1.32 ,1,0,0,0,1,1,0,0,0,0 \\ % 2: done,
+RTL8139   ,RTL8139_RX_RING_DESC_RXBUFLO.32,0,0,1,0,1,1,0,0,0,0 \\ % 2: done,
+RTL8139   ,RTL8139_RX_RING_DESC_RXBUFHI.32,0,0,0,0,1,1,0,0,0,0 \\ % 2: done,
+RTL8139   , RTL8139_TXBUFFER.8.A             ,0,0,0,0,1,1,0,0,0,0 \\ % 2: done,
+RTL8139   , RTL8139_TX_RING_DESC_TXDW0.32 ,1,1,0,0,1,1,0,0,0,0 \\ % 2: done,
+RTL8139   , RTL8139_TX_RING_DESC_TXDW1.32 ,1,1,0,0,1,1,0,0,0,0 \\ % 2: done,
+RTL8139   ,RTL8139_TX_RING_DESC_TXBUFLO.32,0,1,1,0,1,1,0,0,0,0 \\ % 2: done,
+RTL8139   ,RTL8139_TX_RING_DESC_TXBUFHI.32,0,1,0,0,1,1,0,0,0,0 \\ % 2: done,
+EHCI , entry.32                               ,1,0,1,0,1,1,0,0,0,0 \\ % 2: done,
+EHCI , EHCIqtd.S                              ,3,1,7,2,8,8,0,0,0,0 \\ % 2: done,
+EHCI , EHCIqh.S                               ,6,1,9,4,12,12,0,0,0,0 \\ % 2: done,
+EHCI , EHCIitd.S                              ,11,11,8,0,16,16,0,0,0,0 \\ % 2: done,
+EHCI , EHCIsitd.S                             ,3,1,1,0,7,7,0,0,0,0 \\ % 2: done,
+OHCI , OHCI_HCCA.S                           ,0,0,32,32,35,35,0,0,0,0 \\ % 2: done,
+OHCI , OHCI_ED.S                             ,2,2,3,2,4,4,0,0,  I  \\ % 2: done,,
+OHCI , OHCI_TD.S                             ,3,4,3,1,4,4,0,0,  I  \\ % 2: done,,
+OHCI , OHCI_ISO_TD.S                        ,1,3,1,1,12,12,0,0,  I  \\ % 2: done,,
+UHCI , link.32                                ,1,1,1,0,1,1,0,0,0,0 \\ % 2: done,
+UHCI , UHCI_QH.S                             ,2,0,2,2,2,2,0,0,0,0 \\ % 2: done,
+UHCI , UHCI_TD.S                             ,3,4,2,2,4,4,0,0,0,0 \\ % 2: done,
+XHCI , XHCITRB0.S                             ,2,3,1,2,5,5,0,0,0,0 \\ % 2: done,
+XHCI , XHCIEvRingSeg.S                        ,1,0,1,0,3,3,0,0,0,0 \\ % 2: done,
+XHCI , XHCI_POCTX.64                         ,0,0,1,0,1,1,0,0,0,0 \\ % 2: done,
+XHCI , XHCI_CTX.32.A                         ,1,1,0,0,2,2,0,0,0,0 \\ % 2: done,
+XHCI , XHCI_SLOT_CTX.32.A                   ,4,4,0,0,4,4,0,0,0,0 \\ % 2: done,
+XHCI , XHCI_EP0_CTX.32.A                    ,0,3,0,0,5,5,0,0,0,0 \\ % 2: done,
+,,,,,,396,373,-23,-27,,,
