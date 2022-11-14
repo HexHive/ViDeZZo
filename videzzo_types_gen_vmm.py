@@ -421,7 +421,10 @@ ahci_42 = Model('ahci', 42)
 cmd_fis = {
     'cmfis0#0x1': FIELD_CONSTANT, 'cmfis1#0x1': FIELD_FLAG, 'cmfis2#0x1': FIELD_RANDOM, 'cmfis3#0x1': FIELD_RANDOM,
     'cmfis4#0x8': FIELD_RANDOM,
-    'cmfis12#0x1': FIELD_RANDOM, 'cmfis13#0x1': FIELD_RANDOM, 'cmfis14#0x1': FIELD_RANDOM, 'cmfis15#0x1': FIELD_FLAG}
+    'cmfis12#0x1': FIELD_RANDOM, 'cmfis13#0x1': FIELD_RANDOM, 'cmfis14#0x1': FIELD_RANDOM, 'cmfis15#0x1': FIELD_FLAG,
+}
+for i in range(0, 32 - 4):
+    cmd_fis['cmfis{}#0x4'.format(i + 16)]  = FIELD_RANDOM
 ahci_42.add_struct('AHCI_CMFIS', cmd_fis) # CHECK POINT
 ahci_42.add_constant('AHCI_CMFIS.cmfis0', [0x27, 0x0])
 ahci_42.add_flag('AHCI_CMFIS.cmfis1', {0: 4, 4: 3, 7: 1})
@@ -443,13 +446,13 @@ ahci_43.add_instrumentation_point('DevAHCI.cpp', ['_ZL19ahciR3PrdtQuerySizeP11PD
 ahci_43.add_instrumentation_point('DevAHCI.cpp', ['_ZL20ahciTrimRangesCreateP11PDMDEVINSR3P8AHCIPORTP7AHCIREQjP7RTRANGEjPj', '_ZL24PDMDevHlpPCIPhysReadMetaP11PDMDEVINSR3mPvm', 0, 1])
 ###################################################################################################################
 ahci_44 = Model('ahci', 44)
-ahci_44.add_struct('AHCI_RESFIS', {'resfix#0x1000': FIELD_RANDOM})
+ahci_44.add_struct('AHCI_RESFIS', {'resfix#0x100': FIELD_RANDOM})
 ahci_44.add_head(['AHCI_RESFIS'])
 ahci_44.add_instrumentation_point('ahci', ['ahci_map_fis_address', 'map_page', 0, 2])
 ###################################################################################################################
 # This should be connected to 42, but I simplify it.
 ahci_45 = Model('ahci', 45)
-ahci_45.add_struct('AHCI_LST', {'lst#0x1000': FIELD_RANDOM})
+ahci_45.add_struct('AHCI_LST', {'lst#0x400': FIELD_RANDOM})
 ahci_45.add_head(['AHCI_LST'])
 ahci_45.add_instrumentation_point('ahci', ['ahci_map_clb_address', 'map_page', 0, 2])
 ###################################################################################################################
