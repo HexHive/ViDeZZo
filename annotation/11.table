@@ -1,155 +1,158 @@
-|       name       |       field       |       type       | offset | size | pointer |
-+------------------+-------------------+------------------+--------+------+---------+
-| EHCIitd          | next              | uint32_t         |      0 |    4 |       0 |
-| EHCIitd          | transact          | uint32_t[8]      |      4 |   32 |       0 |
-| EHCIitd          | bufptr            | uint32_t[7]      |     36 |   28 |       0 |
-| EHCIqh           | next              | uint32_t         |      0 |    4 |       1 |
-| EHCIqh           | epchar            | uint32_t         |      4 |    4 |       1 |
-| EHCIqh           | epcap             | uint32_t         |      8 |    4 |       0 |
-| EHCIqh           | current_qtd       | uint32_t         |     12 |    4 |       1 |
-| EHCIqh           | next_qtd          | uint32_t         |     16 |    4 |       1 |
-| EHCIqh           | altnext_qtd       | uint32_t         |     20 |    4 |       1 |
-| EHCIqh           | token             | uint32_t         |     24 |    4 |       0 |
-| EHCIqh           | bufptr            | uint32_t[5]      |     28 |   20 |       0 |
-| EHCIqtd          | next              | uint32_t         |      0 |    4 |       1 |
-| EHCIqtd          | altnext           | uint32_t         |      4 |    4 |       1 |
-| EHCIqtd          | token             | uint32_t         |      8 |    4 |       1 |
-| EHCIqtd          | bufptr            | uint32_t[5]      |     12 |   20 |       1 |
-| EHCIsitd         | next              | uint32_t         |      0 |    4 |       0 |
-| EHCIsitd         | epchar            | uint32_t         |      4 |    4 |       0 |
-| EHCIsitd         | uframe            | uint32_t         |      8 |    4 |       0 |
-| EHCIsitd         | results           | uint32_t         |     12 |    4 |       0 |
-| EHCIsitd         | bufptr            | uint32_t[2]      |     16 |    8 |       0 |
-| EHCIsitd         | backptr           | uint32_t         |     24 |    4 |       0 |
-| UHCI_QH          | link              | uint32_t         |      0 |    4 |       1 |
-| UHCI_QH          | el_link           | uint32_t         |      4 |    4 |       1 |
-| UHCI_TD          | link              | uint32_t         |      0 |    4 |       1 |
-| UHCI_TD          | ctrl              | uint32_t         |      4 |    4 |       0 |
-| UHCI_TD          | token             | uint32_t         |      8 |    4 |       0 |
-| UHCI_TD          | buffer            | uint32_t         |     12 |    4 |       0 |
-| XHCIEvRingSeg    | addr_low          | uint32_t         |      0 |    4 |       0 |
-| XHCIEvRingSeg    | addr_high         | uint32_t         |      4 |    4 |       0 |
-| XHCIEvRingSeg    | size              | uint32_t         |      8 |    4 |       0 |
-| XHCIEvRingSeg    | rsvd              | uint32_t         |     12 |    4 |       0 |
-| XHCITRB          | parameter         | uint64_t         |      0 |    8 |       1 |
-| XHCITRB          | status            | uint32_t         |      8 |    4 |       0 |
-| XHCITRB          | control           | uint32_t         |     12 |    4 |       0 |
-| XHCITRB          | addr              | dma_addr_t       |     16 |    8 |       0 |
-| XHCITRB          | ccs               | bool             |     24 |    1 |       0 |
-| e1000_rx_desc    | buffer_addr       | uint64_t         |      0 |    8 |       0 |
-| e1000_rx_desc    | length            | uint16_t         |      8 |    2 |       0 |
-| e1000_rx_desc    | csum              | uint16_t         |     10 |    2 |       0 |
-| e1000_rx_desc    | status            | uint8_t          |     12 |    1 |       0 |
-| e1000_rx_desc    | errors            | uint8_t          |     13 |    1 |       0 |
-| e1000_rx_desc    | special           | uint16_t         |     14 |    2 |       0 |
-| e1000_tx_desc    | buffer_addr       | uint64_t         |      0 |    8 |       1 |
-| e1000_tx_desc    | lower             | union <unnamed>  |      8 |    4 |       0 |
-| e1000_tx_desc    | upper             | union <unnamed>  |     12 |    4 |       0 |
-| mfi_abort_frame  | header            | mfi_frame_header |      0 |   24 |       0 |
-| mfi_abort_frame  | abort_context     | uint64_t         |     24 |    8 |       0 |
-| mfi_abort_frame  | abort_mfi_addr_lo | uint32_t         |     32 |    4 |       0 |
-| mfi_abort_frame  | abort_mfi_addr_hi | uint32_t         |     36 |    4 |       0 |
-| mfi_abort_frame  | reserved1         | uint32_t[6]      |     40 |   24 |       0 |
-| mfi_dcmd_frame   | header            | mfi_frame_header |      0 |   24 |       0 |
-| mfi_dcmd_frame   | opcode            | uint32_t         |     24 |    4 |       0 |
-| mfi_dcmd_frame   | mbox              | uint8_t[12]      |     28 |   12 |       0 |
-| mfi_dcmd_frame   | sgl               | mfi_sgl          |     40 |   16 |       0 |
-| mfi_frame        | bytes             | uint8_t[64]      |      0 |   64 |       0 |
-| mfi_frame        | raw               | uint64_t[8]      |      0 |   64 |       0 |
-| mfi_frame        | stp               | mfi_stp_frame    |      0 |   72 |       0 |
-| mfi_frame        | smp               | mfi_smp_frame    |      0 |   56 |       0 |
-| mfi_frame        | abort             | mfi_abort_frame  |      0 |   64 |       0 |
-| mfi_frame        | dcmd              | mfi_dcmd_frame   |      0 |   56 |       0 |
-| mfi_frame        | pass              | mfi_pass_frame   |      0 |   64 |       0 |
-| mfi_frame        | io                | mfi_io_frame     |      0 |   56 |       0 |
-| mfi_frame        | init              | mfi_init_frame   |      0 |   64 |       0 |
-| mfi_frame        | header            | mfi_frame_header |      0 |   24 |       0 |
-| mfi_frame_header | frame_cmd         | uint8_t          |      0 |    1 |       0 |
-| mfi_frame_header | sense_len         | uint8_t          |      1 |    1 |       0 |
-| mfi_frame_header | cmd_status        | uint8_t          |      2 |    1 |       0 |
-| mfi_frame_header | scsi_status       | uint8_t          |      3 |    1 |       0 |
-| mfi_frame_header | target_id         | uint8_t          |      4 |    1 |       0 |
-| mfi_frame_header | lun_id            | uint8_t          |      5 |    1 |       0 |
-| mfi_frame_header | cdb_len           | uint8_t          |      6 |    1 |       0 |
-| mfi_frame_header | sge_count         | uint8_t          |      7 |    1 |       0 |
-| mfi_frame_header | context           | uint64_t         |      8 |    8 |       0 |
-| mfi_frame_header | flags             | uint16_t         |     16 |    2 |       0 |
-| mfi_frame_header | timeout           | uint16_t         |     18 |    2 |       0 |
-| mfi_frame_header | data_len          | uint32_t         |     20 |    4 |       0 |
-| mfi_init_frame   | header            | mfi_frame_header |      0 |   24 |       0 |
-| mfi_init_frame   | qinfo_new_addr_lo | uint32_t         |     24 |    4 |       0 |
-| mfi_init_frame   | qinfo_new_addr_hi | uint32_t         |     28 |    4 |       0 |
-| mfi_init_frame   | qinfo_old_addr_lo | uint32_t         |     32 |    4 |       0 |
-| mfi_init_frame   | qinfo_old_addr_hi | uint32_t         |     36 |    4 |       0 |
-| mfi_init_frame   | reserved          | uint32_t[6]      |     40 |   24 |       0 |
-| mfi_init_qinfo   | flags             | uint32_t         |      0 |    4 |       0 |
-| mfi_init_qinfo   | rq_entries        | uint32_t         |      4 |    4 |       0 |
-| mfi_init_qinfo   | rq_addr_lo        | uint32_t         |      8 |    4 |       0 |
-| mfi_init_qinfo   | rq_addr_hi        | uint32_t         |     12 |    4 |       0 |
-| mfi_init_qinfo   | pi_addr_lo        | uint32_t         |     16 |    4 |       0 |
-| mfi_init_qinfo   | pi_addr_hi        | uint32_t         |     20 |    4 |       0 |
-| mfi_init_qinfo   | ci_addr_lo        | uint32_t         |     24 |    4 |       1 |
-| mfi_init_qinfo   | ci_addr_hi        | uint32_t         |     28 |    4 |       1 |
-| mfi_io_frame     | header            | mfi_frame_header |      0 |   24 |       0 |
-| mfi_io_frame     | sense_addr_lo     | uint32_t         |     24 |    4 |       0 |
-| mfi_io_frame     | sense_addr_hi     | uint32_t         |     28 |    4 |       0 |
-| mfi_io_frame     | lba_lo            | uint32_t         |     32 |    4 |       0 |
-| mfi_io_frame     | lba_hi            | uint32_t         |     36 |    4 |       0 |
-| mfi_io_frame     | sgl               | mfi_sgl          |     40 |   16 |       0 |
-| mfi_pass_frame   | header            | mfi_frame_header |      0 |   24 |       0 |
-| mfi_pass_frame   | sense_addr_lo     | uint32_t         |     24 |    4 |       0 |
-| mfi_pass_frame   | sense_addr_hi     | uint32_t         |     28 |    4 |       0 |
-| mfi_pass_frame   | cdb               | uint8_t[16]      |     32 |   16 |       0 |
-| mfi_pass_frame   | sgl               | mfi_sgl          |     48 |   16 |       0 |
-| mfi_sgl          | sg64              | mfi_sg64[1]      |      0 |   12 |       0 |
-| mfi_sgl          | sg32              | mfi_sg32[1]      |      0 |    8 |       0 |
-| mfi_sgl          | sg_skinny         | mfi_sg_skinny[1] |      0 |   16 |       0 |
-| mfi_smp_frame    | header            | mfi_frame_header |      0 |   24 |       0 |
-| mfi_smp_frame    | sas_addr          | uint64_t         |     24 |    8 |       0 |
-| mfi_smp_frame    | sgl               | union <unnamed>  |     32 |   24 |       0 |
-| mfi_smp_frame    | sgl               | union <unnamed>  |     32 |   24 |       0 |
-| mfi_stp_frame    | header            | mfi_frame_header |      0 |   24 |       0 |
-| mfi_stp_frame    | fis               | uint16_t[10]     |     24 |   20 |       0 |
-| mfi_stp_frame    | stp_flags         | uint32_t         |     44 |    4 |       0 |
-| mfi_stp_frame    | sgl               | union <unnamed>  |     48 |   24 |       0 |
-| mfi_stp_frame    | sgl               | union <unnamed>  |     48 |   24 |       0 |
-| ohci_ed          | flags             | uint32_t         |      0 |    4 |       0 |
-| ohci_ed          | tail              | uint32_t         |      4 |    4 |       0 |
-| ohci_ed          | head              | uint32_t         |      8 |    4 |       1 |
-| ohci_ed          | next              | uint32_t         |     12 |    4 |       1 |
-| ohci_hcca        | intr              | uint32_t[32]     |      0 |  128 |       1 |
-| ohci_hcca        | frame             | uint16_t         |    128 |    2 |       0 |
-| ohci_hcca        | pad               | uint16_t         |    130 |    2 |       0 |
-| ohci_hcca        | done              | uint32_t         |    132 |    4 |       0 |
-| ohci_iso_td      | flags             | uint32_t         |      0 |    4 |       0 |
-| ohci_iso_td      | bp                | uint32_t         |      4 |    4 |       0 |
-| ohci_iso_td      | next              | uint32_t         |      8 |    4 |       1 |
-| ohci_iso_td      | be                | uint32_t         |     12 |    4 |       0 |
-| ohci_iso_td      | offset            | uint16_t[8]      |     16 |   16 |       1 |
-| ohci_td          | flags             | uint32_t         |      0 |    4 |       0 |
-| ohci_td          | cbp               | uint32_t         |      4 |    4 |       0 |
-| ohci_td          | next              | uint32_t         |      8 |    4 |       1 |
-| ohci_td          | be                | uint32_t         |     12 |    4 |       0 |
-| pcnet_RMD        | rbadr             | uint32_t         |      0 |    4 |       0 |
-| pcnet_RMD        | buf_length        | int16_t          |      4 |    2 |       0 |
-| pcnet_RMD        | status            | int16_t          |      6 |    2 |       0 |
-| pcnet_RMD        | msg_length        | uint32_t         |      8 |    4 |       0 |
-| pcnet_RMD        | res               | uint32_t         |     12 |    4 |       0 |
-| pcnet_TMD        | tbadr             | uint32_t         |      0 |    4 |       0 |
-| pcnet_TMD        | length            | int16_t          |      4 |    2 |       0 |
-| pcnet_TMD        | status            | int16_t          |      6 |    2 |       0 |
-| pcnet_TMD        | misc              | uint32_t         |      8 |    4 |       0 |
-| pcnet_TMD        | res               | uint32_t         |     12 |    4 |       0 |
-| pcnet_initblk16  | mode              | uint16_t         |      0 |    2 |       0 |
-| pcnet_initblk16  | padr              | uint16_t[3]      |      2 |    6 |       0 |
-| pcnet_initblk16  | ladrf             | uint16_t[4]      |      8 |    8 |       0 |
-| pcnet_initblk16  | rdra              | uint32_t         |     16 |    4 |       0 |
-| pcnet_initblk16  | tdra              | uint32_t         |     20 |    4 |       0 |
-| pcnet_initblk32  | mode              | uint16_t         |      0 |    2 |       0 |
-| pcnet_initblk32  | rlen              | uint8_t          |      2 |    1 |       0 |
-| pcnet_initblk32  | tlen              | uint8_t          |      3 |    1 |       0 |
-| pcnet_initblk32  | padr              | uint16_t[3]      |      4 |    6 |       0 |
-| pcnet_initblk32  | _res              | uint16_t         |     10 |    2 |       0 |
-| pcnet_initblk32  | ladrf             | uint16_t[4]      |     12 |    8 |       0 |
-| pcnet_initblk32  | rdra              | uint32_t         |     20 |    4 |       0 |
-| pcnet_initblk32  | tdra              | uint32_t         |     24 |    4 |       0 |
+|       name       |       field       |       type       | offset | size |
++------------------+-------------------+------------------+--------+------+
+| AHCI_SG          | addr              | uint64_t         |      0 |    8 |
+| AHCI_SG          | reserved          | uint32_t         |      8 |    4 |
+| AHCI_SG          | flags_size        | uint32_t         |     12 |    4 |
+| EHCIitd          | next              | uint32_t         |      0 |    4 |
+| EHCIitd          | transact          | uint32_t[8]      |      4 |   32 |
+| EHCIitd          | bufptr            | uint32_t[7]      |     36 |   28 |
+| EHCIqh           | next              | uint32_t         |      0 |    4 |
+| EHCIqh           | epchar            | uint32_t         |      4 |    4 |
+| EHCIqh           | epcap             | uint32_t         |      8 |    4 |
+| EHCIqh           | current_qtd       | uint32_t         |     12 |    4 |
+| EHCIqh           | next_qtd          | uint32_t         |     16 |    4 |
+| EHCIqh           | altnext_qtd       | uint32_t         |     20 |    4 |
+| EHCIqh           | token             | uint32_t         |     24 |    4 |
+| EHCIqh           | bufptr            | uint32_t[5]      |     28 |   20 |
+| EHCIqtd          | next              | uint32_t         |      0 |    4 |
+| EHCIqtd          | altnext           | uint32_t         |      4 |    4 |
+| EHCIqtd          | token             | uint32_t         |      8 |    4 |
+| EHCIqtd          | bufptr            | uint32_t[5]      |     12 |   20 |
+| EHCIsitd         | next              | uint32_t         |      0 |    4 |
+| EHCIsitd         | epchar            | uint32_t         |      4 |    4 |
+| EHCIsitd         | uframe            | uint32_t         |      8 |    4 |
+| EHCIsitd         | results           | uint32_t         |     12 |    4 |
+| EHCIsitd         | bufptr            | uint32_t[2]      |     16 |    8 |
+| EHCIsitd         | backptr           | uint32_t         |     24 |    4 |
+| UHCI_QH          | link              | uint32_t         |      0 |    4 |
+| UHCI_QH          | el_link           | uint32_t         |      4 |    4 |
+| UHCI_TD          | link              | uint32_t         |      0 |    4 |
+| UHCI_TD          | ctrl              | uint32_t         |      4 |    4 |
+| UHCI_TD          | token             | uint32_t         |      8 |    4 |
+| UHCI_TD          | buffer            | uint32_t         |     12 |    4 |
+| XHCIEvRingSeg    | addr_low          | uint32_t         |      0 |    4 |
+| XHCIEvRingSeg    | addr_high         | uint32_t         |      4 |    4 |
+| XHCIEvRingSeg    | size              | uint32_t         |      8 |    4 |
+| XHCIEvRingSeg    | rsvd              | uint32_t         |     12 |    4 |
+| XHCITRB          | parameter         | uint64_t         |      0 |    8 |
+| XHCITRB          | status            | uint32_t         |      8 |    4 |
+| XHCITRB          | control           | uint32_t         |     12 |    4 |
+| XHCITRB          | addr              | dma_addr_t       |     16 |    8 |
+| XHCITRB          | ccs               | bool             |     24 |    1 |
+| e1000_rx_desc    | buffer_addr       | uint64_t         |      0 |    8 |
+| e1000_rx_desc    | length            | uint16_t         |      8 |    2 |
+| e1000_rx_desc    | csum              | uint16_t         |     10 |    2 |
+| e1000_rx_desc    | status            | uint8_t          |     12 |    1 |
+| e1000_rx_desc    | errors            | uint8_t          |     13 |    1 |
+| e1000_rx_desc    | special           | uint16_t         |     14 |    2 |
+| e1000_tx_desc    | buffer_addr       | uint64_t         |      0 |    8 |
+| e1000_tx_desc    | lower             | union <unnamed>  |      8 |    4 |
+| e1000_tx_desc    | upper             | union <unnamed>  |     12 |    4 |
+| mfi_abort_frame  | header            | mfi_frame_header |      0 |   24 |
+| mfi_abort_frame  | abort_context     | uint64_t         |     24 |    8 |
+| mfi_abort_frame  | abort_mfi_addr_lo | uint32_t         |     32 |    4 |
+| mfi_abort_frame  | abort_mfi_addr_hi | uint32_t         |     36 |    4 |
+| mfi_abort_frame  | reserved1         | uint32_t[6]      |     40 |   24 |
+| mfi_dcmd_frame   | header            | mfi_frame_header |      0 |   24 |
+| mfi_dcmd_frame   | opcode            | uint32_t         |     24 |    4 |
+| mfi_dcmd_frame   | mbox              | uint8_t[12]      |     28 |   12 |
+| mfi_dcmd_frame   | sgl               | mfi_sgl          |     40 |   16 |
+| mfi_frame        | smp               | mfi_smp_frame    |      0 |   56 |
+| mfi_frame        | abort             | mfi_abort_frame  |      0 |   64 |
+| mfi_frame        | dcmd              | mfi_dcmd_frame   |      0 |   56 |
+| mfi_frame        | pass              | mfi_pass_frame   |      0 |   64 |
+| mfi_frame        | io                | mfi_io_frame     |      0 |   56 |
+| mfi_frame        | init              | mfi_init_frame   |      0 |   64 |
+| mfi_frame        | header            | mfi_frame_header |      0 |   24 |
+| mfi_frame        | stp               | mfi_stp_frame    |      0 |   72 |
+| mfi_frame        | raw               | uint64_t[8]      |      0 |   64 |
+| mfi_frame        | bytes             | uint8_t[64]      |      0 |   64 |
+| mfi_frame_header | frame_cmd         | uint8_t          |      0 |    1 |
+| mfi_frame_header | sense_len         | uint8_t          |      1 |    1 |
+| mfi_frame_header | cmd_status        | uint8_t          |      2 |    1 |
+| mfi_frame_header | scsi_status       | uint8_t          |      3 |    1 |
+| mfi_frame_header | target_id         | uint8_t          |      4 |    1 |
+| mfi_frame_header | lun_id            | uint8_t          |      5 |    1 |
+| mfi_frame_header | cdb_len           | uint8_t          |      6 |    1 |
+| mfi_frame_header | sge_count         | uint8_t          |      7 |    1 |
+| mfi_frame_header | context           | uint64_t         |      8 |    8 |
+| mfi_frame_header | flags             | uint16_t         |     16 |    2 |
+| mfi_frame_header | timeout           | uint16_t         |     18 |    2 |
+| mfi_frame_header | data_len          | uint32_t         |     20 |    4 |
+| mfi_init_frame   | header            | mfi_frame_header |      0 |   24 |
+| mfi_init_frame   | qinfo_new_addr_lo | uint32_t         |     24 |    4 |
+| mfi_init_frame   | qinfo_new_addr_hi | uint32_t         |     28 |    4 |
+| mfi_init_frame   | qinfo_old_addr_lo | uint32_t         |     32 |    4 |
+| mfi_init_frame   | qinfo_old_addr_hi | uint32_t         |     36 |    4 |
+| mfi_init_frame   | reserved          | uint32_t[6]      |     40 |   24 |
+| mfi_init_qinfo   | flags             | uint32_t         |      0 |    4 |
+| mfi_init_qinfo   | rq_entries        | uint32_t         |      4 |    4 |
+| mfi_init_qinfo   | rq_addr_lo        | uint32_t         |      8 |    4 |
+| mfi_init_qinfo   | rq_addr_hi        | uint32_t         |     12 |    4 |
+| mfi_init_qinfo   | pi_addr_lo        | uint32_t         |     16 |    4 |
+| mfi_init_qinfo   | pi_addr_hi        | uint32_t         |     20 |    4 |
+| mfi_init_qinfo   | ci_addr_lo        | uint32_t         |     24 |    4 |
+| mfi_init_qinfo   | ci_addr_hi        | uint32_t         |     28 |    4 |
+| mfi_io_frame     | header            | mfi_frame_header |      0 |   24 |
+| mfi_io_frame     | sense_addr_lo     | uint32_t         |     24 |    4 |
+| mfi_io_frame     | sense_addr_hi     | uint32_t         |     28 |    4 |
+| mfi_io_frame     | lba_lo            | uint32_t         |     32 |    4 |
+| mfi_io_frame     | lba_hi            | uint32_t         |     36 |    4 |
+| mfi_io_frame     | sgl               | mfi_sgl          |     40 |   16 |
+| mfi_pass_frame   | header            | mfi_frame_header |      0 |   24 |
+| mfi_pass_frame   | sense_addr_lo     | uint32_t         |     24 |    4 |
+| mfi_pass_frame   | sense_addr_hi     | uint32_t         |     28 |    4 |
+| mfi_pass_frame   | cdb               | uint8_t[16]      |     32 |   16 |
+| mfi_pass_frame   | sgl               | mfi_sgl          |     48 |   16 |
+| mfi_sgl          | sg64              | mfi_sg64[1]      |      0 |   12 |
+| mfi_sgl          | sg32              | mfi_sg32[1]      |      0 |    8 |
+| mfi_sgl          | sg_skinny         | mfi_sg_skinny[1] |      0 |   16 |
+| mfi_smp_frame    | header            | mfi_frame_header |      0 |   24 |
+| mfi_smp_frame    | sas_addr          | uint64_t         |     24 |    8 |
+| mfi_smp_frame    | sgl               | union <unnamed>  |     32 |   24 |
+| mfi_smp_frame    | sgl               | union <unnamed>  |     32 |   24 |
+| mfi_stp_frame    | header            | mfi_frame_header |      0 |   24 |
+| mfi_stp_frame    | fis               | uint16_t[10]     |     24 |   20 |
+| mfi_stp_frame    | stp_flags         | uint32_t         |     44 |    4 |
+| mfi_stp_frame    | sgl               | union <unnamed>  |     48 |   24 |
+| mfi_stp_frame    | sgl               | union <unnamed>  |     48 |   24 |
+| ohci_ed          | flags             | uint32_t         |      0 |    4 |
+| ohci_ed          | tail              | uint32_t         |      4 |    4 |
+| ohci_ed          | head              | uint32_t         |      8 |    4 |
+| ohci_ed          | next              | uint32_t         |     12 |    4 |
+| ohci_hcca        | intr              | uint32_t[32]     |      0 |  128 |
+| ohci_hcca        | frame             | uint16_t         |    128 |    2 |
+| ohci_hcca        | pad               | uint16_t         |    130 |    2 |
+| ohci_hcca        | done              | uint32_t         |    132 |    4 |
+| ohci_iso_td      | flags             | uint32_t         |      0 |    4 |
+| ohci_iso_td      | bp                | uint32_t         |      4 |    4 |
+| ohci_iso_td      | next              | uint32_t         |      8 |    4 |
+| ohci_iso_td      | be                | uint32_t         |     12 |    4 |
+| ohci_iso_td      | offset            | uint16_t[8]      |     16 |   16 |
+| ohci_td          | flags             | uint32_t         |      0 |    4 |
+| ohci_td          | cbp               | uint32_t         |      4 |    4 |
+| ohci_td          | next              | uint32_t         |      8 |    4 |
+| ohci_td          | be                | uint32_t         |     12 |    4 |
+| pcnet_RMD        | rbadr             | uint32_t         |      0 |    4 |
+| pcnet_RMD        | buf_length        | int16_t          |      4 |    2 |
+| pcnet_RMD        | status            | int16_t          |      6 |    2 |
+| pcnet_RMD        | msg_length        | uint32_t         |      8 |    4 |
+| pcnet_RMD        | res               | uint32_t         |     12 |    4 |
+| pcnet_TMD        | tbadr             | uint32_t         |      0 |    4 |
+| pcnet_TMD        | length            | int16_t          |      4 |    2 |
+| pcnet_TMD        | status            | int16_t          |      6 |    2 |
+| pcnet_TMD        | misc              | uint32_t         |      8 |    4 |
+| pcnet_TMD        | res               | uint32_t         |     12 |    4 |
+| pcnet_initblk16  | mode              | uint16_t         |      0 |    2 |
+| pcnet_initblk16  | padr              | uint16_t[3]      |      2 |    6 |
+| pcnet_initblk16  | ladrf             | uint16_t[4]      |      8 |    8 |
+| pcnet_initblk16  | rdra              | uint32_t         |     16 |    4 |
+| pcnet_initblk16  | tdra              | uint32_t         |     20 |    4 |
+| pcnet_initblk32  | mode              | uint16_t         |      0 |    2 |
+| pcnet_initblk32  | rlen              | uint8_t          |      2 |    1 |
+| pcnet_initblk32  | tlen              | uint8_t          |      3 |    1 |
+| pcnet_initblk32  | padr              | uint16_t[3]      |      4 |    6 |
+| pcnet_initblk32  | _res              | uint16_t         |     10 |    2 |
+| pcnet_initblk32  | ladrf             | uint16_t[4]      |     12 |    8 |
+| pcnet_initblk32  | rdra              | uint32_t         |     20 |    4 |
+| pcnet_initblk32  | tdra              | uint32_t         |     24 |    4 |
