@@ -41,7 +41,7 @@ codeql database create videzzo-v3 --language=cpp --command=/path/to/videzzo/anno
 
 ```
 # in codeql-home
-codeql query run codeql-qemu/videzzo-v3 -- codeql-repo/cpp/ql/src/ViDeZZo/
+codeql query run -j8 -d codeql-qemu/videzzo-v3 -- codeql-repo/cpp/ql/src/ViDeZZo/10-sink-to-structs.ql
 ```
 
 Please also check [Analyzing your projects in
