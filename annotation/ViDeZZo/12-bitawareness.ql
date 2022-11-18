@@ -32,24 +32,57 @@ class IsFlowingToBitwiseAndExprConfiguration extends TaintTracking::Configuratio
       isSupported(call) and
       not isDuplicated(call)
     |
-      getDestination(call) = source.asExpr()
+      getDestination(call) = source.asExpr().(VariableAccess)
       or
-      getDestination(call).(AddressOfExpr).getOperand() = source.asExpr()
+      getDestination(call).(AddressOfExpr).getOperand() = source.asExpr().(VariableAccess)
       or
-      isAccessOfSpecificStructField(getDestination(call).getType().stripType().(Struct),
-        source.asExpr())
+      // handle s->configuration[20]
+      getDestination(call).(AddressOfExpr).getOperand().(ArrayExpr).getArrayBase() = source.asExpr().(PointerFieldAccess)
     )
+    or
+    isAccessOfSpecificStructFieldSimple(source.asExpr())
   }
 
-  override predicate isSink(DataFlow::Node sink) { sink.asExpr() instanceof BitwiseAndExpr }
+  override predicate isSink(DataFlow::Node sink) {
+    sink.asExpr() instanceof BitwiseAndExpr or
+    // &=
+    sink.asExpr() instanceof AssignAndExpr
+   }
+}
+
+predicate isTargetStructSimple(string name) {
+  name =
+    [
+      "e1000_tx_desc", "e1000_rx_desc", "e1000_tx_desc", "e1000_context_desc",
+      "e1000_tx", "e1000e_tx",
+      "pcnet_initblk32", "pcnet_initblk16",
+      "pcnet_TMD", "pcnet_RMD", "mfi_frame", "mfi_init_qinfo", "mfi_frame_header", "mfi_pass_frame",
+      "mfi_io_frame", "mfi_init_frame", "mfi_dcmd_frame", "mfi_abort_frame", "mfi_smp_frame",
+      "mfi_stp_frame", "mfi_sgl", "EHCIqh", "EHCIitd", "EHCIsitd", "EHCIqtd", "ohci_hcca",
+      "ohci_ed", "ohci_td", "ohci_iso_td", "UHCI_QH", "UHCI_TD", "XHCIEvRingSeg", "XHCITRB",
+      "AHCI_SG"
+    ]
+}
+
+predicate isAccessOfSpecificStructFieldSimple(Access access) {
+  access instanceof PointerFieldAccess and
+  isTargetStructSimple(access.(PointerFieldAccess).getQualifier().getType().stripType().getName())
+  or
+  access instanceof ValueFieldAccess and
+  isTargetStructSimple(access.(ValueFieldAccess).getQualifier().getType().getName())
 }
 
 from
-  Access access, BitwiseAndExpr bitwiseAndExpr,
+  Access access, Expr bitwiseAndExpr,
   IsFlowingToBitwiseAndExprConfiguration isFlowingToBitwiseAndExprConfiguration
 where
   isFlowingToBitwiseAndExprConfiguration
-      .hasFlow(DataFlow::exprNode(access), DataFlow::exprNode(bitwiseAndExpr))
-select access.getFile().getRelativePath() as pathname, access.getEnclosingFunction() as function,
-  access, getExprLiteral(access) as accessLiteral, bitwiseAndExpr.getLeftOperand() as flowToField,
-  getExprLiteral(flowToField) as flowToFieldLiternal, getFlags(bitwiseAndExpr) as bits
+      .hasFlow(DataFlow::exprNode(access), DataFlow::exprNode(bitwiseAndExpr)) and
+  access.getFile().getRelativePath() = bitwiseAndExpr.getFile().getRelativePath()
+  and access.getFile().getRelativePath() = ["hw/net/e1000.c", "hw/net/e1000e.c"]
+select access.getFile().getRelativePath() as src_pathname,
+  access.getEnclosingFunction() as src_function, access,
+  bitwiseAndExpr.getFile().getRelativePath() as dst_pathname,
+  bitwiseAndExpr.getEnclosingFunction() as dst_function, bitwiseAndExpr,
+  getExprLiteral(bitwiseAndExpr) as bitwiseAndExprLiteral
+  //, getFlags(bitwiseAndExpr) as bits

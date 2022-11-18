@@ -40,8 +40,8 @@ string getExprLiteral(Expr expr) {
   expr instanceof ValueFieldAccess
   or
   result =
-    getExprLiteral(expr.(ArrayExpr).getArrayBase()) + "." +
-      getExprLiteral(expr.(ArrayExpr).getArrayOffset()) and
+    getExprLiteral(expr.(ArrayExpr).getArrayBase()) + "[" +
+      getExprLiteral(expr.(ArrayExpr).getArrayOffset()) + "]" and
   expr instanceof ArrayExpr
   or
   result = "sizeof(" + getExprLiteral(expr.(SizeofExprOperator).getExprOperand()) + ")" and
@@ -95,6 +95,10 @@ string getExprLiteral(Expr expr) {
   or
   result = "sizeof(" + expr.(SizeofTypeOperator).getTypeOperand().toString() + ")"
   or
+  result = expr.(FunctionCall).getTarget().getName() + "(" + getExprLiteral(expr.(FunctionCall).getArgument(0)) + ")"
+  or
+  result = getExprLiteral(expr.(AssignAndExpr).getLValue()) + " & " + getExprLiteral(expr.(AssignAndExpr).getRValue())
+  or
   result = "Unknown" and
   not expr instanceof VariableAccess and
   not expr instanceof AddressOfExpr and
@@ -112,7 +116,10 @@ string getExprLiteral(Expr expr) {
   not expr instanceof AddExpr and
   not expr instanceof SubExpr and
   not expr instanceof MulExpr and
-  not expr instanceof SizeofTypeOperator
+  not expr instanceof SizeofTypeOperator and
+  not expr instanceof ComplementExpr and
+  not expr instanceof FunctionCall and
+  not expr instanceof AssignAndExpr
 }
 
 Expr getDestination(Call call) {

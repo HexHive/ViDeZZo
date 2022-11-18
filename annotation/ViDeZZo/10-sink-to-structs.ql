@@ -1,7 +1,7 @@
 /**
  * @id cpp/videzzo/10-sink-to-structs
  * @name Get all DMA accesses
- * @description Get all DMA accesses via signature functions
+ * @description Show the type and size of the destination buffer.
  * @kind metric
  * @tags videzzo
  */

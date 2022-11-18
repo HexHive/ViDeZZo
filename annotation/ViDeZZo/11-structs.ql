@@ -1,9 +1,7 @@
 /**
- * @id cpp/videzzo/11-fieldawareness
- * @name Parse struct types.
- * @description A virtual device message is field-aware with specific
- * boundaries. In general, a sub-field is either a data field or a pointer
- * field.
+ * @id cpp/videzzo/11-structs.ql
+ * @name Parse structs.
+ * @description Show the field name, field offset, and field size.
  * @kind metric
  * @tags videzzo
  */
