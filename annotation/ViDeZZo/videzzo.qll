@@ -99,6 +99,8 @@ string getExprLiteral(Expr expr) {
   or
   result = getExprLiteral(expr.(AssignAndExpr).getLValue()) + " & " + getExprLiteral(expr.(AssignAndExpr).getRValue())
   or
+  result = expr.(EnumConstantAccess).getTarget().getValue()
+  or
   result = "Unknown" and
   not expr instanceof VariableAccess and
   not expr instanceof AddressOfExpr and
@@ -119,7 +121,8 @@ string getExprLiteral(Expr expr) {
   not expr instanceof SizeofTypeOperator and
   not expr instanceof ComplementExpr and
   not expr instanceof FunctionCall and
-  not expr instanceof AssignAndExpr
+  not expr instanceof AssignAndExpr and
+  not expr instanceof EnumConstantAccess
 }
 
 Expr getDestination(Call call) {
@@ -260,17 +263,23 @@ predicate isDuplicated(Call call) {
     ]
 }
 
-predicate isTargetStruct(Struct struct) {
-  // this is derived from 10-sink-to-structs.ql
-  struct.getName() =
+predicate isTargetStructSimple(string name) {
+  name =
     [
-      "e1000_tx_desc", "e1000_rx_desc", "e1000_tx_desc", "pcnet_initblk32", "pcnet_initblk16",
+      "e1000_tx_desc", "e1000_rx_desc", "e1000_tx_desc", "e1000_context_desc",
+      // "e1000_tx", "e1000e_tx",
+      "pcnet_initblk32", "pcnet_initblk16",
       "pcnet_TMD", "pcnet_RMD", "mfi_frame", "mfi_init_qinfo", "mfi_frame_header", "mfi_pass_frame",
       "mfi_io_frame", "mfi_init_frame", "mfi_dcmd_frame", "mfi_abort_frame", "mfi_smp_frame",
       "mfi_stp_frame", "mfi_sgl", "EHCIqh", "EHCIitd", "EHCIsitd", "EHCIqtd", "ohci_hcca",
       "ohci_ed", "ohci_td", "ohci_iso_td", "UHCI_QH", "UHCI_TD", "XHCIEvRingSeg", "XHCITRB",
       "AHCI_SG"
     ]
+}
+
+predicate isTargetStruct(Struct struct) {
+  // this is derived from 10-sink-to-structs.ql
+  isTargetStructSimple(struct.getName())
 }
 
 predicate isAccessOfSpecificStructField(Struct struct, Access access) {

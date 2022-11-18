@@ -13,8 +13,9 @@ from videzzo_types_lib import dict_append
 # - Model buf: AC97_BUF0 (XXX_BUFX)
 
 ac97_00 = Model('ac97', 0)
-ac97_00.add_struct('AC97_BD', {'addr#0x4': FIELD_POINTER, 'ctl_len#0x4': FIELD_FLAG})
-ac97_00.add_flag('AC97_BD.ctl_len', {0: 16, 16: 14, 30: 1, 31: 1}) # AUTO MISSING
+ac97_00.add_struct('AC97_BD', {'addr#0x4': FIELD_POINTER | FIELD_FLAG, 'ctl_len#0x4': FIELD_FLAG})
+ac97_00.add_flag('AC97_BD.addr', {0: '2@0'})
+ac97_00.add_flag('AC97_BD.ctl_len', {0: 16, 16: 14, 30: 1, 31: 1})
 ac97_00.add_struct('AC97_BUF0', {'buf#0x100': FIELD_RANDOM})
 ac97_00.add_point_to('AC97_BD.addr', ['AC97_BUF0'], alignment=2) # AUTO MISSING
 ac97_00.add_head(['AC97_BD'])
@@ -189,6 +190,7 @@ pcnet_17.add_head(['PCNET_XDA'])
 pcnet_17.add_instrumentation_point('pcnet.c', ['pcnet_tmd_load', 'phys_mem_read', 0, 1])
 ###################################################################################################################
 pcnet_18 = Model('pcnet', 18)
+# static analysis says tbadr has tags
 pcnet_18.add_struct('PCNET_TMD', {'tbadr#0x4': FIELD_POINTER, 'length#0x2': FIELD_RANDOM, 'status#0x2': FIELD_FLAG, 'misc#0x4': FIELD_FLAG, 'res#0x4': FIELD_RANDOM})
 pcnet_18.add_flag('PCNET_TMD.status', {0: 7, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 16})
 pcnet_18.add_flag('PCNET_TMD.misc', {0: 4, 4: 12, 16: 10, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
@@ -210,6 +212,7 @@ pcnet_19.add_head(['PCNET_RDA'])
 pcnet_19.add_instrumentation_point('pcnet.c', ['pcnet_rmd_load', 'phys_mem_read', 0, 1])
 ###################################################################################################################
 pcnet_20 = Model('pcnet', 20)
+# static analysis says tbadr has tags
 pcnet_20.add_struct('PCNET_RMD', {'rbadr#0x4': FIELD_POINTER, 'buf_length#0x2': FIELD_FLAG, 'status#0x2': FIELD_FLAG, 'msg_length#0x4': FIELD_FLAG, 'res#0x4': FIELD_RANDOM})
 pcnet_20.add_flag('PCNET_RMD.status', {0: 4, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 16})
 pcnet_20.add_flag('PCNET_RMD.buf_length', {0: 12, 12: 4, 16: 8, 24: 8})
@@ -467,6 +470,7 @@ sdhci_47.add_head(['SDHCI_FIFO_BUFFER1'])
 sdhci_47.add_instrumentation_point('sdhci.c', ['sdhci_sdma_transfer_single_block', 'dma_memory_read', 0, 1])
 ###################################################################################################################
 sdhci_48 = Model('sdhci', 48)
+# static analysis says addr has a tag
 sdhci_48.add_struct('SDHCI_ADMA2', {'attr#1': FIELD_RANDOM, 'reserved#1': FIELD_RANDOM, 'length#0x2': FIELD_RANDOM, 'addr#0x4': FIELD_POINTER})
 sdhci_48.add_struct('SDHCI_ADMA2_BUF', {'buf#0x100': FIELD_RANDOM})
 sdhci_48.add_point_to('SDHCI_ADMA2.addr', ['SDHCI_ADMA2_BUF'])
@@ -731,7 +735,10 @@ xhci_94.add_instrumentation_point('hcd-xhci.c', ['usb_xhci_post_load', 'xhci_dma
 ###################################################################################################################
 xhci_95 = Model('xhci', 95) # 78
 xhci_95.add_struct('XHCI_EP0_CTX', {
-    'ep0_ctx0#0x4': FIELD_RANDOM, 'ep0_ctx1#0x4': FIELD_RANDOM, 'ep0_ctx2#0x4': FIELD_RANDOM, 'ep0_ctx3#0x4': FIELD_RANDOM, 'ep0_ctx4#0x4': FIELD_RANDOM})
+    'ep0_ctx0#0x4': FIELD_FLAGS, 'ep0_ctx1#0x4': FIELD_FLAGS, 'ep0_ctx2#0x4': FIELD_FLAGS, 'ep0_ctx3#0x4': FIELD_RANDOM, 'ep0_ctx4#0x4': FIELD_RANDOM})
+xhci_95.add_flag('XHCI_EP0_CTX.ep0_ctx', {0: 3, 3: 7, 10: 15, 15: 1, 16: 8, 24: 8})
+xhci_95.add_flag('XHCI_EP0_CTX.ep1_ctx', {0: 3, 3: 3, 6: 2, 8: 8, 16: 16})
+xhci_95.add_flag('XHCI_EP0_CTX.ep2_ctx', {0: 1, 1: 3, 4: 28})
 xhci_95.add_head(['XHCI_EP0_CTX'])
 xhci_95.add_instrumentation_point('hcd-xhci.c', ['xhci_evaluate_slot', 'xhci_dma_read_u32s', 3, 1])
 xhci_95.add_instrumentation_point('hcd-xhci.c', ['xhci_evaluate_slot', 'xhci_dma_read_u32s', 4, 1])
@@ -783,6 +790,17 @@ ohci_80.add_head(['OHCI_HCCA'])
 ohci_80.add_instrumentation_point('hcd-ohci.c', ['ohci_read_hcca', 'dma_memory_read', 0, 1])
 ohci_80.add_instrumentation_point('DevOHCI.cpp', ['_ZL16ohciR3UpdateHCCAP11PDMDEVINSR3P4OHCIP6OHCIR3', '_ZL14ohciR3PhysReadP11PDMDEVINSR3jPvm', 0, 1])
 ###################################################################################################################
+ohci_99 = Model('ohci', 99)
+ohci_99.add_struct('OHCI_BUF3', {'buf#0x100': FIELD_RANDOM})
+t = {}
+for i in range(0, 32):
+    t['intr{}#0x4'.format(i)] = FIELD_POINTER
+ohci_99.add_struct('OHCI_INTR', t)
+for i in range(0, 32):
+    ohci_99.add_point_to('OHCI_INTR.intr{}'.format(i), ['OHCI_BUF3'])
+ohci_99.add_head(['OHCI_INTR'])
+ohci_99.add_instrumentation_point('DevOHCI.cpp', ['_ZL25ohciR3ServicePeriodicListP11PDMDEVINSR3P4OHCIP6OHCIR3', '_ZL15ohciR3GetDWordsP11PDMDEVINSR3jPji', 0, 1])
+###################################################################################################################
 ohci_81 = Model('ohci', 81)
 ohci_81.add_struct('OHCI_BUF1', {'buf#0x100': FIELD_RANDOM})
 # this involves SCSI commands!
@@ -797,24 +815,28 @@ ohci_81.add_constant('OHCI_BUF2.sig2', [0x43425355])
 ohci_81.add_constant('OHCI_BUF2.data_len', [0, 100])
 ohci_81.add_struct('OHCI_ED', {
     'flags#0x4': FIELD_FLAG, 'tail#0x4': FIELD_POINTER, # AUTO MISSING
-    'head#0x4': FIELD_POINTER | FIELD_FLAG, 'next#0x4': FIELD_POINTER})
+    'head#0x4': FIELD_POINTER | FIELD_FLAG, 'next#0x4': FIELD_POINTER | FIELD_FLAG})
 ohci_81.add_flag('OHCI_ED.head', {0: 1, 1: 1})
+ohci_81.add_flag('OHCI_ED.next', {0: '4@0'})
 ohci_81.add_flag('OHCI_ED.flags', {
     0: '7@0x0', 7: 2, 9: '2@0', 11: 2, 13: 1, 14: 1, 15: 1, 16: 11, 27: 5})
 ohci_81.add_point_to('OHCI_ED.next', ['OHCI_BUF1'], alignment=4)
 ohci_81.add_struct('OHCI_TD', {
     'flags#0x4': FIELD_FLAG, 'cbp#0x4': FIELD_POINTER | FIELD_FLAG,
-     'next#0x4': FIELD_POINTER, 'be#0x4': FIELD_POINTER | FIELD_FLAG})
+     'next#0x4': FIELD_POINTER | FIELD_FLAG, 'be#0x4': FIELD_POINTER | FIELD_FLAG})
+ohci_81.add_flag('OHCI_TD.next', {0: '4@0'})
 ohci_81.add_flag('OHCI_TD.cbp', {0: '12@0xffc'})
 ohci_81.add_flag('OHCI_TD.be', {0: '4@a', 4: 2, 6: '6@0'})
 ohci_81.add_point_to('OHCI_TD.cbp', ['OHCI_BUF2'], alignment=12, immediate=True)
 ohci_81.add_point_to('OHCI_TD.be', ['OHCI_BUF2'], alignment=12, immediate=True)
 ohci_81.add_flag('OHCI_TD.flags', {0: 16, 18: 1, 19: 2, 21: 3, 24: 1, 25: 1, 26: 2, 28: 4})
 ohci_81.add_point_to('OHCI_TD.next', ['OHCI_TD'], alignment=4)
+## ISO_TD.bp, be are pointers with tags, but we make them random for simplicity
 ohci_81.add_struct('OHCI_ISO_TD', {
-    'flags#0x4': FIELD_FLAG, 'bp#0x4': FIELD_RANDOM, 'next#0x4': FIELD_POINTER, 'be#0x4': FIELD_RANDOM,
+    'flags#0x4': FIELD_FLAG, 'bp#0x4': FIELD_RANDOM, 'next#0x4': FIELD_POINTER | FIELD_FLAG, 'be#0x4': FIELD_RANDOM,
     'offset0#0x2': FIELD_RANDOM, 'offset1#0x2': FIELD_RANDOM, 'offset2#0x2': FIELD_RANDOM, 'offset3#0x2': FIELD_RANDOM,
     'offset4#0x2': FIELD_RANDOM, 'offset5#0x2': FIELD_RANDOM, 'offset6#0x2': FIELD_RANDOM, 'offset7#0x2': FIELD_RANDOM})
+ohci_81.add_flag('OHCI_ISO_TD.next', {0: '4@0'})
 ohci_81.add_flag('OHCI_ISO_TD.flags', {0: '16@0', 18: 1, 19: 2, 21: 3, 24: 3, 28: 4})
 ohci_81.add_point_to('OHCI_ISO_TD.next', ['OHCI_ISO_TD'], alignment=4)
 ohci_81.add_point_to_single_linked_list('OHCI_ED.head', 'OHCI_ED.tail', ['OHCI_TD', 'OHCI_ISO_TD'], ['next', 'next'], flags=['OHCI_ED.flags.15'], alignment=4)
@@ -831,6 +853,7 @@ ehci_82.add_head(['entry'])
 ehci_82.add_instrumentation_point('hcd-ehci.c', ['ehci_advance_periodic_state', 'get_dwords', 0, 1])
 ###################################################################################################################
 ehci_87 = Model('ehci', 87)
+# bufptr[0] has a tag according to the static analysis
 ehci_87.add_struct('EHCIqtd_BUF0', {'buf#0x100': FIELD_RANDOM})
 ehci_87.add_struct('EHCIqtd', {
     'next#0x4': FIELD_POINTER | FIELD_FLAG, 'altnext#0x4': FIELD_POINTER | FIELD_FLAG, 'token#0x4': FIELD_FLAG,
@@ -881,6 +904,7 @@ ehci_92.add_instrumentation_point('hcd-ehci.c', ['ehci_state_fetchqtd', 'get_dwo
 ###################################################################################################################
 ehci_88 = Model('ehci', 88)
 ehci_88.add_struct('EHCIqh_BUF0', {'buf#0x100': FIELD_RANDOM})
+# bufptr[0] has a tag according to the static analysis
 ehci_88.add_struct('EHCIqh', {
     'next#0x4': FIELD_POINTER, 'epchar#0x4': FIELD_FLAG, 'epcap#0x4': FIELD_FLAG,
     'current_qtd#0x4': FIELD_POINTER | FIELD_FLAG, 'next_qtd#0x4': FIELD_POINTER | FIELD_FLAG, 'altnext_qtd#0x4': FIELD_POINTER | FIELD_FLAG,
@@ -914,10 +938,10 @@ ehci_85.add_struct('EHCIitd', {
     'bufptr0#0x4': FIELD_POINTER | FIELD_FLAG, 'bufptr1#0x4': FIELD_POINTER | FIELD_FLAG, 'bufptr2#0x4': FIELD_POINTER | FIELD_FLAG,
     'bufptr3#0x4': FIELD_POINTER, 'bufptr4#0x4': FIELD_POINTER, 'bufptr5#0x4': FIELD_POINTER, 'bufptr6#0x4': FIELD_POINTER})
 for i in range(0, 8):
-    ehci_85.add_flag('EHCIitd.transact{}'.format(i), {0: 12, 12: 3, 15: 1, 16: 12, 28: 1, 29: 1, 30: 1, 31: 1}) # AUTO MISS
-ehci_85.add_flag('EHCIitd.bufptr0', {0: '7@0', 8: 4}) # AUTO MISS
-ehci_85.add_flag('EHCIitd.bufptr1', {0: 11, 11: 1}) # AUTO MISS
-ehci_85.add_flag('EHCIitd.bufptr2', {0: 2}) # AUTO MISS
+    ehci_85.add_flag('EHCIitd.transact{}'.format(i), {0: 12, 12: 3, 15: 1, 16: 12, 28: 1, 29: 1, 30: 1, 31: 1})
+ehci_85.add_flag('EHCIitd.bufptr0', {0: '7@0', 8: 4})
+ehci_85.add_flag('EHCIitd.bufptr1', {0: 11, 11: 1})
+ehci_85.add_flag('EHCIitd.bufptr2', {0: 2})
 for i in range(0, 7):
     ehci_85.add_point_to('EHCIitd.bufptr{}'.format(i), ['EHCIitd_BUF0']) # AUTO MISS
 ehci_85.add_point_to('EHCIitd.next', ['EHCIitd_BUF0']) # AUTO MISS
@@ -955,7 +979,23 @@ dwc2_74.add_flag('DWC2_USB_MSD_CBW.data_len', {0: 2, 2: '28@0', 30: 2})
 dwc2_74.add_flag('DWC2_USB_MSD_CBW.flags', {0: 7, 7: 1})
 dwc2_74.add_instrumentation_point('hcd-dwc2.c', ['dwc2_handle_packet', 'dma_memory_read', 0, 1])
 ###################################################################################################################
+# vring.desc  = val
+# vring.avail = val + 0x100 * sizeof(VRingDesc);
+# vring.used  = val.avail + offset(VRingAvail, ring[0x100])
+###################################################################################################################
+vringdesc = ['addr{}#0x8', 'len{}#0x4', 'flags{}#0x2', 'next{}#0x2']
+vringavail = {'flags#0x2': FIELD_RANDOM, 'idx#0x2': FIELD_RANDOM, 'ring#0x200': FIELD_RANDOM}
+vringused = {'flags#0x2': FIELD_RANDOM, 'idx#0x2': FIELD_RANDOM, 'ring#0x200': FIELD_RANDOM}
+vring = {}
+for i in range(0, 0x100):
+    vring[vringdesc[0].format(i)] = FIELD_RANDOM
+    vring[vringdesc[1].format(i)] = FIELD_RANDOM
+    vring[vringdesc[2].format(i)] = FIELD_RANDOM
+    vring[vringdesc[3].format(i)] = FIELD_RANDOM
+vring.update(vringavail)
+vring.update(vringused)
+###################################################################################################################
 virtio_75 = Model('virtio', 75)
-virtio_75.add_struct('VIRTIO_RING', {'virtio_ring#0x1000': FIELD_RANDOM})
-virtio_75.add_head(['VIRTIO_RING'])
+virtio_75.add_struct('VIRTIO_VRING', vring)
+virtio_75.add_head(['VIRTIO_VRING'])
 virtio_75.add_instrumentation_point('virtio.c', ['virtio_queue_set_addr', 'this_is_a_stub', 0, 2])

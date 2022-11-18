@@ -50,20 +50,6 @@ class IsFlowingToBitwiseAndExprConfiguration extends TaintTracking::Configuratio
    }
 }
 
-predicate isTargetStructSimple(string name) {
-  name =
-    [
-      "e1000_tx_desc", "e1000_rx_desc", "e1000_tx_desc", "e1000_context_desc",
-      "e1000_tx", "e1000e_tx",
-      "pcnet_initblk32", "pcnet_initblk16",
-      "pcnet_TMD", "pcnet_RMD", "mfi_frame", "mfi_init_qinfo", "mfi_frame_header", "mfi_pass_frame",
-      "mfi_io_frame", "mfi_init_frame", "mfi_dcmd_frame", "mfi_abort_frame", "mfi_smp_frame",
-      "mfi_stp_frame", "mfi_sgl", "EHCIqh", "EHCIitd", "EHCIsitd", "EHCIqtd", "ohci_hcca",
-      "ohci_ed", "ohci_td", "ohci_iso_td", "UHCI_QH", "UHCI_TD", "XHCIEvRingSeg", "XHCITRB",
-      "AHCI_SG"
-    ]
-}
-
 predicate isAccessOfSpecificStructFieldSimple(Access access) {
   access instanceof PointerFieldAccess and
   isTargetStructSimple(access.(PointerFieldAccess).getQualifier().getType().stripType().getName())
@@ -79,7 +65,6 @@ where
   isFlowingToBitwiseAndExprConfiguration
       .hasFlow(DataFlow::exprNode(access), DataFlow::exprNode(bitwiseAndExpr)) and
   access.getFile().getRelativePath() = bitwiseAndExpr.getFile().getRelativePath()
-  and access.getFile().getRelativePath() = ["hw/net/e1000.c", "hw/net/e1000e.c"]
 select access.getFile().getRelativePath() as src_pathname,
   access.getEnclosingFunction() as src_function, access,
   bitwiseAndExpr.getFile().getRelativePath() as dst_pathname,
