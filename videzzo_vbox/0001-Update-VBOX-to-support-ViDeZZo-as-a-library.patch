@@ -549,6 +549,37 @@ Index: src/VBox/Devices/Makefile.kmk
   VBoxDD_SDKS.win         = ReorderCompilerIncs $(VBOX_WINPSDK) $(VBOX_WINDDK) VBOX_NTDLL
   Storage/DrvHostDVD.cpp_SDKS.win = ReorderCompilerIncs $(VBOX_WINDDK)
   VBoxDD_INCS             = \
+Index: src/VBox/Devices/USB/DevOHCI.cpp
+===================================================================
+--- src/VBox/Devices/USB/DevOHCI.cpp	(revision 95063)
++++ src/VBox/Devices/USB/DevOHCI.cpp	(working copy)
+@@ -767,7 +767,6 @@
+ typedef OHCIPHYSREADSTATS const *PCOHCIPHYSREADSTATS;
+ #endif /* VBOX_WITH_OHCI_PHYS_READ_STATS */
+ 
+-
+ /*********************************************************************************************************************************
+ *   Global Variables                                                                                                             *
+ *********************************************************************************************************************************/
+@@ -3567,6 +3566,7 @@
+     uint32_t ITdAddrPrev = 0;
+     uint32_t u32NextFrame = UINT32_MAX;
+     const uint16_t u16CurFrame = pThis->HcFmNumber;
++    int counter = 0;
+     for (;;)
+     {
+         /* check for end-of-chain. */
+@@ -3573,6 +3573,10 @@
+         if (    ITdAddr == (pEd->TailP & ED_PTR_MASK)
+             ||  !ITdAddr)
+             break;
++        counter++;
++        if (counter > 10) {
++            break;
++        }
+ 
+         /*
+          * If isochronous endpoints are around, don't slow down the timer. Getting the timing right
 Index: src/VBox/Devices/build/VBoxDD.cpp
 ===================================================================
 --- src/VBox/Devices/build/VBoxDD.cpp	(revision 95063)
@@ -685,6 +716,31 @@ Index: src/VBox/VMM/Makefile.kmk
  endif
  
  
+Index: src/VBox/VMM/VMMAll/PGMAllPhys.cpp
+===================================================================
+--- src/VBox/VMM/VMMAll/PGMAllPhys.cpp	(revision 95063)
++++ src/VBox/VMM/VMMAll/PGMAllPhys.cpp	(working copy)
+@@ -1850,13 +1850,13 @@
+     /*
+      * Make sure the page is writable.
+      */
+-    if (RT_UNLIKELY(PGM_PAGE_GET_STATE(pPage) != PGM_PAGE_STATE_ALLOCATED))
+-    {
+-        rc = pgmPhysPageMakeWritable(pVM, pPage, GCPhys);
+-        if (RT_FAILURE(rc))
+-            return rc;
+-        AssertMsg(rc == VINF_SUCCESS || rc == VINF_PGM_SYNC_CR3 /* not returned */, ("%Rrc\n", rc));
+-    }
++    // if (RT_UNLIKELY(PGM_PAGE_GET_STATE(pPage) != PGM_PAGE_STATE_ALLOCATED))
++    // {
++        // rc = pgmPhysPageMakeWritable(pVM, pPage, GCPhys);
++        // if (RT_FAILURE(rc))
++            // return rc;
++        // AssertMsg(rc == VINF_SUCCESS || rc == VINF_PGM_SYNC_CR3 /* not returned */, ("%Rrc\n", rc));
++    // }
+     Assert(PGM_PAGE_GET_HCPHYS(pPage) != 0);
+ 
+     /*
 Index: src/VBox/VMM/VMMAll/PGMAllPool.cpp
 ===================================================================
 --- src/VBox/VMM/VMMAll/PGMAllPool.cpp	(revision 95063)
