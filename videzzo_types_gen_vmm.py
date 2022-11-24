@@ -17,7 +17,7 @@ ac97_00.add_struct('AC97_BD', {'addr#0x4': FIELD_POINTER | FIELD_FLAG, 'ctl_len#
 ac97_00.add_flag('AC97_BD.addr', {0: '2@0'})
 ac97_00.add_flag('AC97_BD.ctl_len', {0: 16, 16: 14, 30: 1, 31: 1})
 ac97_00.add_struct('AC97_BUF0', {'buf#0x100': FIELD_RANDOM})
-ac97_00.add_point_to('AC97_BD.addr', ['AC97_BUF0'], alignment=2) # AUTO MISSING
+ac97_00.add_point_to('AC97_BD.addr', ['AC97_BUF0'], alignment=2)
 ac97_00.add_head(['AC97_BD'])
 ac97_00.add_instrumentation_point('ac97.c', ['fetch_bd', 'pci_dma_read', 0, 1])
 ac97_00.add_instrumentation_point('DevIchAc97.cpp', ['_ZL28ichac97R3StreamFetchNextBdleP11PDMDEVINSR3P10AC97STREAMP12AC97STREAMR3', '_ZL20PDMDevHlpPCIPhysReadP11PDMDEVINSR3mPvm', 0, 1])
@@ -779,10 +779,10 @@ xhci_94.add_instrumentation_point('hcd-xhci.c', ['usb_xhci_post_load', 'xhci_dma
 ###################################################################################################################
 xhci_95 = Model('xhci', 95) # 78
 xhci_95.add_struct('XHCI_EP0_CTX', {
-    'ep0_ctx0#0x4': FIELD_FLAGS, 'ep0_ctx1#0x4': FIELD_FLAGS, 'ep0_ctx2#0x4': FIELD_FLAGS, 'ep0_ctx3#0x4': FIELD_RANDOM, 'ep0_ctx4#0x4': FIELD_RANDOM})
-xhci_95.add_flag('XHCI_EP0_CTX.ep0_ctx', {0: 3, 3: 7, 10: 15, 15: 1, 16: 8, 24: 8})
-xhci_95.add_flag('XHCI_EP0_CTX.ep1_ctx', {0: 3, 3: 3, 6: 2, 8: 8, 16: 16})
-xhci_95.add_flag('XHCI_EP0_CTX.ep2_ctx', {0: 1, 1: 3, 4: 28})
+    'ep0_ctx0#0x4': FIELD_FLAG, 'ep0_ctx1#0x4': FIELD_FLAG, 'ep0_ctx2#0x4': FIELD_FLAG, 'ep0_ctx3#0x4': FIELD_RANDOM, 'ep0_ctx4#0x4': FIELD_RANDOM})
+xhci_95.add_flag('XHCI_EP0_CTX.ep0_ctx0', {0: 3, 3: 7, 10: 15, 15: 1, 16: 8, 24: 8})
+xhci_95.add_flag('XHCI_EP0_CTX.ep0_ctx1', {0: 3, 3: 3, 6: 2, 8: 8, 16: 16})
+xhci_95.add_flag('XHCI_EP0_CTX.ep0_ctx2', {0: 1, 1: 3, 4: 28})
 xhci_95.add_head(['XHCI_EP0_CTX'])
 xhci_95.add_instrumentation_point('hcd-xhci.c', ['xhci_evaluate_slot', 'xhci_dma_read_u32s', 3, 1])
 xhci_95.add_instrumentation_point('hcd-xhci.c', ['xhci_evaluate_slot', 'xhci_dma_read_u32s', 4, 1])
