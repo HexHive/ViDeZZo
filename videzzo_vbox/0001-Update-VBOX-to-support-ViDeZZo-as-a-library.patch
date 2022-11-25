@@ -549,6 +549,19 @@ Index: src/VBox/Devices/Makefile.kmk
   VBoxDD_SDKS.win         = ReorderCompilerIncs $(VBOX_WINPSDK) $(VBOX_WINDDK) VBOX_NTDLL
   Storage/DrvHostDVD.cpp_SDKS.win = ReorderCompilerIncs $(VBOX_WINDDK)
   VBoxDD_INCS             = \
+Index: src/VBox/Devices/Storage/DevFdc.cpp
+===================================================================
+--- src/VBox/Devices/Storage/DevFdc.cpp	(revision 95063)
++++ src/VBox/Devices/Storage/DevFdc.cpp	(working copy)
+@@ -79,7 +79,7 @@
+ # define FLOPPY_DPRINTF(...) do { } while (0)
+ #endif
+ 
+-#define FLOPPY_ERROR RTLogPrintf
++#define FLOPPY_ERROR FLOPPY_DPRINTF
+ 
+ typedef struct fdctrl_t fdctrl_t;
+ 
 Index: src/VBox/Devices/USB/DevOHCI.cpp
 ===================================================================
 --- src/VBox/Devices/USB/DevOHCI.cpp	(revision 95063)

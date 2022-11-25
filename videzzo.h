@@ -219,6 +219,8 @@ extern bool DisableInputProcessing;
 //
 // Fuzz Targets
 //
+// TODO: VBox exposes multiple and distinct interfaces to set up VMs,
+// e.g., modifyvm, storagectl. Consider a flexible way to initial VMs in ViDeZZO.
 typedef struct ViDeZZoFuzzTargetConfig {
     // Group 1: basic information
     const char *arch, *name, *args, *file;

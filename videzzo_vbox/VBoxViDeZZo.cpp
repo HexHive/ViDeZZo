@@ -363,16 +363,16 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .byte_address = true,
         .socket = false,
         .display = false,
-    }, /* { // TODO
+    }, {
         .arch = "i386",
         .name = "floppy",
-        .args = "--floppy none",
+        .args = nullptr,
         .file = "src/VBox/Devices/Storage/DevFdc.cpp",
         .mrnames = "*FDC*,*DMA*",
         .byte_address = true,
         .socket = false,
         .display = false,
-    }, */ {
+    }, {
         .arch = "i386",
         .name = "lsilogicscsi",
         .args = "--scsi on --scsitype LsiLogic --memory 2048", // scsi: LsiLogic; LsiLogic and siLogicSAS share this
@@ -1006,7 +1006,7 @@ static void cleanup(int sig) {
 int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
 {
     char *target_name = nullptr;
-    GString *generic_cmd_line = nullptr, *modifyvm_cmd_line = nullptr;
+    GString *generic_cmd_line = nullptr, *modifyvm_cmd_line = nullptr, *storageattach_cmd_line = nullptr;
     ViDeZZoFuzzTarget *fuzz_target;
     int rc;
     HRESULT hrc;
@@ -1059,6 +1059,26 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
         g_string_free(modifyvm_cmd_line, true);
         HandlerArg handlerArg1 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
         handleModifyVM(&handlerArg1);
+    }
+
+    if (!strcmp(fuzz_target->name, "videzzo-fuzz-floppy")) {
+        // add the sata
+        storageattach_cmd_line = g_string_new(NULL);
+        g_string_append_printf(storageattach_cmd_line,
+            "%s --name \"floppy01\" --add floppy", uuid_str);
+        wordexp(storageattach_cmd_line->str, &result, 0);
+        HandlerArg handlerArg2 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
+        handleStorageController(&handlerArg2);
+        g_string_free(storageattach_cmd_line, true);
+        // add an hard disk
+        storageattach_cmd_line = g_string_new(NULL);
+        // VBoxManage createhd --filename `pwd`/videzzo.iso --size 80000 --format VDI
+        g_string_append_printf(storageattach_cmd_line,
+            "%s --storagectl \"floppy01\" --port 0 --device 0 --type fdd --medium emptydrive", uuid_str);
+        wordexp(storageattach_cmd_line->str, &result, 0);
+        HandlerArg handlerArg3 = {(int)result.we_wordc, result.we_wordv, virtualBox, session};
+        handleStorageAttach(&handlerArg3);
+        g_string_free(storageattach_cmd_line, true);
     }
 
     // console and debugger
