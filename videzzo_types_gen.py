@@ -163,6 +163,8 @@ uint32_t urand32() {{
 
     headers = []
     for model_name, model in models.items():
+        if model.get_head() is None:
+            continue
         print('Handling {} ...'.format(model_name), end='')
         filepath = '{}/{}.h'.format(hypervisor_dir, model_name)
         with open(filepath, 'w') as f:
@@ -175,6 +177,8 @@ uint32_t urand32() {{
         f.write('\n')
         f.write('FeedbackHandler group_mutator_miss_handlers[0xff] = {\n')
         for model in models.values():
+            if model.get_head() is None:
+                continue
             f.write('    [{0}] = videzzo_group_mutator_miss_handler_{0},\n'.format(model.index))
         f.write('};')
 

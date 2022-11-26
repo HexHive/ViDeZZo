@@ -93,6 +93,9 @@ class Model(object):
         """
         self.head_struct_types = head_struct_types
 
+    def get_head(self):
+        return self.head_struct_types
+
     def add_instrumentation_point(self, filename, callstack):
         """
         filename: basename.c
