@@ -137,7 +137,7 @@ e1000_tx_desc = {'buffer_addr#0x8': FIELD_POINTER,
 e1000_context_desc = {'ip_fields#0x4': FIELD_FLAG, 'tcp_fields#0x4': FIELD_FLAG,
                       'cmd_and_length#0x4': FIELD_FLAG, 'fields#0x4': FIELD_FLAG}
 ###################################################################################################################
-e1000e_13 = Model('e1000e', 13) # 15 is available
+e1000e_13 = Model('e1000e', 13)
 e1000e_13.add_struct('E1000_TX_DESC0', e1000_tx_desc)
 e1000e_13.add_flag('E1000_TX_DESC0.flags', {0: 16, 16: 4, 20: 1, 21: 7, 28: 1, 29: 1, 30: 2})
 e1000e_13.add_flag('E1000_TX_DESC0.fields', {0: 4, 4: 1, 5: 11, 16: 8, 24: 8})
@@ -1055,24 +1055,24 @@ for i in range(0, 0x100):
 vring.update(vringused)
 ###################################################################################################################
 virtio_75 = Model('virtio', 75)
-virtio_75.add_struct('VIRTIO_VRING', vring)
-virtio_75.add_struct('VIRTIO_BUF0', {'buf#0x100': FIELD_RANDOM})
+virtio_75.add_struct('VIRTIO_###_VRING', vring)
+virtio_75.add_struct('VIRTIO_###_BUF0', {'buf#0x100': FIELD_RANDOM})
 for i in range(0, 0x100):
-    virtio_75.add_point_to('VIRTIO_VRING.addr{}'.format(i), ['VIRTIO_BUF0'])
-    virtio_75.add_constant('VIRTIO_VRING.len{}'.format(i), [0x100])
-    virtio_75.add_flag('VIRTIO_VRING.flags{}'.format(i), {0: 1, 1: 1, 2: 1, 3: 1, 4: 12})
-    virtio_75.add_flag('VIRTIO_VRING.next{}'.format(i), {0: 8, 8: '8@0'})
-virtio_75.add_flag('VIRTIO_VRING.aflags', {0: 1, 1: 1, 2: 14})
-virtio_75.add_flag('VIRTIO_VRING.aidx', {0: 12, 12: '4@0'})
+    virtio_75.add_point_to('VIRTIO_###_VRING.addr{}'.format(i), ['VIRTIO_###_BUF0'])
+    virtio_75.add_constant('VIRTIO_###_VRING.len{}'.format(i), [0x100])
+    virtio_75.add_flag('VIRTIO_###_VRING.flags{}'.format(i), {0: 1, 1: 1, 2: 1, 3: 1, 4: 12})
+    virtio_75.add_flag('VIRTIO_###_VRING.next{}'.format(i), {0: 8, 8: '8@0'})
+virtio_75.add_flag('VIRTIO_###_VRING.aflags', {0: 1, 1: 1, 2: 14})
+virtio_75.add_flag('VIRTIO_###_VRING.aidx', {0: 12, 12: '4@0'})
 for i in range(0, 0x100):
-    virtio_75.add_flag('VIRTIO_VRING.aring{}'.format(i), {0: 8, 8: '8@0'})
-virtio_75.add_flag('VIRTIO_VRING.uflags', {0: 1, 1: 1, 2: 14})
-virtio_75.add_flag('VIRTIO_VRING.uidx', {0: 12, 12: '4@0'})
+    virtio_75.add_flag('VIRTIO_###_VRING.aring{}'.format(i), {0: 8, 8: '8@0'})
+virtio_75.add_flag('VIRTIO_###_VRING.uflags', {0: 1, 1: 1, 2: 14})
+virtio_75.add_flag('VIRTIO_###_VRING.uidx', {0: 12, 12: '4@0'})
 for i in range(0, 0x100):
-    virtio_75.add_flag('VIRTIO_VRING.uring{}'.format(i), {0: 8, 8: '8@0'})
+    virtio_75.add_flag('VIRTIO_###_VRING.uring{}'.format(i), {0: 8, 8: '8@0'})
 ###################################################################################################################
 virtio_78 = copy.deepcopy(virtio_75)
-virtio_78.index = 78
+virtio_78.initialize(78, 'BLK')
 virtio_78.add_struct('VIRTIO_BLK_OUTHDR', {
     'type#0x4': FIELD_CONSTANT | FIELD_FLAG, 'ioprio#0x4': FIELD_RANDOM, 'sector#0x8': FIELD_FLAG,
     'dwz_sector#0x8': FIELD_FLAG, 'dwz_num_sectors#0x4': FIELD_FLAG, 'dwz_flags#0x4': FIELD_FLAG,
@@ -1085,8 +1085,28 @@ virtio_78.add_flag('VIRTIO_BLK_OUTHDR.dwz_num_sectors', {0: 21, 21: '11@0'})
 virtio_78.add_flag('VIRTIO_BLK_OUTHDR.dwz_flags', {0: 1, 1: '31@0'})
 virtio_78.add_struct('VIRTIO_BLK_INHDR', {'status#0x1': FIELD_RANDOM, 'pad#0x200': FIELD_RANDOM})
 for i in range(0, 0x100):
-    virtio_78.add_constant('VIRTIO_VRING.len{}'.format(i), [0x210, 0x201, 0x20]) # block size
-    virtio_78.add_point_to('VIRTIO_VRING.addr{}'.format(i), ['VIRTIO_BLK_OUTHDR', 'VIRTIO_BLK_INHDR'],
-                           flags=['VIRTIO_VRING.flags{}.1'.format(i)])
-virtio_78.add_head(['VIRTIO_VRING'])
-virtio_78.add_instrumentation_point('virtio.c', ['virtio_queue_set_addr', 'this_is_a_stub', 0, 2])
+    virtio_78.add_constant('VIRTIO_BLK_VRING.len{}'.format(i), [0x210, 0x201, 0x20]) # block size
+    virtio_78.add_point_to('VIRTIO_BLK_VRING.addr{}'.format(i), ['VIRTIO_BLK_OUTHDR', 'VIRTIO_BLK_INHDR'],
+                           flags=['VIRTIO_BLK_VRING.flags{}.1'.format(i)])
+virtio_78.add_head(['VIRTIO_BLK_VRING'])
+virtio_78.add_instrumentation_point('virtio.c', ['virtio_queue_set_addr', 'this_is_a_stub_for_virtio_blk', 0, 2])
+###################################################################################################################
+virtio_15 = copy.deepcopy(virtio_75)
+virtio_15.initialize(15, 'NET')
+# virtio_15.add_struct('VIRTIO_BLK_OUTHDR', {
+    # 'type#0x4': FIELD_CONSTANT | FIELD_FLAG, 'ioprio#0x4': FIELD_RANDOM, 'sector#0x8': FIELD_FLAG,
+    # 'dwz_sector#0x8': FIELD_FLAG, 'dwz_num_sectors#0x4': FIELD_FLAG, 'dwz_flags#0x4': FIELD_FLAG,
+    # 'pad#0x200': FIELD_RANDOM})
+# virtio_15.add_constant('VIRTIO_BLK_OUTHDR.type', [0, 1, 2, 4, 8, 11, 13, 5])
+# virtio_15.add_flag('VIRTIO_BLK_OUTHDR.type', {0: 1, 1: '30@0', 31: 1})
+# virtio_15.add_flag('VIRTIO_BLK_OUTHDR.sector', {0: 21, 21: '43@0'})
+# virtio_15.add_flag('VIRTIO_BLK_OUTHDR.dwz_sector', {0: 21, 21: '43@0'})
+# virtio_15.add_flag('VIRTIO_BLK_OUTHDR.dwz_num_sectors', {0: 21, 21: '11@0'})
+# virtio_15.add_flag('VIRTIO_BLK_OUTHDR.dwz_flags', {0: 1, 1: '31@0'})
+# virtio_15.add_struct('VIRTIO_BLK_INHDR', {'status#0x1': FIELD_RANDOM, 'pad#0x200': FIELD_RANDOM})
+# for i in range(0, 0x100):
+    # virtio_15.add_constant('VIRTIO_VRING.len{}'.format(i), [0x210, 0x201, 0x20]) # block size
+    # virtio_15.add_point_to('VIRTIO_VRING.addr{}'.format(i), ['VIRTIO_BLK_OUTHDR', 'VIRTIO_BLK_INHDR'],
+                           # flags=['VIRTIO_VRING.flags{}.1'.format(i)])
+virtio_15.add_head(['VIRTIO_NET_VRING'])
+virtio_15.add_instrumentation_point('virtio.c', ['virtio_queue_set_addr', 'this_is_a_stub_for_virtio_net', 0, 2])

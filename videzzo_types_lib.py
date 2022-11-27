@@ -29,6 +29,18 @@ class Model(object):
         self.code = []
         self.indent = 0
 
+    def initialize(self, index, replacement):
+        self.index = index
+        structs = {}
+        for struct_type, struct_metadata in self.structs.items():
+            for field_name, metadata in struct_metadata.items():
+                field_type = metadata['field_type']
+                if field_type & FIELD_POINTER:
+                    for k, v in metadata['point_to']['types'].items():
+                        metadata['point_to']['types'][k] = v.replace('###', replacement)
+            structs[struct_type.replace('###', replacement)] = struct_metadata
+        self.structs = structs
+
     def get_uuid(self):
         self.last_uuid = '{:010x}'.format(random.randint(0, 0xFFFFFFFFFFFFFFFF))[:10]
         return 'v' + self.last_uuid
