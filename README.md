@@ -10,6 +10,11 @@ Currently, ViDeZZo supports QEMU (C) and VirtualBox (C++) covering Audio,
 Storage, Network, USB, and Graphics virtual devices, and covering i386, x86_64,
 ARM, and AArch64 builds.
 
+A develop plan is as follows.
++ group mutators are not thread safe in vbox, and reproduction doesn't work either
++ consider all pitfalls and maybe reimplement the grammar interpreter
++ support the shared bitmap when the fork server is enabled
+
 The usage of ViDeZZo is as follows.
 
 ## Quick start
