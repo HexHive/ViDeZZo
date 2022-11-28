@@ -1091,22 +1091,76 @@ for i in range(0, 0x100):
 virtio_78.add_head(['VIRTIO_BLK_VRING'])
 virtio_78.add_instrumentation_point('virtio.c', ['virtio_queue_set_addr', 'this_is_a_stub_for_virtio_blk', 0, 2])
 ###################################################################################################################
+virtio_113 = copy.deepcopy(virtio_75)
+virtio_113.initialize(113, 'NET_RX')
+virtio_113.add_head(['VIRTIO_NET_RX_VRING'])
+virtio_113.add_instrumentation_point('virtio.c', ['virtio_queue_set_addr', 'this_is_a_stub_for_virtio_net_rx', 0, 2])
+###################################################################################################################
+virtio_112 = copy.deepcopy(virtio_75)
+virtio_112.initialize(112, 'NET_TX')
+virtio_112.add_head(['VIRTIO_NET_TX_VRING'])
+virtio_112.add_instrumentation_point('virtio.c', ['virtio_queue_set_addr', 'this_is_a_stub_for_virtio_net_tx', 0, 2])
+###################################################################################################################
 virtio_15 = copy.deepcopy(virtio_75)
-virtio_15.initialize(15, 'NET')
-# virtio_15.add_struct('VIRTIO_BLK_OUTHDR', {
-    # 'type#0x4': FIELD_CONSTANT | FIELD_FLAG, 'ioprio#0x4': FIELD_RANDOM, 'sector#0x8': FIELD_FLAG,
-    # 'dwz_sector#0x8': FIELD_FLAG, 'dwz_num_sectors#0x4': FIELD_FLAG, 'dwz_flags#0x4': FIELD_FLAG,
-    # 'pad#0x200': FIELD_RANDOM})
-# virtio_15.add_constant('VIRTIO_BLK_OUTHDR.type', [0, 1, 2, 4, 8, 11, 13, 5])
-# virtio_15.add_flag('VIRTIO_BLK_OUTHDR.type', {0: 1, 1: '30@0', 31: 1})
-# virtio_15.add_flag('VIRTIO_BLK_OUTHDR.sector', {0: 21, 21: '43@0'})
-# virtio_15.add_flag('VIRTIO_BLK_OUTHDR.dwz_sector', {0: 21, 21: '43@0'})
-# virtio_15.add_flag('VIRTIO_BLK_OUTHDR.dwz_num_sectors', {0: 21, 21: '11@0'})
-# virtio_15.add_flag('VIRTIO_BLK_OUTHDR.dwz_flags', {0: 1, 1: '31@0'})
-# virtio_15.add_struct('VIRTIO_BLK_INHDR', {'status#0x1': FIELD_RANDOM, 'pad#0x200': FIELD_RANDOM})
-# for i in range(0, 0x100):
-    # virtio_15.add_constant('VIRTIO_VRING.len{}'.format(i), [0x210, 0x201, 0x20]) # block size
-    # virtio_15.add_point_to('VIRTIO_VRING.addr{}'.format(i), ['VIRTIO_BLK_OUTHDR', 'VIRTIO_BLK_INHDR'],
-                           # flags=['VIRTIO_VRING.flags{}.1'.format(i)])
-virtio_15.add_head(['VIRTIO_NET_VRING'])
-virtio_15.add_instrumentation_point('virtio.c', ['virtio_queue_set_addr', 'this_is_a_stub_for_virtio_net', 0, 2])
+virtio_15.initialize(15, 'NET_CTRL')
+# we cannot support the buffer type control bit in buffer header, same in the megasas
+virtio_15.add_struct('VIRTIO_NET_CTRL_CTRL_HDR_0', {'class#0x1': FIELD_CONSTANT, 'cmd#0x1': FIELD_CONSTANT, 'on#0x1': FIELD_RANDOM})
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_0.class', [0])
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_0.cmd', [0, 1, 2, 3, 4, 5])
+virtio_15.add_struct('VIRTIO_NET_CTRL_CTRL_HDR_11', {'class#0x1': FIELD_CONSTANT, 'cmd#0x1': FIELD_CONSTANT, 'mac#0x6': FIELD_FLAG})
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_11.class', [1])
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_11.cmd', [1])
+virtio_15.add_flag('VIRTIO_NET_CTRL_CTRL_HDR_11.mac', {0: 6, 6: 6, 12: 6, 18: 6, 24: 6, 30: 6})
+virtio_15.add_struct('VIRTIO_NET_CTRL_CTRL_HDR_10', {
+    'class#0x1': FIELD_CONSTANT, 'cmd#0x1': FIELD_CONSTANT,
+    'entries0#0x4': FIELD_CONSTANT, 'mac0#0x6': FIELD_FLAG, 'mac1#0x6': FIELD_FLAG,
+    'entries1#0x4': FIELD_CONSTANT, 'mac2#0x6': FIELD_FLAG, 'mac3#0x6': FIELD_FLAG,
+})
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_10.class', [1])
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_10.cmd', [0])
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_10.entries0', [2])
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_10.entries1', [2])
+virtio_15.add_flag('VIRTIO_NET_CTRL_CTRL_HDR_10.mac0', {0: 6, 6: 6, 12: 6, 18: 6, 24: 6, 30: 6})
+virtio_15.add_flag('VIRTIO_NET_CTRL_CTRL_HDR_10.mac1', {0: 6, 6: 6, 12: 6, 18: 6, 24: 6, 30: 6})
+virtio_15.add_flag('VIRTIO_NET_CTRL_CTRL_HDR_10.mac2', {0: 6, 6: 6, 12: 6, 18: 6, 24: 6, 30: 6})
+virtio_15.add_flag('VIRTIO_NET_CTRL_CTRL_HDR_10.mac3', {0: 6, 6: 6, 12: 6, 18: 6, 24: 6, 30: 6})
+virtio_15.add_struct('VIRTIO_NET_CTRL_CTRL_HDR_2', {'class#0x1': FIELD_CONSTANT, 'cmd#0x1': FIELD_CONSTANT, 'vid#0x2': FIELD_FLAG})
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_2.class', [2])
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_2.cmd', [0, 1, 2, 3, 4, 5])
+virtio_15.add_flag('VIRTIO_NET_CTRL_CTRL_HDR_2.vid', {0: 5, 5: 11})
+virtio_15.add_struct('VIRTIO_NET_CTRL_CTRL_HDR_3', {'class#0x1': FIELD_CONSTANT, 'cmd#0x1': FIELD_CONSTANT})
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_3.class', [3])
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_3.cmd', [0, 1, 2, 3, 4, 5])
+virtio_15.add_struct('VIRTIO_NET_CTRL_CTRL_HDR_40', {'class#0x1': FIELD_CONSTANT, 'cmd#0x1': FIELD_CONSTANT, 'virtqueue_pairs#0x2': FIELD_RANDOM})
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_40.class', [4])
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_40.cmd', [0])
+virtio_15.add_struct('VIRTIO_NET_CTRL_CTRL_HDR_41', {
+    'class#0x1': FIELD_CONSTANT, 'cmd#0x1': FIELD_CONSTANT,
+    'hash_types#0x4': FIELD_FLAG,
+    'indirection_table_mask#0x2': FIELD_CONSTANT, # =3
+    'unclassified_queue#0x2': FIELD_RANDOM,
+    'indirection_table#0x6': FIELD_RANDOM, # x3
+    'max_tx_vq#0x2': FIELD_RANDOM,
+    'hash_key_length#0x1': FIELD_CONSTANT,
+    'hash_key_data#0x20': FIELD_RANDOM,
+})
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_41.class', [4])
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_41.cmd', [1, 2])
+virtio_15.add_flag('VIRTIO_NET_CTRL_CTRL_HDR_41.hash_types', {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1})
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_41.indirection_table_mask', [3]) # 0, 1, 3, 7, 15, 31, 63, 127])
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_41.hash_key_length', [32])
+virtio_15.add_struct('VIRTIO_NET_CTRL_CTRL_HDR_5', {'class#0x1': FIELD_CONSTANT, 'cmd#0x1': FIELD_CONSTANT, 'offloads#0x8': FIELD_RANDOM})
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_5.class', [5])
+virtio_15.add_constant('VIRTIO_NET_CTRL_CTRL_HDR_5.cmd', [0, 1,2, 3, 4, 5])
+virtio_15.add_struct('VIRTIO_NET_CTRL_CTRL_ACK', {'status#0x1': FIELD_RANDOM})
+for i in range(0, 0x100):
+    virtio_15.add_flag('VIRTIO_NET_CTRL_VRING.flags{}'.format(i), {0: 1, 1: 1, 2: 1, 3: 1, 4: 3, 7: 9})
+    # we cannot control which buffer in which channel
+    virtio_15.add_point_to('VIRTIO_NET_CTRL_VRING.addr{}'.format(i), [
+        'VIRTIO_NET_CTRL_CTRL_HDR_0', 'VIRTIO_NET_CTRL_CTRL_HDR_10', 'VIRTIO_NET_CTRL_CTRL_HDR_11', 'VIRTIO_NET_CTRL_CTRL_HDR_2',
+        'VIRTIO_NET_CTRL_CTRL_HDR_3', 'VIRTIO_NET_CTRL_CTRL_HDR_40', 'VIRTIO_NET_CTRL_CTRL_HDR_41', 'VIRTIO_NET_CTRL_CTRL_HDR_5',
+        'VIRTIO_NET_CTRL_CTRL_ACK', 'VIRTIO_NET_CTRL_CTRL_ACK', 'VIRTIO_NET_CTRL_CTRL_ACK', 'VIRTIO_NET_CTRL_CTRL_ACK',
+        'VIRTIO_NET_CTRL_CTRL_ACK', 'VIRTIO_NET_CTRL_CTRL_ACK', 'VIRTIO_NET_CTRL_CTRL_ACK', 'VIRTIO_NET_CTRL_CTRL_ACK',
+    ], flags=['VIRTIO_NET_CTRL_VRING.flags{}.1'.format(i), 'VIRTIO_NET_CTRL_VRING.flags{}.4'.format(i)])
+virtio_15.add_head(['VIRTIO_NET_CTRL_VRING'])
+virtio_15.add_instrumentation_point('virtio.c', ['virtio_queue_set_addr', 'this_is_a_stub_for_virtio_net_ctrl', 0, 2])

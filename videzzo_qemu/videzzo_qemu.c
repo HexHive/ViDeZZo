@@ -360,7 +360,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .arch = "i386",
         .name = "virtio-net",
         .args = "-M q35 -nodefaults "
-        "-device virtio-net,netdev=net0 -netdev user,id=net0",
+        "-device virtio-net,netdev=net0,mq=on,hash=on,rss=on -netdev user,id=net0",
         .mrnames = "*virtio*",
         .file = "hw/net/virtio-net.c",
         .socket = false,
@@ -1224,7 +1224,7 @@ uint64_t dispatch_mmio_write(Event *event) {
                 break;
         }
     }
-    if ((!DisableInputProcessing) && virtio && event->addr == 0xe0004017) {
+    if ((!DisableInputProcessing) && virtio && event->addr == 0xe0004018) {
         event->valu = 0x100;
     }
     switch (__disimm_around_event_size(event->size, 8)) {
