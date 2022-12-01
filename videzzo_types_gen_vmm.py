@@ -1074,13 +1074,15 @@ for i in range(0, 0x100):
 virtio_78 = copy.deepcopy(virtio_75)
 virtio_78.initialize(78, 'BLK')
 virtio_78.add_struct('VIRTIO_BLK_OUTHDR', {
-    'type#0x4': FIELD_CONSTANT | FIELD_FLAG, 'ioprio#0x4': FIELD_RANDOM, 'sector#0x8': FIELD_FLAG,
-    'dwz_sector#0x8': FIELD_FLAG, 'dwz_num_sectors#0x4': FIELD_FLAG, 'dwz_flags#0x4': FIELD_FLAG,
+    'type#0x4': FIELD_CONSTANT | FIELD_FLAG, 'ioprio#0x4': FIELD_RANDOM, 'sector0#0x4': FIELD_FLAG, 'sector1#0x4': FIELD_CONSTANT,
+    'dwz_sector0#0x4': FIELD_FLAG, 'dwz_sector1#0x4': FIELD_CONSTANT, 'dwz_num_sectors#0x4': FIELD_FLAG, 'dwz_flags#0x4': FIELD_FLAG,
     'pad#0x200': FIELD_RANDOM})
 virtio_78.add_constant('VIRTIO_BLK_OUTHDR.type', [0, 1, 2, 4, 8, 11, 13, 5])
 virtio_78.add_flag('VIRTIO_BLK_OUTHDR.type', {0: 1, 1: '30@0', 31: 1})
-virtio_78.add_flag('VIRTIO_BLK_OUTHDR.sector', {0: 21, 21: '43@0'})
-virtio_78.add_flag('VIRTIO_BLK_OUTHDR.dwz_sector', {0: 21, 21: '43@0'})
+virtio_78.add_flag('VIRTIO_BLK_OUTHDR.sector0', {0: 21, 21: '11@0'})
+virtio_78.add_constant('VIRTIO_BLK_OUTHDR.sector1', [0])
+virtio_78.add_flag('VIRTIO_BLK_OUTHDR.dwz_sector0', {0: 21, 21: '11@0'})
+virtio_78.add_constant('VIRTIO_BLK_OUTHDR.dwz_sector1', [0])
 virtio_78.add_flag('VIRTIO_BLK_OUTHDR.dwz_num_sectors', {0: 21, 21: '11@0'})
 virtio_78.add_flag('VIRTIO_BLK_OUTHDR.dwz_flags', {0: 1, 1: '31@0'})
 virtio_78.add_struct('VIRTIO_BLK_INHDR', {'status#0x1': FIELD_RANDOM, 'pad#0x200': FIELD_RANDOM})
