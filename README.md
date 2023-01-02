@@ -79,15 +79,16 @@ first time, we can run `./videzzo_tool/05-deploy.sh -t 86400 -v qemu 0`. See
 large value decided by the running status to make sure every event is dumped,
 and enable `CORPUS`. For example, `DEFAULT_INPUT_MAXSIZE=10000000
 ./qemu-videzzo-i386-target-videzzo-fuzz-ohci -max_len=10000000 -detect_leaks=0
-ohci`
+ohci`. To capture UBSAN bugs, please `export
+UBSAN_OPTIONS=halt_on_error=1:symbolize=1:print_stacktrace=1`.
 
 + 3.2 delta-debug and gen a PoC: run `02-dd.sh -t ABS_PATH_TO_BINARY -s
-ABS_PATH_TO_CORPUS -c ABS_PATH_TO_CRASHING_SEED`. Note that UBSAN bugs need to
-enable "halt_on_error" and the check of "runtime error".
+ABS_PATH_TO_CORPUS -c ABS_PATH_TO_CRASHING_SEED`. To capture UBSAN bugs, please
+use `02-dd.ubsan.sh`.
 
 + 3.3 minimize this PoC: run `06-minimize.sh -t ABS_PATH_TO_BINARY -c
-ABS_PATH_TO_CRASHING_POC`. Note that UBSAN bugs need to enable "halt_on_error"
-and the check of "runtime error".
+ABS_PATH_TO_CRASHING_POC`. To capture UBSAN bugs, please use
+`06-minimize.ubsan.sh`.
 
 + 3.4 you may want to dump this poc and change it: run
 `DEFAULT_INPUT_MAXSIZE=10000000 ./videzzo_tool/videzzo-poc-gen -i binary -o text
