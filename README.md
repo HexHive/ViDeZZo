@@ -84,11 +84,11 @@ UBSAN_OPTIONS=halt_on_error=1:symbolize=1:print_stacktrace=1`.
 
 + 3.2 delta-debug and gen a PoC: run `02-dd.sh -t ABS_PATH_TO_BINARY -s
 ABS_PATH_TO_CORPUS -c ABS_PATH_TO_CRASHING_SEED`. To capture UBSAN bugs, please
-use `02-dd.ubsan.sh`.
+add `-e "runtime error"`.
 
 + 3.3 minimize this PoC: run `06-minimize.sh -t ABS_PATH_TO_BINARY -c
-ABS_PATH_TO_CRASHING_POC`. To capture UBSAN bugs, please use
-`06-minimize.ubsan.sh`.
+ABS_PATH_TO_CRASHING_POC`. To capture UBSAN bugs, please add `-e "runtime
+error"`.
 
 + 3.4 you may want to dump this poc and change it: run
 `DEFAULT_INPUT_MAXSIZE=10000000 ./videzzo_tool/videzzo-poc-gen -i binary -o text
