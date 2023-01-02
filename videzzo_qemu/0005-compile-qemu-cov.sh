@@ -1,8 +1,8 @@
 #!/bin/bash
 
 pushd qemu
-mkdir build-cov-6
-pushd build-cov-6
+mkdir out-cov
+pushd out-cov
 CLANG_COV_DUMP=1 \
 CC=clang CXX=clang++ ../configure \
     --enable-videzzo --enable-fuzzing --enable-debug \

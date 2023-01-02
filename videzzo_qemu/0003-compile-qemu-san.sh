@@ -1,8 +1,8 @@
 #!/bin/bash
 
 pushd qemu
-mkdir build-san-6
-pushd build-san-6
+mkdir out-san
+pushd out-san
 CC=clang CXX=clang++ ../configure \
     --enable-videzzo --enable-fuzzing --enable-debug \
     --disable-werror --enable-sanitizers \

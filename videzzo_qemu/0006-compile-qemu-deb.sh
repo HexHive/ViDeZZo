@@ -1,8 +1,8 @@
 #!/bin/bash
 
 pushd qemu
-mkdir build-deb-6
-pushd build-deb-6
+mkdir out-deb
+pushd out-deb
 CC=clang CXX=clang++ ../configure \
     --enable-videzzo --enable-fuzzing --enable-debug \
     --disable-werror --enable-sanitizers \

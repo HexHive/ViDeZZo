@@ -13,7 +13,15 @@
 #include "qemu/osdep.h"
 #include <wordexp.h>
 #include "hw/core/cpu.h"
+// from commit a2ce7dbd917a18408cf4bfd132578b46c2752a72 (5.2.0?), libqtest.h was
+// moved to tests/qtest/libqos/, and in commit
+// 907b5105f1b9e1af1abbdbb4f2039c7ab105c001 the libqtest.h was moved back
+// (7.1.0).
+#if QEMU_VERSION_MAJOR == 6 || (QEMU_VERSION_MAJOR == 7 && QEMU_VERSION_MICRO == 0)
+#include "tests/qtest/libqos/libqtest.h"
+#else
 #include "tests/qtest/libqtest.h"
+#endif
 #include "exec/address-spaces.h"
 #include "string.h"
 #include "exec/memory.h"
@@ -1770,7 +1778,11 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp) {
     wordexp(cmd_line->str, &result, 0);
     g_string_free(cmd_line, true);
 
+#if QEMU_VERSION_MAJOR < 7 || (QEMU_VERSION_MAJOR == 7 && QEMU_VERSION_MICRO < 2)
     qemu_init(result.we_wordc, result.we_wordv, NULL);
+#else
+    qemu_init(result.we_wordc, result.we_wordv);
+#endif
 
     /* re-enable the rcu atfork, which was previously disabled in qemu_init */
     rcu_enable_atfork();
