@@ -1,14 +1,13 @@
 # ViDeZZo: Dependency-aware Virtual Device Fuzzing Framework
 
 ViDeZZo is a virtual device fuzzing framework considering both intra- and
-inter-message dependencies to balance fuzzing scalability and efficiency. More
-technical details go in to our paper.
+inter-message dependencies to balance fuzzing scalability and efficiency.
 
 Currently, ViDeZZo supports libFuzzer in combination with ASAN and UBSAN.
 
-Currently, ViDeZZo supports QEMU (C) and VirtualBox (C++) covering Audio,
-Storage, Network, USB, and Graphics virtual devices, and covering i386, x86_64,
-ARM, and AArch64 builds.
+Currently, ViDeZZo supports QEMU (6.1.50 and above) and VirtualBox (C++)
+covering Audio, Storage, Network, USB, and Graphics virtual devices, and
+covering i386, x86_64, ARM, and AArch64 builds.
 
 A develop plan is as follows.
 + group mutators are not thread safe in vbox, and reproduction doesn't work either
@@ -90,16 +89,16 @@ enable "halt_on_error" and the check of "runtime error".
 ABS_PATH_TO_CRASHING_POC`. Note that UBSAN bugs need to enable "halt_on_error"
 and the check of "runtime error".
 
-+ 3.4 analyze this minimized PoC: Evaluate security impacts of crashes, fix bugs
-and verify, submit patches and discuss in communities. Apply for CVE and
-advertise if it is necessary. See
-[this](https://github.com/HexHive/virtfuzz-bugs) project for more information.
-
-+ 3.5 modify this PoC to exploit the primitive capability: run
++ 3.4 you may want to dump this poc and change it: run
 `DEFAULT_INPUT_MAXSIZE=10000000 ./videzzo_tool/videzzo-poc-gen -i binary -o text
 -O path/to/text path/to/poc` to deserialize a PoC to a plan text file.  Modify
 the text file and then serialize it: `DEFAULT_INPUT_MAXSIZE=10000000
 ./videzzo_tool/videzzo-poc-gen -i text -o binary -O path/to/poc path/to/binary`.
+
++ 3.5 analyze the minimized PoC: Evaluate security impacts of crashes, report,
+discuss, and submit your patches. Apply for CVE and advertise if it is possible.
+See [this](https://github.com/HexHive/virtfuzz-bugs) project for more
+information.
 
 ## Advanced usage: Source code coverage profiling
 
