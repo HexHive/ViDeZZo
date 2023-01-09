@@ -1545,7 +1545,11 @@ static QGuestAllocator *get_qemu_alloc(QTestState *qts) {
     if (strcmp(TARGET_NAME, "i386") == 0) {
         node = qos_graph_get_node("i386/pc");
     } else if (strcmp(TARGET_NAME, "arm") == 0) {
+#if QEMU_VERSION_MAJOR == 6 && QEMU_VERSION_MICRO < 2
+        node = qos_graph_get_node("arm/raspi2");
+#else
         node = qos_graph_get_node("arm/raspi2b");
+#endif
     } else if (strcmp(TARGET_NAME, "aarch64") == 0) {
         node = qos_graph_get_node("aarch64/xlnx-zcu102");
     } else if (strcmp(TARGET_NAME, "x86_64") == 0) {
