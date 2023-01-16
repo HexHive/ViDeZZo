@@ -1051,7 +1051,7 @@ for i in range(0, 0x100):
 vring.update(vringavail)
 vringused = {'uflags#0x2': FIELD_FLAG, 'uidx#0x2': FIELD_FLAG}
 for i in range(0, 0x100):
-    vringused['uring{}#0x2'.format(i)] = FIELD_FLAG
+    vringused['uring{}#0x8'.format(i)] = FIELD_FLAG
 vring.update(vringused)
 ###################################################################################################################
 virtio_75 = Model('virtio', 75)
