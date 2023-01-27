@@ -51,6 +51,7 @@ RUN apt-get install -y libcurl4-openssl-dev
 RUN apt-get install -y libncurses5
 RUN git config --global --add safe.directory '*'
 Run apt-get install -y glslang-tools llvm
+RUN apt-get install -y bison flex
 
 FROM base as development
 
