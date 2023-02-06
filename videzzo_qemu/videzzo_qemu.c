@@ -29,6 +29,7 @@
 #include "exec/address-spaces.h"
 #include "hw/qdev-core.h"
 #include "hw/pci/pci.h"
+#include "hw/pci/pci_device.h"
 #include "hw/boards.h"
 #include "exec/ioport.h"
 #include "tests/qtest/libqos/pci-pc.h"
