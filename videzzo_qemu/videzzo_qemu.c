@@ -76,6 +76,14 @@ int __llvm_profile_runtime;
 static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
     {
         .arch = "i386",
+        .name = "acpi-erst",
+        .args = "-machine q35 -nodefaults "
+        "-object memory-backend-file,id=erstnvram,mem-path=acpi-erst.backing,size=0x10000,share=on "
+        "-device acpi-erst,memdev=erstnvram",
+        .mrnames = "*acpi-erst*",
+        .file = "hw/acpi/erst.c",
+    },{
+        .arch = "i386",
         .name = "xhci",
         .args = "-machine q35 -nodefaults "
         "-drive file=null-co://,if=none,format=raw,id=disk0 "

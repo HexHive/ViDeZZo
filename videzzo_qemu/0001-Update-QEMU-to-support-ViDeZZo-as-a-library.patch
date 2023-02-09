@@ -150,3 +150,34 @@ index 0000000..b26ee22
 +videzzo_fuzz_ss.add(declare_dependency(
 +  link_args: fuzz_exe_ldflags + ['-Wl,-wrap,abort'])
 +)
+diff --git a/hw/acpi/erst.c b/hw/acpi/erst.c
+index 35007d8..656d859 100644
+--- a/hw/acpi/erst.c
++++ b/hw/acpi/erst.c
+@@ -585,6 +585,10 @@ static unsigned clear_erst_record(ERSTDeviceState *s)
+     return rc;
+ }
+ 
++static void __videzzo_write_exchange_mr(uint64_t addr, uint32_t size) {
++    printf("going to write from 0x%lx to 0x%u\n", addr, size);
++}
++
+ /* ACPI 4.0: 17.4.2.2 Operations - Reading */
+ static unsigned read_erst_record(ERSTDeviceState *s)
+ {
+@@ -624,6 +628,7 @@ static unsigned read_erst_record(ERSTDeviceState *s)
+ 
+         /* Obtain pointer to the exchange buffer */
+         exchange = memory_region_get_ram_ptr(&s->exchange_mr);
++        __videzzo_write_exchange_mr((&s->exchange_mr)->addr, exchange_length);
+         exchange += s->record_offset;
+         /* Obtain pointer to slot in storage */
+         nvram = get_nvram_ptr_by_index(s, index);
+@@ -675,6 +680,7 @@ static unsigned write_erst_record(ERSTDeviceState *s)
+ 
+     /* Obtain pointer to record in the exchange buffer */
+     exchange = memory_region_get_ram_ptr(&s->exchange_mr);
++    __videzzo_write_exchange_mr((&s->exchange_mr)->addr, exchange_length);
+     exchange += s->record_offset;
+ 
+     /* Validate CPER record_length */

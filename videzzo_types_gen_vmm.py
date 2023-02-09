@@ -1034,6 +1034,11 @@ dwc2_74.add_flag('DWC2_USB_MSD_CBW.data_len', {0: 2, 2: '28@0', 30: 2})
 dwc2_74.add_flag('DWC2_USB_MSD_CBW.flags', {0: 7, 7: 1})
 dwc2_74.add_instrumentation_point('hcd-dwc2.c', ['dwc2_handle_packet', 'dma_memory_read', 0, 1])
 ###################################################################################################################
+erst_114 = Model('erst', 114)
+erst_114.add_struct('ERST_BUF', {'erst_buf#0x2000': FIELD_RANDOM})
+erst_114.add_head(['ERST_BUF'])
+erst_114.add_instrumentation_point('erst.c', ['read_erst_record', '__videzzo_write_exchange_mr', 0, 1])
+###################################################################################################################
 # vring.desc  = val
 # vring.avail = val + 0x100 * sizeof(VRingDesc);
 # vring.used  = val.avail + offset(VRingAvail, ring[0x100])
