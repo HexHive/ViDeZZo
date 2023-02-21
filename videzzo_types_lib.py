@@ -258,7 +258,7 @@ class Model(object):
             if initvalue is None:
                 initvalue = 'urand32()'
             # flags.append(('(({0} & ((1 << 0x{1:02x}) - 1)) << 0x{2:02x})'.format(initvalue, length, length_in_total)))
-            flags.append(('(({0} % (1 << 0x{1:02x})) << 0x{2:02x})'.format(initvalue, length, length_in_total)))
+            flags.append(('(({0} % (1u << 0x{1:02x})) << 0x{2:02x})'.format(initvalue, length, length_in_total)))
             length_in_total += int(length)
         sep = '\n    {} | '.format(' ' * self.indent * 4)
         return sep.join(flags)
