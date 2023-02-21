@@ -80,7 +80,7 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .args = "-machine q35 -nodefaults "
         "-object memory-backend-file,id=erstnvram,mem-path=acpi-erst.backing,size=0x10000,share=on "
         "-device acpi-erst,memdev=erstnvram",
-        .mrnames = "*acpi-erst*",
+        .mrnames = "*acpi-erst*,*erst.exchange*",
         .file = "hw/acpi/erst.c",
     },{
         .arch = "i386",
@@ -1410,6 +1410,7 @@ static uint8_t get_memoryregion_addr(MemoryRegion *mr, uint64_t *addr) {
         } else if (strcmp(tmp_mr->name, "nrf51-container") == 0) {
             *addr = tmp_addr;
             return MMIO_ADDRESS;
+        // TODO fix me
         } else if (strcmp(tmp_mr->name, "io") == 0) {
             *addr = tmp_addr;
             return PIO_ADDRESS;
