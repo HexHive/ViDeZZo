@@ -181,3 +181,169 @@ index 35007d8..656d859 100644
      exchange += s->record_offset;
  
      /* Validate CPER record_length */
+diff --git a/hw/acpi/erst.c b/hw/acpi/erst.c
+index 35007d8..64003eb 100644
+--- a/hw/acpi/erst.c
++++ b/hw/acpi/erst.c
+@@ -585,6 +585,10 @@ static unsigned clear_erst_record(ERSTDeviceState *s)
+     return rc;
+ }
+ 
++static void __videzzo_write_exchange_mr(uint64_t addr, uint32_t size) {
++    printf("going to write from 0x%lx to 0x%u\n", addr, size);
++}
++
+ /* ACPI 4.0: 17.4.2.2 Operations - Reading */
+ static unsigned read_erst_record(ERSTDeviceState *s)
+ {
+@@ -624,6 +628,7 @@ static unsigned read_erst_record(ERSTDeviceState *s)
+ 
+         /* Obtain pointer to the exchange buffer */
+         exchange = memory_region_get_ram_ptr(&s->exchange_mr);
++        __videzzo_write_exchange_mr((&s->exchange_mr)->addr, exchange_length);
+         exchange += s->record_offset;
+         /* Obtain pointer to slot in storage */
+         nvram = get_nvram_ptr_by_index(s, index);
+@@ -675,6 +680,7 @@ static unsigned write_erst_record(ERSTDeviceState *s)
+ 
+     /* Obtain pointer to record in the exchange buffer */
+     exchange = memory_region_get_ram_ptr(&s->exchange_mr);
++    __videzzo_write_exchange_mr((&s->exchange_mr)->addr, exchange_length);
+     exchange += s->record_offset;
+ 
+     /* Validate CPER record_length */
+@@ -817,7 +823,7 @@ static void erst_reg_write(void *opaque, hwaddr addr,
+             s->operation = val;
+             break;
+         case ACTION_SET_RECORD_OFFSET:
+-            s->record_offset = s->reg_value;
++            s->record_offset = s->reg_value % 0x2000;
+             break;
+         case ACTION_EXECUTE_OPERATION:
+             if ((uint8_t)s->reg_value == ERST_EXECUTE_OPERATION_MAGIC) {
+diff --git a/hw/display/qxl.c b/hw/display/qxl.c
+index ec712d3..6fcfc05 100644
+--- a/hw/display/qxl.c
++++ b/hw/display/qxl.c
+@@ -1615,7 +1615,7 @@ static void ioport_write(void *opaque, hwaddr addr,
+     uint32_t orig_io_port;
+ 
+     if (d->guest_bug && io_port != QXL_IO_RESET) {
+-        return;
++        io_port = addr = QXL_IO_RESET;
+     }
+ 
+     if (d->revision <= QXL_REVISION_STABLE_V10 &&
+diff --git a/hw/virtio/virtio.c b/hw/virtio/virtio.c
+index f35178f..8615c29 100644
+--- a/hw/virtio/virtio.c
++++ b/hw/virtio/virtio.c
+@@ -2142,12 +2142,49 @@ void virtio_reset(void *opaque)
+     }
+ }
+ 
++static void this_is_a_stub_for_virtio_blk(VirtIODevice *vdev, int n, hwaddr addr) {
++    // virtio_blk_handle_output
++    // printf("== %s %d 0x%08lx\n", vdev->name, n, addr);
++}
++
++static void this_is_a_stub_for_virtio_net_rx(VirtIODevice *vdev, int n, hwaddr addr) {
++    // virtio_net_handle_rx
++    // printf("== %s %d 0x%08lx\n", vdev->name, n, addr);
++}
++
++static void this_is_a_stub_for_virtio_net_tx(VirtIODevice *vdev, int n, hwaddr addr) {
++    // virtio_net_handle_tx_bh
++    // printf("== %s %d 0x%08lx\n", vdev->name, n, addr);
++}
++
++static void this_is_a_stub_for_virtio_net_ctrl(VirtIODevice *vdev, int n, hwaddr addr) {
++    // virtio_net_handle_ctrl
++    // printf("== %s %d 0x%08lx\n", vdev->name, n, addr);
++}
++
++extern uint64_t AroundInvalidAddress(uint64_t physaddr);
+ void virtio_queue_set_addr(VirtIODevice *vdev, int n, hwaddr addr)
+ {
++    if (strcmp(vdev->name, "virtio-blk") == 0) {
++        n = 0;
++    } else if (strcmp(vdev->name, "virtio-net") == 0 && n == 0) {
++        n = n % 3;
++    }
+     if (!vdev->vq[n].vring.num) {
+         return;
+     }
+-    vdev->vq[n].vring.desc = addr;
++    uint64_t addr0 = AroundInvalidAddress(addr);
++    vdev->vq[n].vring.desc = addr0;
++    if (strcmp(vdev->name, "virtio-blk") == 0 && n == 0) {
++        this_is_a_stub_for_virtio_blk(vdev, n, addr0);
++    } else if (strcmp(vdev->name, "virtio-net") == 0 && n == 0) {
++        this_is_a_stub_for_virtio_net_rx(vdev, n, addr0);
++    } else if (strcmp(vdev->name, "virtio-net") == 0 && n == 1) {
++        this_is_a_stub_for_virtio_net_tx(vdev, n, addr0);
++    } else if (strcmp(vdev->name, "virtio-net") == 0 && n == 2) {
++        this_is_a_stub_for_virtio_net_ctrl(vdev, n, addr0);
++    }
++
+     virtio_queue_update_rings(vdev, n);
+ }
+ 
+@@ -2170,15 +2207,7 @@ void virtio_queue_set_rings(VirtIODevice *vdev, int n, hwaddr desc,
+ 
+ void virtio_queue_set_num(VirtIODevice *vdev, int n, int num)
+ {
+-    /* Don't allow guest to flip queue between existent and
+-     * nonexistent states, or to set it to an invalid size.
+-     */
+-    if (!!num != !!vdev->vq[n].vring.num ||
+-        num > VIRTQUEUE_MAX_SIZE ||
+-        num < 0) {
+-        return;
+-    }
+-    vdev->vq[n].vring.num = num;
++    vdev->vq[n].vring.num = 0x100;
+ }
+ 
+ VirtQueue *virtio_vector_first_queue(VirtIODevice *vdev, uint16_t vector)
+@@ -2193,6 +2222,15 @@ VirtQueue *virtio_vector_next_queue(VirtQueue *vq)
+ 
+ int virtio_queue_get_num(VirtIODevice *vdev, int n)
+ {
++    if (strcmp(vdev->name, "virtio-blk") == 0 && n == 0) {
++        vdev->vq[n].vring.num = 0x100;
++    } else if (strcmp(vdev->name, "virtio-net") == 0 && n == 0) {
++        vdev->vq[n].vring.num = 0x100;
++    } else if (strcmp(vdev->name, "virtio-net") == 0 && n == 1) {
++        vdev->vq[n].vring.num = 0x100;
++    } else if (strcmp(vdev->name, "virtio-net") == 0 && n == 2) {
++        vdev->vq[n].vring.num = 0x100;
++    }
+     return vdev->vq[n].vring.num;
+ }
+ 
+@@ -2256,6 +2294,11 @@ static void virtio_queue_notify_vq(VirtQueue *vq)
+ 
+ void virtio_queue_notify(VirtIODevice *vdev, int n)
+ {
++    if (strcmp(vdev->name, "virtio-blk") == 0) {
++        n = 0;
++    } else if (strcmp(vdev->name, "virtio-net") == 0) {
++        n = n % 3;
++    }
+     VirtQueue *vq = &vdev->vq[n];
+ 
+     if (unlikely(!vq->vring.desc || vdev->broken)) {
+@@ -3566,12 +3609,6 @@ void virtio_device_set_child_bus_name(VirtIODevice *vdev, char *bus_name)
+ 
+ void G_GNUC_PRINTF(2, 3) virtio_error(VirtIODevice *vdev, const char *fmt, ...)
+ {
+-    va_list ap;
+-
+-    va_start(ap, fmt);
+-    error_vreport(fmt, ap);
+-    va_end(ap);
+-
+     if (virtio_vdev_has_feature(vdev, VIRTIO_F_VERSION_1)) {
+         vdev->status = vdev->status | VIRTIO_CONFIG_S_NEEDS_RESET;
+         virtio_notify_config(vdev);
