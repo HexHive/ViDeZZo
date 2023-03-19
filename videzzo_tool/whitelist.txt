@@ -1,0 +1,17 @@
+# RedHat list
+# network
+e1000
+virtio-net
+rtl8139
+# graphics
+qxl
+vga
+bochs
+# storage
+ide
+virtio-blk
+# sound
+ac97
+es1370
+# serial
+virtio-serial
