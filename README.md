@@ -14,6 +14,10 @@ A develop plan is as follows.
 + consider all pitfalls and maybe reimplement the grammar interpreter
 + support the shared bitmap when the fork server is enabled
 
+Part of virtual device code is not covered by ViDeZZo due to the lack of VM
+snapshot/migration and device plug in/out. Nevertheless, we do not have a plan
+to support them.
+
 The usage of ViDeZZo is as follows.
 
 ## Quick start
@@ -25,25 +29,45 @@ sudo docker build -t videzzo:latest .
 sudo docker run --rm -it -v $PWD:/root/videzzo videzzo:latest /bin/bash
 ```
 
+More adjustment is necessary for VirtualBox as VirtualBox would install its
+kernel modules into the host system.
+
+```
+sudo docker run --rm -it \
+    -v /usr/src:/usr/src \
+    -v /dev:/dev \
+    -v /lib/modules:/lib/modules \
+    --privileged \
+    -v $PWD:/root/videzzo videzzo:latest \
+    /bin/bash
+```
+
 We recommend running ViDeZZo in a docker container.
 
-We also tested ViDeZZo on a native Ubuntu 20.04 host.
+We also tested ViDeZZo on a native Ubuntu 20.04 host, espicailly for VirtualBox.
+Note that, testing VirtualBox virtual devices requires `sudo` or a root user.
 
-For artifact evaluation, it's not necessary to download the tool chain. `sudo
-docker build --target base -t videzzo:latest .` is enough.
-
-Step 2: build and test QEMU and VirtualBox
+Step 2: build and test QEMU and VirtualBox (artifact evaluation)
 
 ``` bash
 cd videzzo
-make qemu vbox
+make qemu qemu-coverage
+make vbox vbox-coverage
 ```
 
-To test a virtual device, go to `videzzo_qemu/out-san` or
-`videzzo_vbox/out-san`, and then run binary there. Usually, we enable ASAN and
-UBSAN. Use `-detect_leaks=0` as we do not prefer small leakages.
+`make qemu` compiles the latest QEMU with ASAN and UBSAN and `make qemu-coverage`
+compiles the latest QEMU with source code coverage profiling. For the fuzzing
+only, go to `videzzo_qemu/out-san` and run binary there.  Use `-detect_leaks=0`
+as we do not prefer small leakages.  For the coverage collection, go to
+`videzzo_qemu/out-cov` and run binary there. This also applies to VirtualBox.
 
-Note that, testing VirtualBox virtual devices requires `sudo` or a root user.
+We develop scripts to make life easy. Let's say we want to fuzz QEMU ac97 for 60
+second in pure fuzzing mode and coverage collection mode.
+
+``` bash
+bash -x videzzo_tool/01-quick-san.sh qemu i386 ac97 60
+bash -x videzzo_tool/04-quick-cov.sh qemu i386 ac97 60
+```
 
 ## Advanced usage - Fuzzing process
 
@@ -101,20 +125,26 @@ discuss, and submit your patches. Apply for CVE and advertise if it is possible.
 See [this](https://github.com/HexHive/virtfuzz-bugs) project for more
 information.
 
-## Advanced usage: Source code coverage profiling
+## Q&A about the toolchain
 
-With source code coverage profiling, we know what we can or cannot improve. To
-enable the profiling, `make qemu-cov` or `make vbox-cov`, and then run binary in
-`videzzo_qemu/out-cov` or `videzzo_vbox/out-cov`. Next, pick up any uncover code
-and update the ViDeZZo to support it.
+With the command line in Step 1, the toolchain (clang-13) is automatically
+downloaded into the docker image. You can also [build the toolchain
+yourself](https://github.com/cyruscyliu/videzzo-llvm-project). In this way, you
+need to adjust the command lines a little bit.
 
-Part of code is not covered by ViDeZZo due to the following reasons. Currently,
-we do not have a plan to support them.
-
-+ VM Snapshot
-+ Device plug in/out
+```
+sudo docker build --target base -t videzzo:latest .
+sudo docker run --rm \
+    -v $PWD/videzzo-llvm-project:/root/llvm-project \
+    -v $PWD/videzzo:/root/videzzo \
+    -v /usr/src:/usr/src \
+    -v /dev:/dev \
+    -v /lib/modules:/lib/modules \
+    --privileged \
+    -it videzzo:latest /bin/bash
+```
 
 ## Contribution
 
-If any questions and ideas, please do not hesitate to raise an issue or a pull
-request.
+If any questions and ideas, please do not hesitate to raise an issue. A pull
+request is also welcome!

@@ -1,10 +1,34 @@
 #!/bin/bash
 
-# usage: bash -x 01-quick-san.sh qemu|vbox i386|x86_64|arm|aarch64 ac97 60
+usage="01-quick-san.sh qemu|vbox i386|x86_64|arm|aarch64 target timeout_in_second"
 vmm=$1
 arch=$2
 target=$3
 timeout=$4
+
+if [ -z $vmm ]; then
+    echo "VMM is migging"
+    echo $usage
+    exit 1
+fi
+
+if [ -z $arch ]; then
+    echo "architecture is migging"
+    echo $usage
+    exit 1
+fi
+
+if [ -z $target ]; then
+    echo "target is missing"
+    echo $usage
+    exit 1
+fi
+
+if [ -z $timeout ]; then
+    echo "timeout in second is missing"
+    echo $usage
+    exit 1
+fi
 
 # stage 1
 pushd videzzo_${vmm}/out-san

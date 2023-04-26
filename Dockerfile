@@ -29,6 +29,7 @@ RUN rm /usr/bin/objcopy; ln -s /usr/local/bin/objcopy /usr/bin/objcopy
 RUN apt-get install -y gdb
 RUN wget -q -O ~/.gdbinit-gef.py https://raw.githubusercontent.com/hugsy/gef/dev/gef.py
 RUN echo source /root/.gdbinit-gef.py >> ~/.gdbinit
+ENV LC_CTYPE=C.UTF-8
 
 # virtualbox
 RUN apt-get install -y acpica-tools chrpath doxygen g++-multilib libasound2-dev libcap-dev \
@@ -57,6 +58,8 @@ RUN apt-get install -y libspice-protocol-dev libspice-server-dev
 FROM base as development
 
 # update llvm toolchains
+RUN python3 -m pip install --upgrade --no-cache-dir gdown \
+    --disable-pip-version-check --root-user-action=ignore
 RUN mkdir llvm-project
 RUN cd llvm-project && gdown https://drive.google.com/uc?id=1bHHYPwpmFaEvhkNcZuCa_Fbk8A41IEJr && \
 tar xf llvm-project-13.tar.gz && cd $OLDPWD
