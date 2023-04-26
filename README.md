@@ -136,6 +136,7 @@ need to adjust the command lines a little bit.
 sudo docker build --target base -t videzzo:latest .
 sudo docker run --rm \
     -v $PWD/videzzo-llvm-project:/root/llvm-project \
+    -e PATH=$PATH:/root/llvm-project/build-custom/bin \
     -v $PWD/videzzo:/root/videzzo \
     -v /usr/src:/usr/src \
     -v /dev:/dev \
