@@ -31,9 +31,9 @@ index 8a8c415..f32b075 100644
 +  qemu_cflags += ['-flegacy-pass-manager']
 +endif
 +
- # Specify linker-script with add_project_link_arguments so that it is not placed
- # within a linker --start-group/--end-group pair
  if get_option('fuzzing')
+   # Specify a filter to only instrument code that is directly related to
+   # virtual-devices.
 @@ -2889,6 +2894,7 @@ qmp_ss = ss.source_set()
  qom_ss = ss.source_set()
  softmmu_ss = ss.source_set()
