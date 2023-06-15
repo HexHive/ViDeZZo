@@ -307,3 +307,35 @@ index f35178f..8615c29 100644
      if (virtio_vdev_has_feature(vdev, VIRTIO_F_VERSION_1)) {
          vdev->status = vdev->status | VIRTIO_CONFIG_S_NEEDS_RESET;
          virtio_notify_config(vdev);
+diff --git a/hw/virtio/virtio-pci.c b/hw/virtio/virtio-pci.c
+index edbc0da..ba5b7af 100644
+--- a/hw/virtio/virtio-pci.c
++++ b/hw/virtio/virtio-pci.c
+@@ -415,8 +415,14 @@ static void virtio_ioport_write(void *opaque, uint32_t addr, uint32_t val)
+             virtio_queue_set_addr(vdev, vdev->queue_sel, pa);
+         break;
+     case VIRTIO_PCI_QUEUE_SEL:
+-        if (val < VIRTIO_QUEUE_MAX)
++        if (val < VIRTIO_QUEUE_MAX) {
++            if (strcmp(vdev->name, "virtio-blk") == 0) {
++                val = 0;
++            } else if (strcmp(vdev->name, "virtio-net") == 0) {
++                val = val % 3;
++            }
+             vdev->queue_sel = val;
++        }
+         break;
+     case VIRTIO_PCI_QUEUE_NOTIFY:
+         if (val < VIRTIO_QUEUE_MAX) {
+@@ -1583,6 +1589,11 @@ static void virtio_pci_common_write(void *opaque, hwaddr addr,
+         break;
+     case VIRTIO_PCI_COMMON_Q_SELECT:
+         if (val < VIRTIO_QUEUE_MAX) {
++            if (strcmp(vdev->name, "virtio-blk") == 0) {
++                val = 0;
++            } else if (strcmp(vdev->name, "virtio-net") == 0) {
++                val = val % 3;
++            }
+             vdev->queue_sel = val;
+         }
+         break;
