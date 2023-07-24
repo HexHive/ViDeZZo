@@ -195,6 +195,14 @@ static const ViDeZZoFuzzTargetConfig predefined_configs[] = {
         .socket = true,
     },{
         .arch = "i386",
+        .name = "tulip",
+        .args = "-M q35 -nodefaults "
+        "-device tulip,netdev=net0 -netdev user,id=net0",
+        .mrnames = "*tulip-io*,*tulip-mem*",
+        .file = "hw/net/tulip.c",
+        .socket = true,
+    },{
+        .arch = "i386",
         .name = "ac97",
         .args = "-machine q35 -nodefaults "
         "-device ac97,audiodev=snd0 -audiodev none,id=snd0 -nodefaults",

@@ -449,6 +449,35 @@ vmxnet3_27.add_point_to('Vmxnet3_DriverShared.mfTablePA', ['Vmxnet3_MACADDR'], a
 vmxnet3_27.add_head(['Vmxnet3_DriverShared'])
 vmxnet3_27.add_instrumentation_point('vmxnet3.c', ['vmxnet3_activate_device', 'vmxnet3_verify_driver_magic', 0, 1])
 ###################################################################################################################
+tulip_28 = Model('tulip', 28)
+tulip_28.add_struct('TULIP_DESCRIPTOR_RX', {
+    'status#0x4': FIELD_FLAG, 'control#0x4': FIELD_FLAG,
+    'buf_addr1#4': FIELD_POINTER, 'buf_addr2#4': FIELD_POINTER})
+tulip_28.add_flag('TULIP_DESCRIPTOR_RX.status', {
+    0: 1, 1: 1, 2: 2, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1,
+    9: 1, 10: 1, 11: 1, 12: 2, 14: 1, 15: 1, 16: 14, 30: 1, 31: 1})
+tulip_28.add_flag('TULIP_DESCRIPTOR_RX.control', {
+    0: 11, 11: '11@0x7ff', 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
+tulip_28.add_struct('TULIP_BUF_RX', {'tulip_buf#0x1000': FIELD_RANDOM})
+tulip_28.add_point_to('TULIP_DESCRIPTOR_RX.buf_addr1', ['TULIP_BUF_RX'])
+tulip_28.add_point_to('TULIP_DESCRIPTOR_RX.buf_addr2', ['TULIP_BUF_RX'])
+tulip_28.add_head(['TULIP_DESCRIPTOR_RX'])
+tulip_28.add_instrumentation_point('tulip.c', ['tulip_receive', 'tulip_desc_read', 0, 1])
+tulip_29 = Model('tulip', 29)
+tulip_29.add_struct('TULIP_DESCRIPTOR_TX', {
+    'status#0x4': FIELD_FLAG, 'control#0x4': FIELD_FLAG,
+    'buf_addr1#4': FIELD_POINTER, 'buf_addr2#4': FIELD_POINTER})
+tulip_29.add_flag('TULIP_DESCRIPTOR_TX.status', {
+    0: 1, 1: 1, 2: 2, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1,
+    9: 1, 10: 1, 11: 1, 12: 2, 14: 1, 15: 1, 16: 14, 30: 1, 31: 1})
+tulip_29.add_flag('TULIP_DESCRIPTOR_TX.control', {
+    0: '11@0xc0', 11: 11, 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1})
+tulip_29.add_struct('TULIP_BUF_TX', {'tulip_buf#0x1000': FIELD_RANDOM})
+tulip_29.add_point_to('TULIP_DESCRIPTOR_TX.buf_addr1', ['TULIP_BUF_TX'])
+tulip_29.add_point_to('TULIP_DESCRIPTOR_TX.buf_addr2', ['TULIP_BUF_TX'])
+tulip_29.add_head(['TULIP_DESCRIPTOR_TX'])
+tulip_29.add_instrumentation_point('tulip.c', ['tulip_xmit_list_update', 'tulip_desc_read', 0, 1])
+###################################################################################################################
 # floppy also uses i8257_dma_read_memory but we only instrument once
 floppy_40 = Model('floppy', 40)
 floppy_40.add_struct('FLOPPY_BUF', {'buf#0x100': FIELD_RANDOM})
