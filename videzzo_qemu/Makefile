@@ -11,7 +11,8 @@ CFLAGS ?=
 patch:
 	cp 0001-Update-QEMU-to-support-ViDeZZo-as-a-library.patch qemu/
 	cp 0001-fix-assertion-in-hw-usb-core.c.patch qemu/
-	cd qemu && patch -p 1 < 0001-Update-QEMU-to-support-ViDeZZo-as-a-library.patch && \
+	cd qemu && git checkout c1eb2ddf0f8075faddc5f7c3d39feae3e8e9d6b4 && \
+		patch -p 1 < 0001-Update-QEMU-to-support-ViDeZZo-as-a-library.patch && \
 		patch -p 1 < 0001-fix-assertion-in-hw-usb-core.c.patch && \
 		./configure && make update-buildoptions && \
 		cd $(OLDPWD)
