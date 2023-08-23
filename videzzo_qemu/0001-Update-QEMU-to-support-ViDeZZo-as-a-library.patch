@@ -181,24 +181,11 @@ index 35007d8..656d859 100644
      exchange += s->record_offset;
  
      /* Validate CPER record_length */
-diff --git a/hw/display/qxl.c b/hw/display/qxl.c
-index ec712d3..6fcfc05 100644
---- a/hw/display/qxl.c
-+++ b/hw/display/qxl.c
-@@ -1615,7 +1615,7 @@ static void ioport_write(void *opaque, hwaddr addr,
-     uint32_t orig_io_port;
- 
-     if (d->guest_bug && io_port != QXL_IO_RESET) {
--        return;
-+        io_port = addr = QXL_IO_RESET;
-     }
- 
-     if (d->revision <= QXL_REVISION_STABLE_V10 &&
 diff --git a/hw/virtio/virtio.c b/hw/virtio/virtio.c
 index f35178f..8615c29 100644
 --- a/hw/virtio/virtio.c
 +++ b/hw/virtio/virtio.c
-@@ -2142,12 +2142,49 @@ void virtio_reset(void *opaque)
+@@ -2141,12 +2141,90 @@ void virtio_reset(void *opaque)
      }
  }
  
@@ -222,20 +209,53 @@ index f35178f..8615c29 100644
 +    // printf("== %s %d 0x%08lx\n", vdev->name, n, addr);
 +}
 +
++static void this_is_a_stub_for_virtio_serial_receiveq(VirtIODevice *vdev, int n, hwaddr addr) {
++    // virtio_serial_receiveq
++    // printf("== %s %d 0x%08lx\n", vdev->name, n, addr);
++}
++
++static void this_is_a_stub_for_virtio_serial_transmitq(VirtIODevice *vdev, int n, hwaddr addr) {
++    // virtio_serial_transmitq
++    // printf("== %s %d 0x%08lx\n", vdev->name, n, addr);
++}
++
++static void this_is_a_stub_for_virtio_serial_receiveq_ctrl(VirtIODevice *vdev, int n, hwaddr addr) {
++    // virtio_serial_receiveq_ctrl
++    // printf("== %s %d 0x%08lx\n", vdev->name, n, addr);
++}
++
++// comments vv used to debug the grammar
++static void this_is_a_stub_for_virtio_serial_transmitq_ctrl(VirtIODevice *vdev, int n, hwaddr addr) {
++    // virtio_serial_transmitq_ctrl
++    // printf("== %s %d 0x%08lx\n", vdev->name, n, addr);
++}
++
 +extern uint64_t AroundInvalidAddress(uint64_t physaddr);
  void virtio_queue_set_addr(VirtIODevice *vdev, int n, hwaddr addr)
  {
++    // make sure that we use the correct virtqueue for each device
++    // for efficiency
 +    if (strcmp(vdev->name, "virtio-blk") == 0) {
 +        n = 0;
-+    } else if (strcmp(vdev->name, "virtio-net") == 0 && n == 0) {
++    } else if (strcmp(vdev->name, "virtio-net") == 0) {
 +        n = n % 3;
++    } else if (strcmp(vdev->name, "virtio-serial") == 0) {
++        n = n % 4;
 +    }
++
      if (!vdev->vq[n].vring.num) {
          return;
      }
 -    vdev->vq[n].vring.desc = addr;
-+    uint64_t addr0 = AroundInvalidAddress(addr);
++    uint64_t addr0 = AroundInvalidAddress(addr); // DMA address 
 +    vdev->vq[n].vring.desc = addr0;
++    // stubs added automatically by modified llvm into other emulated devices
++    // that use pci_dma_read
++    // virtio is more complicated, so need to identify dma bufs manually
++    // the stubs tell videzzo where the dma buf address is, and to fill it
++    // what a 'trigger message' is must be known statically, so that
++    // trigger-action protocol can be triggered
++    // if we can control the dma buf address, these stubs would not be needed
 +    if (strcmp(vdev->name, "virtio-blk") == 0 && n == 0) {
 +        this_is_a_stub_for_virtio_blk(vdev, n, addr0);
 +    } else if (strcmp(vdev->name, "virtio-net") == 0 && n == 0) {
@@ -244,30 +264,25 @@ index f35178f..8615c29 100644
 +        this_is_a_stub_for_virtio_net_tx(vdev, n, addr0);
 +    } else if (strcmp(vdev->name, "virtio-net") == 0 && n == 2) {
 +        this_is_a_stub_for_virtio_net_ctrl(vdev, n, addr0);
++    } else if (strcmp(vdev->name, "virtio-serial") == 0 && n == 0) {
++        this_is_a_stub_for_virtio_serial_receiveq(vdev, n, addr0);
++    } else if (strcmp(vdev->name, "virtio-serial") == 0 && n == 1) {
++        this_is_a_stub_for_virtio_serial_transmitq(vdev, n, addr0);
++    } else if (strcmp(vdev->name, "virtio-serial") == 0 && n == 2) {
++        this_is_a_stub_for_virtio_serial_receiveq_ctrl(vdev, n, addr0);
++    } else if (strcmp(vdev->name, "virtio-serial") == 0 && n == 3) {
++        this_is_a_stub_for_virtio_serial_transmitq_ctrl(vdev, n, addr0);
 +    }
 +
      virtio_queue_update_rings(vdev, n);
  }
- 
-@@ -2170,15 +2207,7 @@ void virtio_queue_set_rings(VirtIODevice *vdev, int n, hwaddr desc,
- 
- void virtio_queue_set_num(VirtIODevice *vdev, int n, int num)
- {
--    /* Don't allow guest to flip queue between existent and
--     * nonexistent states, or to set it to an invalid size.
--     */
--    if (!!num != !!vdev->vq[n].vring.num ||
--        num > VIRTQUEUE_MAX_SIZE ||
--        num < 0) {
--        return;
--    }
--    vdev->vq[n].vring.num = num;
-+    vdev->vq[n].vring.num = 0x100;
+
+@@ -2190,8 +2268,27 @@ VirtQueue *virtio_vector_next_queue(VirtQueue *vq)
+     return QLIST_NEXT(vq, node);
  }
  
- VirtQueue *virtio_vector_first_queue(VirtIODevice *vdev, uint16_t vector)
-@@ -2193,6 +2222,15 @@ VirtQueue *virtio_vector_next_queue(VirtQueue *vq)
- 
++// size of data in vring_used / vring_avail buffers
++// hardcode to 0x100 so that the bufs will be filled with data
  int virtio_queue_get_num(VirtIODevice *vdev, int n)
  {
 +    if (strcmp(vdev->name, "virtio-blk") == 0 && n == 0) {
@@ -278,11 +293,19 @@ index f35178f..8615c29 100644
 +        vdev->vq[n].vring.num = 0x100;
 +    } else if (strcmp(vdev->name, "virtio-net") == 0 && n == 2) {
 +        vdev->vq[n].vring.num = 0x100;
++    } else if (strcmp(vdev->name, "virtio-serial") == 0 && n == 0) {
++        vdev->vq[n].vring.num = 0x100;
++    } else if (strcmp(vdev->name, "virtio-serial") == 0 && n == 1) {
++        vdev->vq[n].vring.num = 0x100;
++    } else if (strcmp(vdev->name, "virtio-serial") == 0 && n == 2) {
++        vdev->vq[n].vring.num = 0x100;
++    } else if (strcmp(vdev->name, "virtio-serial") == 0 && n == 3) {
++        vdev->vq[n].vring.num = 0x100;
 +    }
      return vdev->vq[n].vring.num;
  }
  
-@@ -2256,6 +2294,11 @@ static void virtio_queue_notify_vq(VirtQueue *vq)
+@@ -2255,6 +2352,13 @@ static void virtio_queue_notify_vq(VirtQueue *vq)
  
  void virtio_queue_notify(VirtIODevice *vdev, int n)
  {
@@ -290,11 +313,13 @@ index f35178f..8615c29 100644
 +        n = 0;
 +    } else if (strcmp(vdev->name, "virtio-net") == 0) {
 +        n = n % 3;
++    } else if (strcmp(vdev->name, "virtio-serial") == 0) {
++        n = n % 4;
 +    }
      VirtQueue *vq = &vdev->vq[n];
  
      if (unlikely(!vq->vring.desc || vdev->broken)) {
-@@ -3566,12 +3609,6 @@ void virtio_device_set_child_bus_name(VirtIODevice *vdev, char *bus_name)
+@@ -3562,12 +3666,6 @@ void virtio_device_set_child_bus_name(VirtIODevice *vdev, char *bus_name)
  
  void G_GNUC_PRINTF(2, 3) virtio_error(VirtIODevice *vdev, const char *fmt, ...)
  {
@@ -311,7 +336,7 @@ diff --git a/hw/virtio/virtio-pci.c b/hw/virtio/virtio-pci.c
 index edbc0da..ba5b7af 100644
 --- a/hw/virtio/virtio-pci.c
 +++ b/hw/virtio/virtio-pci.c
-@@ -415,8 +415,14 @@ static void virtio_ioport_write(void *opaque, uint32_t addr, uint32_t val)
+@@ -415,8 +415,16 @@ static void virtio_ioport_write(void *opaque, uint32_t addr, uint32_t val)
              virtio_queue_set_addr(vdev, vdev->queue_sel, pa);
          break;
      case VIRTIO_PCI_QUEUE_SEL:
@@ -321,13 +346,15 @@ index edbc0da..ba5b7af 100644
 +                val = 0;
 +            } else if (strcmp(vdev->name, "virtio-net") == 0) {
 +                val = val % 3;
++            } else if (strcmp(vdev->name, "virtio-serial") == 0) {
++                val = val % 4;
 +            }
              vdev->queue_sel = val;
 +        }
          break;
      case VIRTIO_PCI_QUEUE_NOTIFY:
          if (val < VIRTIO_QUEUE_MAX) {
-@@ -1583,6 +1589,11 @@ static void virtio_pci_common_write(void *opaque, hwaddr addr,
+@@ -1583,6 +1591,13 @@ static void virtio_pci_common_write(void *opaque, hwaddr addr,
          break;
      case VIRTIO_PCI_COMMON_Q_SELECT:
          if (val < VIRTIO_QUEUE_MAX) {
@@ -335,6 +362,8 @@ index edbc0da..ba5b7af 100644
 +                val = 0;
 +            } else if (strcmp(vdev->name, "virtio-net") == 0) {
 +                val = val % 3;
++            } else if (strcmp(vdev->name, "virtio-serial") == 0) {
++                val = val % 4;
 +            }
              vdev->queue_sel = val;
          }

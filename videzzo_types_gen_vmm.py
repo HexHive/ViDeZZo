@@ -1119,6 +1119,7 @@ for i in range(0, 0x100):
     virtio_78.add_constant('VIRTIO_BLK_VRING.len{}'.format(i), [0x210, 0x201, 0x20]) # block size
     virtio_78.add_point_to('VIRTIO_BLK_VRING.addr{}'.format(i), ['VIRTIO_BLK_OUTHDR', 'VIRTIO_BLK_INHDR'],
                            flags=['VIRTIO_BLK_VRING.flags{}.1'.format(i)])
+    # makes an addr field point to another data structure - struct names are videzzo specific
 virtio_78.add_head(['VIRTIO_BLK_VRING'])
 virtio_78.add_instrumentation_point('virtio.c', ['virtio_queue_set_addr', 'this_is_a_stub_for_virtio_blk', 0, 2])
 ###################################################################################################################
@@ -1195,3 +1196,30 @@ for i in range(0, 0x100):
     ], flags=['VIRTIO_NET_CTRL_VRING.flags{}.1'.format(i), 'VIRTIO_NET_CTRL_VRING.flags{}.4'.format(i)])
 virtio_15.add_head(['VIRTIO_NET_CTRL_VRING'])
 virtio_15.add_instrumentation_point('virtio.c', ['virtio_queue_set_addr', 'this_is_a_stub_for_virtio_net_ctrl', 0, 2])
+#######################################################################################
+virtio_114 = copy.deepcopy(virtio_75)
+virtio_114.initialize(114, 'SERIAL_RECEIVEQ')
+virtio_114.add_head(['VIRTIO_SERIAL_RECEIVEQ_VRING'])
+virtio_114.add_instrumentation_point('virtio.c', ['virtio_queue_set_addr', 'this_is_a_stub_for_virtio_serial_receiveq', 0, 2])
+#######################################################################################
+virtio_115 = copy.deepcopy(virtio_75)
+virtio_115.initialize(115, 'SERIAL_TRANSMITQ')
+virtio_115.add_head(['VIRTIO_SERIAL_TRANSMITQ_VRING'])
+virtio_115.add_instrumentation_point('virtio.c', ['virtio_queue_set_addr', 'this_is_a_stub_for_virtio_serial_transmitq', 0, 2])
+#######################################################################################
+virtio_116 = copy.deepcopy(virtio_75)
+virtio_116.initialize(116, 'SERIAL_RECEIVEQ_CTRL')
+virtio_116.add_head(['VIRTIO_SERIAL_RECEIVEQ_CTRL_VRING'])
+virtio_116.add_instrumentation_point('virtio.c', ['virtio_queue_set_addr', 'this_is_a_stub_for_virtio_serial_receiveq_ctrl', 0, 2])
+#######################################################################################
+virtio_117 = copy.deepcopy(virtio_75)
+virtio_117.initialize(117, 'SERIAL_TRANSMITQ_CTRL')
+virtio_117.add_head(['VIRTIO_SERIAL_TRANSMITQ_CTRL_VRING'])
+virtio_117.add_instrumentation_point('virtio.c', ['virtio_queue_set_addr', 'this_is_a_stub_for_virtio_serial_transmitq_ctrl', 0, 2])
+virtio_117.add_struct('VIRTIO_SERIAL_TRANSMITQ_CTRL', {
+    'id#0x4': FIELD_CONSTANT, 'event#0x2': FIELD_CONSTANT, 'value#0x2': FIELD_RANDOM})
+virtio_117.add_constant('VIRTIO_SERIAL_TRANSMITQ_CTRL.id', [0])
+virtio_117.add_constant('VIRTIO_SERIAL_TRANSMITQ_CTRL.event', [0, 1, 2, 3, 4, 5, 6, 7])
+for i in range(0, 0x100):
+    virtio_117.add_constant('VIRTIO_SERIAL_TRANSMITQ_CTRL_VRING.len{}'.format(i), [0x8]) # block size
+    virtio_117.add_point_to('VIRTIO_SERIAL_TRANSMITQ_CTRL_VRING.addr{}'.format(i), ['VIRTIO_SERIAL_TRANSMITQ_CTRL'])
