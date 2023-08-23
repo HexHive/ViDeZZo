@@ -27,7 +27,7 @@ RUN rm /usr/bin/objcopy; ln -s /usr/local/bin/objcopy /usr/bin/objcopy
 
 # update gdb
 RUN apt-get install -y gdb
-RUN wget -q -O ~/.gdbinit-gef.py https://raw.githubusercontent.com/hugsy/gef/dev/gef.py
+RUN wget -q -O ~/.gdbinit-gef.py https://raw.githubusercontent.com/hugsy/gef/main/gef.py
 RUN echo source /root/.gdbinit-gef.py >> ~/.gdbinit
 ENV LC_CTYPE=C.UTF-8
 
