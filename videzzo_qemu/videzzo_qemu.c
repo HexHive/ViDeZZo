@@ -1652,6 +1652,10 @@ static void videzzo_qemu_pre() {
 #ifdef CLANG_COV_DUMP
     llvm_profile_initialize_file(true);
 #endif
+
+    if (getenv("VIDEZZO_FORK")) {
+        counter_shm_init();
+    }
 }
 
 // This is called in LLVMFuzzerInitialize

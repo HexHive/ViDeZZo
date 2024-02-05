@@ -19,30 +19,32 @@ index b1c161c..42dfd3d 100644
  #define O_LARGEFILE 0
  #endif
 diff --git a/meson.build b/meson.build
-index 8a8c415..f32b075 100644
+index b5d6dc9..6b1bfe0 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -199,6 +199,11 @@ if get_option('gprof')
-   qemu_ldflags += ['-p']
+@@ -481,6 +481,13 @@ if host_os != 'sunos' and not get_option('tsan')
+   qemu_ldflags += cc.get_supported_link_arguments('-Wl,--warn-common')
  endif
  
 +if get_option('videzzo')
 +  qemu_cflags += ['-videzzo-instrumentation=' + (meson.current_source_dir() / 'videzzo_qemu_types.yaml')]
 +  qemu_cflags += ['-flegacy-pass-manager']
++  add_project_link_arguments(['-Wl,-T,',
++    (meson.current_source_dir() / 'tests/qtest/videzzo/videzzo_fork.ld')], native: false, language: all_languages)
 +endif
 +
  if get_option('fuzzing')
    # Specify a filter to only instrument code that is directly related to
    # virtual-devices.
-@@ -2889,6 +2894,7 @@ qmp_ss = ss.source_set()
+@@ -3373,6 +3380,7 @@ qmp_ss = ss.source_set()
  qom_ss = ss.source_set()
- softmmu_ss = ss.source_set()
+ system_ss = ss.source_set()
  specific_fuzz_ss = ss.source_set()
 +videzzo_fuzz_ss = ss.source_set()
  specific_ss = ss.source_set()
  stub_ss = ss.source_set()
  trace_ss = ss.source_set()
-@@ -3162,6 +3168,7 @@ subdir('linux-user')
+@@ -3529,6 +3537,7 @@ subdir('linux-user')
  # needed for fuzzing binaries
  subdir('tests/qtest/libqos')
  subdir('tests/qtest/fuzz')
@@ -50,7 +52,7 @@ index 8a8c415..f32b075 100644
  
  # accel modules
  tcg_real_module_ss = ss.source_set()
-@@ -3514,6 +3521,15 @@ foreach target : target_dirs
+@@ -3885,6 +3894,15 @@ foreach target : target_dirs
          'dependencies': specific_fuzz.dependencies(),
        }]
      endif
@@ -125,15 +127,16 @@ index 0000000..faf775e
 +}
 diff --git a/tests/qtest/videzzo/meson.build b/tests/qtest/videzzo/meson.build
 new file mode 100644
-index 0000000..b26ee22
+index 0000000..a9c692a
 --- /dev/null
 +++ b/tests/qtest/videzzo/meson.build
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,22 @@
 +if not get_option('videzzo')
 +  subdir_done()
 +endif
 +
 +videzzo_fuzz_ss.add(files('less_crashes_wrappers.c'), qos)
++videzzo_fuzz_ss.add(files('videzzo_fork.c'), qos)
 +
 +# Targets
 +videzzo_fuzz_ss.add(files('videzzo_qemu.c'))
