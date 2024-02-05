@@ -1,10 +1,10 @@
-FROM ubuntu:20.04 as base
+FROM ubuntu:22.04 as base
 
 ARG DEBIAN_FRONTEND=noninteractive
-ENV TZ=Asia/Shanghai
+ENV TZ=utc
 RUN apt-get update
 RUN apt-get install -y tzdata
-RUN apt-get install -y build-essential cmake vim python3.7 \
+RUN apt-get install -y build-essential cmake vim python3 \
 make autoconf automake libtool ninja-build libglib2.0-dev \
 libfdt-dev libpixman-1-dev zlib1g-dev patchelf wget libattr1 libattr1-dev \
 libcap-ng-dev pkg-config libvncserver-dev software-properties-common \
