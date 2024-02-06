@@ -79,6 +79,15 @@ bash -x videzzo_tool/01-quick-san.sh qemu i386 ac97 60 fork
 bash -x videzzo_tool/04-quick-cov.sh qemu i386 ac97 60 fork
 ```
 
+LibFuzzer `-jobs` and `-workers` should be working automatically.
+
+``` bash
+LIBFUZZER_ARGS="-jobs=2 -workers=2" \
+bash -x videzzo_tool/01-quick-san.sh qemu i386 ac97 60 fork
+```
+
+fuzz-<JOB>.log should be found in `out-san`.
+
 ## Advanced usage - Fuzzing process
 
 In practice, we fuzz QEMU and VirtualBox virtual devices as follows.

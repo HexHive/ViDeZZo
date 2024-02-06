@@ -48,7 +48,7 @@ fi
 # stage 2
 rm -rf clangcovdump.profraw*
 bin=./${vmm}-videzzo-${arch}-target-videzzo-fuzz-${target}
-$bin -max_total_time=${timeout} -timeout=60
+$bin -max_total_time=${timeout} -timeout=60 $LIBFUZZER_ARGS
 
 # stage 3
 llvm-profdata merge -output=clangcovdump.profraw $(ls clangcovdump.profraw-* | tail -n 1)

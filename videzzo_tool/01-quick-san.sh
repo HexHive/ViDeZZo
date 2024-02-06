@@ -48,6 +48,6 @@ fi
 # stage 2
 export ASAN_OPTIONS=detect_leaks=0
 bin=./${vmm}-videzzo-${arch}-target-videzzo-fuzz-${target}
-$bin -max_total_time=${timeout} -timeout=60
+$bin -max_total_time=${timeout} -timeout=60 $LIBFUZZER_ARGS
 
 popd
