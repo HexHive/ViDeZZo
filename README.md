@@ -12,7 +12,6 @@ covering i386, x86_64, ARM, and AArch64 builds.
 A develop plan is as follows.
 + group mutators are not thread safe in vbox, and reproduction doesn't work either
 + consider all pitfalls and maybe reimplement the grammar interpreter
-+ support the shared bitmap when the fork server is enabled
 
 Part of virtual device code is not covered by ViDeZZo due to the lack of VM
 snapshot/migration and device plug in/out. Nevertheless, we do not have a plan
@@ -67,6 +66,17 @@ second in pure fuzzing mode and coverage collection mode.
 ``` bash
 bash -x videzzo_tool/01-quick-san.sh qemu i386 ac97 60
 bash -x videzzo_tool/04-quick-cov.sh qemu i386 ac97 60
+```
+
+## Advanced usage - Crash-Resistant Mode
+
+ViDeZZo has supported a built-in fork server that allows no stop if there is any
+crash. Enable it with VIDEZZO_FORK=1. Or use the scripts as follows. However,
+the performance deteriorates very much.
+
+``` bash
+bash -x videzzo_tool/01-quick-san.sh qemu i386 ac97 60 fork
+bash -x videzzo_tool/04-quick-cov.sh qemu i386 ac97 60 fork
 ```
 
 ## Advanced usage - Fuzzing process

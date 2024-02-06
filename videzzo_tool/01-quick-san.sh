@@ -1,10 +1,11 @@
 #!/bin/bash
 
-usage="01-quick-san.sh qemu|vbox i386|x86_64|arm|aarch64 target timeout_in_second"
+usage="01-quick-san.sh qemu|vbox i386|x86_64|arm|aarch64 target timeout_in_second [fork]"
 vmm=$1
 arch=$2
 target=$3
 timeout=$4
+fork=$5
 
 if [ -z $vmm ]; then
     echo "VMM is migging"
@@ -28,6 +29,13 @@ if [ -z $timeout ]; then
     echo "timeout in second is missing"
     echo $usage
     exit 1
+fi
+
+if [ -z $fork ]; then
+    echo 'VIDEZZO_FORK is unset'
+else
+    echo 'VIDEZZO_FORK is set'
+    export VIDEZZO_FORK=1
 fi
 
 # stage 1
