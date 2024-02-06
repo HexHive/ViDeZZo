@@ -130,13 +130,12 @@ new file mode 100644
 index 0000000..a9c692a
 --- /dev/null
 +++ b/tests/qtest/videzzo/meson.build
-@@ -0,0 +1,22 @@
+@@ -0,0 +1,21 @@
 +if not get_option('videzzo')
 +  subdir_done()
 +endif
 +
 +videzzo_fuzz_ss.add(files('less_crashes_wrappers.c'), qos)
-+videzzo_fuzz_ss.add(files('videzzo_fork.c'), qos)
 +
 +# Targets
 +videzzo_fuzz_ss.add(files('videzzo_qemu.c'))
