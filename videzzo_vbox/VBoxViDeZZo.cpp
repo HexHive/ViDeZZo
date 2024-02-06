@@ -55,6 +55,7 @@ using namespace com;
 
 #include <wordexp.h>
 #include "videzzo.h"
+#include "videzzo_fork.h"
 
 /* without this, include/VBox/vmm/pdmtask.h does not import PDMTASKTYPE enum */
 #define VBOX_IN_VMM 1
@@ -820,6 +821,10 @@ static void videzzo_vbox_pre() {
 
     // step 3: get VM to be running
     pVM->enmVMState = VMSTATE_RUNNING;
+
+    if (getenv("VIDEZZO_FORK")) {
+        counter_shm_init();
+    }
 }
 
 static ComPtr<IVirtualBoxClient> virtualBoxClient;

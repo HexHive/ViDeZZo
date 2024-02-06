@@ -3,6 +3,8 @@
 target=vbox/src/VBox
 cp ../clangcovdump.h $target/Devices/build
 cp ../videzzo.h $target/Frontends/VBoxManage
+cp ../videzzo_fork.h $target/Frontends/VBoxManage
+cp ../videzzo_fork.ld $target/Frontends/VBoxManage
 cp ../libvidezzo.a.vbox $target/Frontends/VBoxManage/libvidezzo.a
 cp VBoxViDeZZo.cpp $target/Frontends/VBoxManage
 cp VBoxMalloc.h $target/Frontends/VBoxManage

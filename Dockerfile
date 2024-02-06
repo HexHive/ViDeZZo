@@ -54,6 +54,7 @@ RUN git config --global --add safe.directory '*'
 Run apt-get install -y glslang-tools llvm
 RUN apt-get install -y bison flex
 RUN apt-get install -y libspice-protocol-dev libspice-server-dev
+RUN apt-get install -y kmod
 
 # fix missing slirp
 RUN apt-get install -y libslirp-dev

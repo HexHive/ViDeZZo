@@ -9,11 +9,12 @@ COVERAGE="-fprofile-instr-generate -fcoverage-mapping"
 ANNOTATION="-videzzo-instrumentation=$PWD/videzzo_vbox_types.yaml -flegacy-pass-manager"
 EXPORT_SYMBOL_LIST="$PWD/export_symbol_list.txt"
 EXPORT_SYMBOL="-Wl,--export-dynamic -Wl,--export-dynamic-symbol-list=$EXPORT_SYMBOL_LIST"
+LINKER_SCRIPT="-Wl,-T,$PWD/src/VBox/Frontends/VBoxManage/videzzo_fork.ld"
 kmk VBOX_FUZZ=1 KBUILD_TYPE=debug VBOX_GCC_TOOL=CLANG \
     PATH_OUT_BASE=$PWD/out-cov \
     TOOL_CLANG_CFLAGS="-fsanitize=fuzzer-no-link -DCLANG_COV_DUMP -DRT_NO_STRICT ${COVERAGE} ${ANNOTATION} -fPIE" \
     TOOL_CLANG_CXXFLAGS="-fsanitize=fuzzer-no-link -DCLANG_COV_DUMP -DRT_NO_STRICT ${COVERAGE} ${ANNOTATION} -fPIE" \
-    TOOL_CLANG_LDFLAGS="-fsanitize=fuzzer-no-link ${COVERAGE} ${EXPORT_SYMBOL}" \
+    TOOL_CLANG_LDFLAGS="-fsanitize=fuzzer-no-link ${COVERAGE} ${EXPORT_SYMBOL} ${LINKER_SCRIPT}" \
     VBOX_FUZZ_LDFLAGS="-fsanitize=fuzzer ${COVERAGE}"
 
 # 1. compile kernel drivers
