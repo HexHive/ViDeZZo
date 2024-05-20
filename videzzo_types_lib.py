@@ -229,7 +229,7 @@ class Model(object):
             self.check_field(tail_struct_type, tail_field_name)
             self.structs[struct_type][field_name]['point_to']['tail'] = {
                 'struct_type': tail_struct_type, 'field_name': tail_field_name}
-            self.structs[tail_struct_type][tail_field_name]['point_to'] = {'tail': True}
+            self.structs[tail_struct_type][tail_field_name]['point_to'] = {'tail': True, 'typeref': field_name}
 
         metadata = self.structs[struct_type][field_name]['point_to']
         metadata['links'] = {}
@@ -570,4 +570,153 @@ class Model(object):
         self.indent -= 1
         self.append_code('}')
 
+        return '\n'.join(self.code)
+
+###########################################################################################
+### Generate XML
+###########################################################################################
+    def gen_flag_xml(self, struct_type, field_name, metadata):
+        size = 0
+        for _, v in metadata.items():
+            size += v['length']
+        self.append_code('<Flags name="{}" size="{}">'.format(field_name, size))
+        self.indent += 1
+        for start, v in metadata.items():
+            if v['initvalue'] is None:
+                self.append_code('<Flag name="{}.{}" size="{}" position="{}" value="None" mutable="true" />'.format(
+                    field_name, start, v['length'], start))
+            elif v['initvalue'] is not None and not isinstance(v['initvalue'], list):
+                self.append_code('<Flag name="{}.{}" size="{}" position="{}" value="{}" mutable="false" />'.format(
+                    field_name, start, v['length'], start, v['initvalue']))
+            else:
+                self.append_code('<Choice name="{}.{}">'.format(field_name, start))
+                self.indent += 1
+                for i, value in enumerate(v['initvalue']):
+                    self.append_code('<Flag name="{}.{}.{}" size="{}" position="{}" value="{}" mutable="false" />'.format(
+                        field_name, start, i, v['length'], start, value))
+                self.indent -= 1
+                self.append_code('</Choice>')
+        self.indent -= 1
+        self.append_code('</Flags>')
+
+    def gen_random_xml(self, struct_type, field_name, metadata):
+        field_size = metadata['field_size']
+        self.append_code('<Blob name="{}" size="{}" unit="byte" mutable="true"/>'.format(field_name, field_size))
+
+    def gen_point_to_xml(self, struct_type, field_name, metadata):
+        size = metadata['field_size'] * 8
+        assert('point_to' in metadata)
+        point_to_metadata = metadata['point_to']
+
+        if 'linked_list' in point_to_metadata:
+            self.append_code('<XmlElement name="{}" elementName="{}">'.format(
+                point_to_metadata['linked_list'], struct_type))
+            self.indent += 1
+            self.append_code(
+                '<XmlAtrribute attributeName="head"> <String value="{}" /> </XmlElement>'.format(field_name))
+            assert(len(set(point_to_metadata['links'].values())) == 1)
+            self.append_code(
+                '<XmlAtrribute attributeName="link"> <String value="{}" /> </XmlElement>'.format(
+                    list(point_to_metadata['links'].values())[0]))
+            assert(point_to_metadata['tail']['struct_type'] == struct_type)
+            self.append_code(
+                '<XmlAtrribute attributeName="tail"> <String value="{}" /> </XmlElement>'.format(
+                    point_to_metadata['tail']['field_name']))
+            self.indent -= 1
+            self.append_code('</XmlElement>')
+
+        if 'tail' in point_to_metadata and point_to_metadata['tail'] == True:
+            self.append_code('<Pointer name="{}" size="{}" reference="{}" />'.format(
+                field_name, size, point_to_metadata['typeref']))
+            return
+
+        if point_to_metadata['array']:
+            self.append_code('<Pointer name="{}" size="{}" minOccurs="3" maxOccurs="6">'.format(field_name, size))
+        else:
+            self.append_code('<Pointer name="{}" size="{}">'.format(field_name, size))
+        self.indent += 1
+
+        point_to_types = point_to_metadata['types']
+        point_to_alignment = point_to_metadata['alignment']
+        point_to_flags = point_to_metadata['flags']
+
+        if point_to_flags is None:
+            assert(len(point_to_types) == 1)
+            self.append_code('<Addr name="{}.addr" size="{}" type="{}" alignment="{}" mutable="false" />'.format(
+                field_name, size, point_to_types['0'], point_to_alignment))
+        else:
+            conds = []
+            for point_to_flag in point_to_flags:
+                # [{'struct_type': 'EEPRO100_TX', 'field_name': 'command', 'bit': '0', 'length': 3}]
+                assert(point_to_flag['struct_type'] == struct_type)
+                conds.append('{}.{}'.format(point_to_flag['field_name'], point_to_flag['bit']))
+            self.append_code('<Choice name="{}.addr" constraints="{}">'.format(field_name, '|'.join(conds)))
+            self.indent += 1
+            for i, point_to_type in point_to_types.items():
+                self.append_code('<Addr name="{}.addr.{}" size="{}" value="{}" alignment="{}" mutable="true" />'.format(
+                    field_name, i, size, point_to_type, point_to_alignment))
+            self.indent -= 1
+            self.append_code('</Choice>')
+        if 'flags' in metadata:
+            flags = metadata['flags']
+            if flags:
+                self.gen_flag_xml(struct_type, field_name + '.flags', flags)
+        self.indent -= 1
+        self.append_code('</Pointer>')
+
+    def gen_constant_xml(self, struct_type, field_name, metadata):
+        field_value = metadata['field_value']
+        field_size = metadata['field_size']
+        self.append_code('<Choice name="{}">'.format(field_name))
+        self.indent += 1
+        for i, value in enumerate(field_value):
+            self.append_code('<Number name="{}.{}" size="{}" value="{}" valueType="hex" mutable="true" />'.format(
+                field_name, i, field_size * 8, hex(value)[2:]
+        ))
+        self.indent -= 1
+        self.append_code('</Choice>')
+
+    def gen_constant_as_flag_xml(self, struct_type, field_name, metadata):
+        # Really really bad. This is a flag not a constant.
+        flags = metadata['flags']
+        if struct_type == 'XHCITRB0':
+            flags['10']['initvalue'] = [i >> 10 for i in metadata['field_value']]
+        elif struct_type == 'XHCITRB1':
+            flags['10']['initvalue'] = [i >> 10 for i in metadata['field_value']]
+        elif struct_type == 'XHCI_SLOT_CTX':
+            flags['16']['initvalue'] = [i >> 16 for i in metadata['field_value']]
+        elif struct_type == 'VIRTIO_BLK_OUTHDR':
+            flags['1']['initvalue'] = [i >> 1 for i in metadata['field_value']]
+        else:
+            print('handle me')
+        self.gen_flag_xml(struct_type, field_name, flags)
+
+    def gen_data_model_xml(self):
+        for struct_type, fields in self.structs.items():
+            self.indent += 1
+            self.append_code('<DataModel name="{}">'.format(struct_type))
+            for field_name, metadata in fields.items():
+                field_type = metadata['field_type']
+                self.indent += 1
+                if (field_type & FIELD_FLAG) and \
+                    (not field_type & FIELD_POINTER) and (not field_type & FIELD_CONSTANT):
+                    assert 'flags' in metadata, 'flag {}.{} is not set up'.format(struct_type, field_name)
+                    self.gen_flag_xml(struct_type, field_name, metadata['flags'])
+                elif (field_type & FIELD_POINTER):
+                    self.gen_point_to_xml(struct_type, field_name, metadata)
+                elif field_type & FIELD_RANDOM:
+                    self.gen_random_xml(struct_type, field_name, metadata)
+                elif field_type & FIELD_CONSTANT and (not field_type & FIELD_FLAG):
+                    self.gen_constant_xml(struct_type, field_name, metadata)
+                elif field_type & FIELD_CONSTANT and (field_type & FIELD_FLAG):
+                    self.gen_constant_as_flag_xml(struct_type, field_name, metadata)
+                else:
+                    print('handle unknow types')
+                self.indent -= 1
+            self.append_code('</DataModel>')
+            self.indent -= 1
+        self.append_code('\n')
+
+    def get_xml(self):
+        self.gen_data_model_xml()
         return '\n'.join(self.code)
