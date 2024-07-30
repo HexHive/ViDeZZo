@@ -2,6 +2,7 @@
 
 ViDeZZo is a virtual device fuzzing framework considering both intra- and
 inter-message dependencies to balance fuzzing scalability and efficiency.
+The [research paper](https://nebelwelt.net/files/23Oakland4.pdf) was accepted by IEEE S&P 2023.
 
 Currently, ViDeZZo supports libFuzzer in combination with ASAN and UBSAN.
 
