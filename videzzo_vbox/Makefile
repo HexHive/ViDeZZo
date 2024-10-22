@@ -58,6 +58,6 @@ clusterfuzz-debug:
 	bash -x 0004-zip-vbox-targets.sh deb
 
 distclean:
-	rm *.h *.yaml
-	rm -r out-*
-	rm -r vbox
+	rm -f *_*.h *.yaml
+	rm -rf out-*
+	rm -rf vbox

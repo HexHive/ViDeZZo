@@ -1,0 +1,49 @@
+From 019c630824f0b053d8e090a41c91a313f77c4991 Mon Sep 17 00:00:00 2001
+From: Qiang Liu <cyruscyliu@gmail.com>
+Date: Tue, 22 Oct 2024 11:18:20 +0200
+Subject: [PATCH] Revert "util/cutils: Remove unused qemu_get_exec_dir"
+
+This reverts commit ecffadf602f34cc1cf4c3ae81502564673d410e8.
+---
+ include/qemu/cutils.h | 5 ++++-
+ util/cutils.c         | 5 +++++
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/include/qemu/cutils.h b/include/qemu/cutils.h
+index 34a9b9b220..da15547bfb 100644
+--- a/include/qemu/cutils.h
++++ b/include/qemu/cutils.h
+@@ -241,10 +241,13 @@ int uleb128_decode_small(const uint8_t *in, uint32_t *n);
+ int qemu_pstrcmp0(const char **str1, const char **str2);
+ 
+ /* Find program directory, and save it for later usage with
+- * get_relocated_path().
++ * qemu_get_exec_dir().
+  * Try OS specific API first, if not working, parse from argv0. */
+ void qemu_init_exec_dir(const char *argv0);
+ 
++/* Get the saved exec dir.  */
++const char *qemu_get_exec_dir(void);
++
+ /**
+  * get_relocated_path:
+  * @dir: the directory (typically a `CONFIG_*DIR` variable) to be relocated.
+diff --git a/util/cutils.c b/util/cutils.c
+index 9803f11a59..42364039a5 100644
+--- a/util/cutils.c
++++ b/util/cutils.c
+@@ -1144,6 +1144,11 @@ void qemu_init_exec_dir(const char *argv0)
+ #endif
+ }
+ 
++const char *qemu_get_exec_dir(void)
++{
++    return exec_dir;
++}
++
+ char *get_relocated_path(const char *dir)
+ {
+     size_t prefix_len = strlen(CONFIG_PREFIX);
+-- 
+2.34.1
+

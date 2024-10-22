@@ -11,8 +11,10 @@ CFLAGS ?=
 patch:
 	cp 0001-Update-QEMU-to-support-ViDeZZo-as-a-library.patch qemu/
 	cp 0001-fix-assertion-in-hw-usb-core.c.patch qemu/
+	cp 0001-Revert-util-cutils-Remove-unused-qemu_get_exec_dir.patch qemu/
 	cd qemu && patch -p 1 < 0001-Update-QEMU-to-support-ViDeZZo-as-a-library.patch && \
 		patch -p 1 < 0001-fix-assertion-in-hw-usb-core.c.patch && \
+		patch -p 1 < 0001-Revert-util-cutils-Remove-unused-qemu_get_exec_dir.patch && \
 		./configure && make update-buildoptions && \
 		cd $(OLDPWD)
 
@@ -60,6 +62,6 @@ clusterfuzz-debug:
 	bash -x 0004-zip-qemu-targets.sh deb
 
 distclean:
-	rm *.h *.yaml
-	rm -r out-*
-	rm -r qemu
+	rm -f *_*.h *.yaml
+	rm -rf out-*
+	rm -rf qemu

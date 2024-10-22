@@ -15,7 +15,7 @@ htop cpulimit meson autoconf-archive libopus-dev zip unzip sudo
 RUN apt-get install -y curl
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 RUN python3 get-pip.py
-RUN python3 -m pip install wllvm picire gdown pyyaml
+RUN python3 -m pip install wllvm picire gdown pyyaml tomli
 
 WORKDIR /root
 
