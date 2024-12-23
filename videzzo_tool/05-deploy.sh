@@ -31,7 +31,9 @@ case "${o}" in
    ;;
  v)
    vmm=${OPTARG}
-   ((vmm == 'vbox' || vmm == 'qemu' || vmm == 'all')) || usage
+   if [[ "$vmm" != "vbox" && "$vmm" != "qemu" && "$vmm" != "all" ]]; then
+     usage
+   fi
    ;;
  *)
    usage
