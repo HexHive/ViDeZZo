@@ -1,6 +1,6 @@
 # ViDeZZo: Dependency-aware Virtual Device Fuzzing Framework
 
-!!! For better communication, please join our [discord](https://discord.gg/9tuPhCtr) server. !!!
+!!! For better communication, please join our [discord](https://discord.gg/dxdvHvrK8D) server. !!!
 
 ViDeZZo is a virtual device fuzzing framework considering both intra- and
 inter-message dependencies to balance fuzzing scalability and efficiency.
