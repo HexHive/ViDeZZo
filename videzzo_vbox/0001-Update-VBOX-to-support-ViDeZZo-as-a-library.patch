@@ -1,9 +1,9 @@
-Index: Config.kmk
-===================================================================
---- Config.kmk	(revision 95063)
-+++ Config.kmk	(working copy)
-@@ -772,6 +772,8 @@
- endif
+diff --git a/Config.kmk b/Config.kmk
+index 2bc51041..0dca89dd 100644
+--- a/Config.kmk
++++ b/Config.kmk
+@@ -821,6 +821,8 @@ VBOX_WITH_VBOXSDL =
+ VBOX_WITH_VBOXSVC_SESSION_0 = 1
  # The headless frontend.
  VBOX_WITH_HEADLESS = 1
 +# The videzzo frontend.
@@ -11,16 +11,16 @@ Index: Config.kmk
  # Enable the build of VRDP server.
  VBOX_WITH_VRDP = 1
  # Build the VRDP authentication modules.
-@@ -1190,6 +1192,7 @@
-  VBOX_WITH_TESTCASES=
-  VBOX_WITH_VBOXSDL=
-  VBOX_WITH_HEADLESS=
-+ VBOX_WITH_VIDEZZO=
-  VBOX_WITH_VRDP=
-  VBOX_WITH_VRDP_RDESKTOP=
-  VBOX_WITH_DOCS=
-@@ -1197,6 +1200,32 @@
-  VBOX_WITH_32_ON_64_MAIN_API=
+@@ -1253,6 +1255,7 @@ ifdef VBOX_QUICK
+  VBOX_WITH_TESTCASES =
+  VBOX_WITH_VBOXSDL =
+  VBOX_WITH_HEADLESS =
++ VBOX_WITH_VIDEZZO = 
+  VBOX_WITH_VRDP =
+  VBOX_WITH_VRDP_RDESKTOP =
+  VBOX_WITH_DOCS =
+@@ -1260,6 +1263,32 @@ ifdef VBOX_QUICK
+  VBOX_WITH_32_ON_64_MAIN_API =
  endif # VBOX_QUICK
  
 +# VBOX_FUZZ can be used to build the fuzzer only
@@ -51,56 +51,57 @@ Index: Config.kmk
 +
  # Only AMD64 is supported for the main product, so disable most of the other bits.
  ifn1of ($(KBUILD_TARGET_ARCH), $(VBOX_SUPPORTED_HOST_ARCHS))
-  VBOX_WITH_MAIN=
-@@ -1246,6 +1275,7 @@
-  VBOX_WITH_VBOXDRV=
-  VBOX_WITH_VRDP=
-  VBOX_WITH_HEADLESS=
-+ VBOX_WITH_VIDEZZO=
-  VBOX_WITH_VBOXSDL=
-  VBOX_WITH_QTGUI=
- # VBOX_WITH_MAIN=
-@@ -1257,7 +1287,6 @@
-  VBOX_WITH_HARDENING=
+  VBOX_WITH_MAIN =
+@@ -1307,6 +1336,7 @@ ifeq ($(KBUILD_TARGET),haiku)
+  VBOX_WITH_VBOXDRV =
+  VBOX_WITH_VRDP =
+  VBOX_WITH_HEADLESS =
++ VBOX_WITH_VIDEZZO = 
+  VBOX_WITH_VBOXSDL =
+  VBOX_WITH_QTGUI =
+  # VBOX_WITH_MAIN=
+@@ -1318,7 +1348,6 @@ ifeq ($(KBUILD_TARGET),haiku)
+  VBOX_WITH_HARDENING =
  endif
  
 -
  ifeq ($(KBUILD_TARGET),os2)
-  VBOX_WITH_WEBSERVICES=
-  VBOX_WITH_INSTALLER=
-@@ -1288,6 +1317,7 @@
-  VBOX_WITH_EHCI=
-  VBOX_WITH_HARDENING=
-  VBOX_WITH_HEADLESS=
-+ VBOX_WITH_VIDEZZO=
-  VBOX_WITH_HGCM=
-  VBOX_WITH_HGSMI=
-  VBOX_WITH_INIP=
-@@ -1550,6 +1580,7 @@
-  VBOX_WITH_QTGUI=
-  VBOX_WITH_DEBUGGER_GUI=
-  VBOX_WITH_HEADLESS=
-+ VBOX_WITH_VIDEZZO=
+  VBOX_WITH_WEBSERVICES =
+  VBOX_WITH_INSTALLER =
+@@ -1344,6 +1373,7 @@ ifn1of ($(KBUILD_TARGET_ARCH), x86 amd64 arm64)
+  VBOX_WITH_EHCI =
+  VBOX_WITH_HARDENING =
+  VBOX_WITH_HEADLESS =
++ VBOX_WITH_HEADLESS = 
+  VBOX_WITH_HGCM =
+  VBOX_WITH_HGSMI =
+  VBOX_WITH_INIP =
+@@ -1595,6 +1625,7 @@ ifndef VBOX_WITH_MAIN
+  VBOX_WITH_QTGUI =
+  VBOX_WITH_DEBUGGER_GUI =
+  VBOX_WITH_HEADLESS =
++ VBOX_WITH_VIDEZZO =
   ifdef VBOX_ONLY_DOCS
    $(error Oh, does VBOX_ONLY_DOCS actually end up here. sweet.)
   endif
-@@ -5210,7 +5241,11 @@
+@@ -5441,7 +5472,11 @@ ifeq ($(VBOX_LDR_FMT),pe)
  endif # pe
  
  ifeq ($(VBOX_LDR_FMT),elf)
-+ ifeq ($(VBOX_GCC_TOOL),CLANG)
-+TEMPLATE_VBoxR0_TOOL                = GXX64 # Super import, otherwise you can't load R0 modules
+- TEMPLATE_VBoxR0_TOOL               = $(VBOX_GCC_TOOL)
++ if1of ($(VBOX_GCC_TOOL), CLANG)
++  TEMPLATE_VBoxR0_TOOL              = GXX64
 + else
- TEMPLATE_VBoxR0_TOOL                = $(VBOX_GCC_TOOL)
++  TEMPLATE_VBoxR0_TOOL              = $(VBOX_GCC_TOOL)
 + endif
- TEMPLATE_VBoxR0_CFLAGS              = -fno-pie -nostdinc -g $(VBOX_GCC_pipe) $(VBOX_GCC_WERR) $(VBOX_GCC_PEDANTIC_C) \
- 	$(VBOX_GCC_Wno-variadic-macros) $(VBOX_GCC_R0_OPT) $(VBOX_GCC_R0_FP) -fno-strict-aliasing -fno-exceptions \
- 	$(VBOX_GCC_fno-stack-protector) -fno-common -ffreestanding $(VBOX_GCC_fvisibility-hidden) -std=gnu99 $(VBOX_GCC_IPRT_FMT_CHECK)
-Index: src/VBox/Devices/Graphics/DevVGA-SVGA3d-glLdr.cpp
-===================================================================
---- src/VBox/Devices/Graphics/DevVGA-SVGA3d-glLdr.cpp	(revision 95063)
-+++ src/VBox/Devices/Graphics/DevVGA-SVGA3d-glLdr.cpp	(working copy)
-@@ -297,105 +297,305 @@
+  TEMPLATE_VBoxR0_CFLAGS             = -fno-pie -nostdinc -g $(VBOX_GCC_pipe) $(VBOX_GCC_WERR) $(VBOX_GCC_PEDANTIC_C) \
+  	$(VBOX_GCC_Wno-variadic-macros) $(VBOX_GCC_R0_OPT) $(VBOX_GCC_R0_FP) -fno-strict-aliasing -fno-exceptions \
+  	$(VBOX_GCC_fno-stack-protector) -fno-common -ffreestanding $(VBOX_GCC_fvisibility-hidden) -std=gnu99 $(VBOX_GCC_IPRT_FMT_CHECK)
+diff --git a/src/VBox/Devices/Graphics/DevVGA-SVGA3d-glLdr.cpp b/src/VBox/Devices/Graphics/DevVGA-SVGA3d-glLdr.cpp
+index 3a0b56e3..1e120ff4 100644
+--- a/src/VBox/Devices/Graphics/DevVGA-SVGA3d-glLdr.cpp
++++ b/src/VBox/Devices/Graphics/DevVGA-SVGA3d-glLdr.cpp
+@@ -307,105 +307,305 @@ int glLdrInit(PPDMDEVINS pDevIns)
      GLGETPROC_(wglMakeCurrent, "");
      GLGETPROC_(wglShareLists, "");
  #elif defined(RT_OS_LINUX)
@@ -504,7 +505,7 @@ Index: src/VBox/Devices/Graphics/DevVGA-SVGA3d-glLdr.cpp
  
  #ifdef RT_OS_LINUX
      XInitThreads();
-@@ -410,9 +610,14 @@
+@@ -420,9 +620,14 @@ PFNRT glLdrGetProcAddress(const char *pszSymbol)
  
  int glLdrGetExtFunctions(PPDMDEVINS pDevIns)
  {
@@ -523,11 +524,11 @@ Index: src/VBox/Devices/Graphics/DevVGA-SVGA3d-glLdr.cpp
 +    if (!pfn_glClientActiveTexture) { PDMDevHlpVMSetError(pDevIns, VERR_VGA_GL_SYMBOL_NOT_FOUND, RT_SRC_POS, "Missing OpenGL symbol");}
      return VINF_SUCCESS;
  }
-Index: src/VBox/Devices/Makefile.kmk
-===================================================================
---- src/VBox/Devices/Makefile.kmk	(revision 95063)
-+++ src/VBox/Devices/Makefile.kmk	(working copy)
-@@ -25,7 +25,8 @@
+diff --git a/src/VBox/Devices/Makefile.kmk b/src/VBox/Devices/Makefile.kmk
+index 3e22f141..2635ac50 100644
+--- a/src/VBox/Devices/Makefile.kmk
++++ b/src/VBox/Devices/Makefile.kmk
+@@ -35,7 +35,8 @@ endif
  
  # Include sub-makefiles.
  if1of ($(KBUILD_TARGET_ARCH), $(VBOX_SUPPORTED_HOST_ARCHS))
@@ -537,7 +538,7 @@ Index: src/VBox/Devices/Makefile.kmk
   include $(PATH_SUB_CURRENT)/Audio/testcase/Makefile.kmk
   include $(PATH_SUB_CURRENT)/Input/testcase/Makefile.kmk
   ifdef VBOX_WITH_TESTCASES
-@@ -148,6 +149,11 @@
+@@ -158,6 +159,11 @@ if !defined(VBOX_ONLY_EXTPACKS) && "$(intersects $(KBUILD_TARGET_ARCH),$(VBOX_SU
   else
    VBoxDD_TEMPLATE         = VBoxR3DllWarnNoPic
   endif
@@ -546,14 +547,14 @@ Index: src/VBox/Devices/Makefile.kmk
 +  VBoxDD_CXXFLAGS       += -fsanitize=address,undefined -fno-sanitize=alignment -fsanitize-recover=address
 +  VboxDD_LDFLAGS        += -fsanitize=address,undefined -fno-sanitize=alignment -fsanitize-recover=address
 + endif
-  VBoxDD_SDKS.win         = ReorderCompilerIncs $(VBOX_WINPSDK) $(VBOX_WINDDK) VBOX_NTDLL
+  VBoxDD_SDKS.win         = ReorderCompilerIncs $(VBOX_WINPSDK) $(VBOX_WINDDK) VBoxNtDll
   Storage/DrvHostDVD.cpp_SDKS.win = ReorderCompilerIncs $(VBOX_WINDDK)
   VBoxDD_INCS             = \
-Index: src/VBox/Devices/Storage/DevFdc.cpp
-===================================================================
---- src/VBox/Devices/Storage/DevFdc.cpp	(revision 95063)
-+++ src/VBox/Devices/Storage/DevFdc.cpp	(working copy)
-@@ -79,7 +79,7 @@
+diff --git a/src/VBox/Devices/Storage/DevFdc.cpp b/src/VBox/Devices/Storage/DevFdc.cpp
+index bed747af..ab2bd2e3 100644
+--- a/src/VBox/Devices/Storage/DevFdc.cpp
++++ b/src/VBox/Devices/Storage/DevFdc.cpp
+@@ -89,7 +89,7 @@
  # define FLOPPY_DPRINTF(...) do { } while (0)
  #endif
  
@@ -562,11 +563,11 @@ Index: src/VBox/Devices/Storage/DevFdc.cpp
  
  typedef struct fdctrl_t fdctrl_t;
  
-Index: src/VBox/Devices/USB/DevOHCI.cpp
-===================================================================
---- src/VBox/Devices/USB/DevOHCI.cpp	(revision 95063)
-+++ src/VBox/Devices/USB/DevOHCI.cpp	(working copy)
-@@ -767,7 +767,6 @@
+diff --git a/src/VBox/Devices/USB/DevOHCI.cpp b/src/VBox/Devices/USB/DevOHCI.cpp
+index cd139e98..3bda5d5d 100644
+--- a/src/VBox/Devices/USB/DevOHCI.cpp
++++ b/src/VBox/Devices/USB/DevOHCI.cpp
+@@ -777,7 +777,6 @@ typedef OHCIPHYSREADSTATS *POHCIPHYSREADSTATS;
  typedef OHCIPHYSREADSTATS const *PCOHCIPHYSREADSTATS;
  #endif /* VBOX_WITH_OHCI_PHYS_READ_STATS */
  
@@ -574,7 +575,7 @@ Index: src/VBox/Devices/USB/DevOHCI.cpp
  /*********************************************************************************************************************************
  *   Global Variables                                                                                                             *
  *********************************************************************************************************************************/
-@@ -3567,6 +3566,7 @@
+@@ -3654,12 +3653,17 @@ static void ohciR3ServiceIsochronousEndpoint(PPDMDEVINS pDevIns, POHCI pThis, PO
      uint32_t ITdAddrPrev = 0;
      uint32_t u32NextFrame = UINT32_MAX;
      const uint16_t u16CurFrame = pThis->HcFmNumber;
@@ -582,7 +583,6 @@ Index: src/VBox/Devices/USB/DevOHCI.cpp
      for (;;)
      {
          /* check for end-of-chain. */
-@@ -3573,6 +3573,10 @@
          if (    ITdAddr == (pEd->TailP & ED_PTR_MASK)
              ||  !ITdAddr)
              break;
@@ -593,11 +593,11 @@ Index: src/VBox/Devices/USB/DevOHCI.cpp
  
          /*
           * If isochronous endpoints are around, don't slow down the timer. Getting the timing right
-Index: src/VBox/Devices/build/VBoxDD.cpp
-===================================================================
---- src/VBox/Devices/build/VBoxDD.cpp	(revision 95063)
-+++ src/VBox/Devices/build/VBoxDD.cpp	(working copy)
-@@ -29,6 +29,9 @@
+diff --git a/src/VBox/Devices/build/VBoxDD.cpp b/src/VBox/Devices/build/VBoxDD.cpp
+index 1e88822d..31e88e0c 100644
+--- a/src/VBox/Devices/build/VBoxDD.cpp
++++ b/src/VBox/Devices/build/VBoxDD.cpp
+@@ -39,6 +39,9 @@
  #include <iprt/assert.h>
  
  #include "VBoxDD.h"
@@ -607,7 +607,7 @@ Index: src/VBox/Devices/build/VBoxDD.cpp
  
  
  /*********************************************************************************************************************************
-@@ -49,6 +52,12 @@
+@@ -59,6 +62,12 @@ const void *g_apvVBoxDDDependencies[] =
   */
  extern "C" DECLEXPORT(int) VBoxDevicesRegister(PPDMDEVREGCB pCallbacks, uint32_t u32Version)
  {
@@ -620,11 +620,11 @@ Index: src/VBox/Devices/build/VBoxDD.cpp
      LogFlow(("VBoxDevicesRegister: u32Version=%#x\n", u32Version));
      AssertReleaseMsg(u32Version == VBOX_VERSION, ("u32Version=%#x VBOX_VERSION=%#x\n", u32Version, VBOX_VERSION));
      int rc;
-Index: src/VBox/ExtPacks/VBoxDTrace/include/VBoxDTraceLibCWrappers.h
-===================================================================
---- src/VBox/ExtPacks/VBoxDTrace/include/VBoxDTraceLibCWrappers.h	(revision 95063)
-+++ src/VBox/ExtPacks/VBoxDTrace/include/VBoxDTraceLibCWrappers.h	(working copy)
-@@ -34,7 +34,7 @@
+diff --git a/src/VBox/ExtPacks/VBoxDTrace/include/VBoxDTraceLibCWrappers.h b/src/VBox/ExtPacks/VBoxDTrace/include/VBoxDTraceLibCWrappers.h
+index b2345519..5aae7e95 100644
+--- a/src/VBox/ExtPacks/VBoxDTrace/include/VBoxDTraceLibCWrappers.h
++++ b/src/VBox/ExtPacks/VBoxDTrace/include/VBoxDTraceLibCWrappers.h
+@@ -35,7 +35,7 @@
  # ifdef RT_OS_DARWIN
  #  include <sys/syslimits.h> /* PATH_MAX */
  # elif !defined(RT_OS_SOLARIS) && !defined(RT_OS_FREEBSD)
@@ -633,38 +633,38 @@ Index: src/VBox/ExtPacks/VBoxDTrace/include/VBoxDTraceLibCWrappers.h
  # endif
  # include <libgen.h>        /* basename */
  # include <unistd.h>
-Index: src/VBox/Frontends/VBoxManage/Makefile.kmk
-===================================================================
---- src/VBox/Frontends/VBoxManage/Makefile.kmk	(revision 95063)
-+++ src/VBox/Frontends/VBoxManage/Makefile.kmk	(working copy)
-@@ -68,8 +68,7 @@
+diff --git a/src/VBox/Frontends/VBoxManage/Makefile.kmk b/src/VBox/Frontends/VBoxManage/Makefile.kmk
+index 2a63da42..6b2f6290 100644
+--- a/src/VBox/Frontends/VBoxManage/Makefile.kmk
++++ b/src/VBox/Frontends/VBoxManage/Makefile.kmk
+@@ -78,8 +78,7 @@ ifndef VBOX_ONLY_DOCS
   	../Common
   VBoxManage_INTERMEDIATES = \
   	$(VBoxManage_0_OUTDIR)/VBoxManageBuiltInHelp.h
 - VBoxManage_SOURCES    = \
 - 	VBoxManage.cpp \
-+ VBoxManage_COMMON_SROUCES = \
- 	VBoxManageUtils.cpp \
++ VBoxManage_COMMON_SOURCES    = \
+  	VBoxManageUtils.cpp \
   	VBoxInternalManage.cpp \
   	VBoxManageAppliance.cpp \
-@@ -100,6 +99,9 @@
+@@ -110,6 +109,9 @@ ifndef VBOX_ONLY_DOCS
   	VBoxManageCloud.cpp \
   	VBoxManageCloudMachine.cpp \
   	../Common/PasswordInput.cpp
 + VBoxManage_SOURCES    = \
 + 	VBoxManage.cpp \
-+	$(VBoxManage_COMMON_SROUCES)
++	$(VBoxManage_COMMON_SOURCES)
   VBoxManage_SOURCES.win = \
   	VBoxManage.rc
   VBoxManage_LIBS      += $(LIB_DDU)
-@@ -400,4 +402,26 @@
+@@ -410,4 +412,26 @@ ifdef VBOX_WITH_VBOXMANAGE_NLS
  
  endif
  
 +ifndef VBOX_ONLY_DOCS
 +ifdef VBOX_WITH_VIDEZZO
 + PROGRAMS += VBoxViDeZZo
-+ VBoxViDeZZo_TEMPLATE   = VBOXMAINCLIENTEXE
++ VBoxViDeZZo_TEMPLATE   = VBoxMainClientExe
 + VBoxViDeZZo_DEFS      += $(VBOX_COMMON_VBOXMANAGE_DEFS) $(VMM_COMMON_DEFS)
 + VBoxViDeZZo_INCS       = \
 +    $(VBoxManage_INCS) \
@@ -673,22 +673,22 @@ Index: src/VBox/Frontends/VBoxManage/Makefile.kmk
 +	../../VMM/include
 + VBoxViDeZZo_SOURCES    = \
 +	VBoxViDeZZo.cpp \
-+	$(VBoxManage_COMMON_SROUCES)
++	$(VBoxManage_COMMON_SOURCES)
 + VBoxViDeZZo_LDFLAGS += \
 +	-L$(PATH_SUB_CURRENT)/src/VBox/Frontends/VBoxManage \
 +	$(VBOX_FUZZ_LDFLAGS)
 + VBoxViDeZZo_LIBS += \
-+    videzzo vncclient gmodule-2.0 glib-2.0 $(LIB_VMM) \
++    videzzo vncclient gmodule-2.0 glib-2.0 ssl crypto $(LIB_VMM) \
 +    $(LIB_DDU)
 +endif
 +endif # VBOX_ONLY_DOCS
 +
  include $(FILE_KBUILD_SUB_FOOTER)
-Index: src/VBox/HostServices/SharedFolders/Makefile.kmk
-===================================================================
---- src/VBox/HostServices/SharedFolders/Makefile.kmk	(revision 95063)
-+++ src/VBox/HostServices/SharedFolders/Makefile.kmk	(working copy)
-@@ -19,7 +19,8 @@
+diff --git a/src/VBox/HostServices/SharedFolders/Makefile.kmk b/src/VBox/HostServices/SharedFolders/Makefile.kmk
+index fc0ff6c5..7a9bf199 100644
+--- a/src/VBox/HostServices/SharedFolders/Makefile.kmk
++++ b/src/VBox/HostServices/SharedFolders/Makefile.kmk
+@@ -29,7 +29,8 @@ SUB_DEPTH = ../../../..
  include $(KBUILD_PATH)/subheader.kmk
  
  # Include sub-makefile(s).
@@ -698,11 +698,20 @@ Index: src/VBox/HostServices/SharedFolders/Makefile.kmk
  
  #
  # The shared folder service DLL.
-Index: src/VBox/Runtime/Makefile.kmk
-===================================================================
---- src/VBox/Runtime/Makefile.kmk	(revision 95063)
-+++ src/VBox/Runtime/Makefile.kmk	(working copy)
-@@ -4301,6 +4301,12 @@
+diff --git a/src/VBox/Runtime/Makefile.kmk b/src/VBox/Runtime/Makefile.kmk
+index 09b01623..26fc5204 100644
+--- a/src/VBox/Runtime/Makefile.kmk
++++ b/src/VBox/Runtime/Makefile.kmk
+@@ -4675,7 +4675,7 @@ if1of ($(LIBRARIES), RuntimeR3 RuntimeR0 RuntimeR0Drv RuntimeRC)
+  		$$(RuntimeR0_1_TARGET) \
+  		$$(RuntimeR0Drv_1_TARGET) \
+  		$$(RuntimeRC_1_TARGET)
+- if1of ($(KBUILD_TARGET), win os2)
++ if1of ($(KBUILD_TARGET), win os2 linux)
+ 	$(call MSG_L1,IPRT: skipped mangling test.)
+  else
+   # Generate a SED script from mangling.h that checks for known symbols.
+@@ -4757,6 +4757,12 @@ if1of ($(LIBRARIES), RuntimeR3 RuntimeR0 RuntimeR0Drv RuntimeRC)
  			\
  			-e '/^VBoxHost_/d'\
  			-e '/^VBoxGuest_/d'\
@@ -715,11 +724,11 @@ Index: src/VBox/Runtime/Makefile.kmk
  		| $(SED) -nf "$@"
    endif
  	$(call MSG_L1,IPRT: Testing mangling using nm...)
-Index: src/VBox/VMM/Makefile.kmk
-===================================================================
---- src/VBox/VMM/Makefile.kmk	(revision 95063)
-+++ src/VBox/VMM/Makefile.kmk	(working copy)
-@@ -26,7 +26,8 @@
+diff --git a/src/VBox/VMM/Makefile.kmk b/src/VBox/VMM/Makefile.kmk
+index 1d87ac3f..50145a86 100644
+--- a/src/VBox/VMM/Makefile.kmk
++++ b/src/VBox/VMM/Makefile.kmk
+@@ -36,7 +36,8 @@ endif
  # Include sub-makefiles.
  ifndef VBOX_ONLY_EXTPACKS
   include $(PATH_SUB_CURRENT)/tools/Makefile.kmk
@@ -729,11 +738,11 @@ Index: src/VBox/VMM/Makefile.kmk
  endif
  
  
-Index: src/VBox/VMM/VMMAll/PGMAllPhys.cpp
-===================================================================
---- src/VBox/VMM/VMMAll/PGMAllPhys.cpp	(revision 95063)
-+++ src/VBox/VMM/VMMAll/PGMAllPhys.cpp	(working copy)
-@@ -1850,13 +1850,13 @@
+diff --git a/src/VBox/VMM/VMMAll/PGMAllPhys.cpp b/src/VBox/VMM/VMMAll/PGMAllPhys.cpp
+index 9aa351d9..53bbcf09 100644
+--- a/src/VBox/VMM/VMMAll/PGMAllPhys.cpp
++++ b/src/VBox/VMM/VMMAll/PGMAllPhys.cpp
+@@ -1860,13 +1860,13 @@ int pgmPhysGCPhys2CCPtrInternal(PVMCC pVM, PPGMPAGE pPage, RTGCPHYS GCPhys, void
      /*
       * Make sure the page is writable.
       */
@@ -754,11 +763,11 @@ Index: src/VBox/VMM/VMMAll/PGMAllPhys.cpp
      Assert(PGM_PAGE_GET_HCPHYS(pPage) != 0);
  
      /*
-Index: src/VBox/VMM/VMMAll/PGMAllPool.cpp
-===================================================================
---- src/VBox/VMM/VMMAll/PGMAllPool.cpp	(revision 95063)
-+++ src/VBox/VMM/VMMAll/PGMAllPool.cpp	(working copy)
-@@ -5076,7 +5076,7 @@
+diff --git a/src/VBox/VMM/VMMAll/PGMAllPool.cpp b/src/VBox/VMM/VMMAll/PGMAllPool.cpp
+index aec01623..5e6ce4ce 100644
+--- a/src/VBox/VMM/VMMAll/PGMAllPool.cpp
++++ b/src/VBox/VMM/VMMAll/PGMAllPool.cpp
+@@ -5493,7 +5493,7 @@ int pgmPoolAlloc(PVMCC pVM, RTGCPHYS GCPhys, PGMPOOLKIND enmKind, PGMPOOLACCESS
      {
          STAM_PROFILE_START(&pPool->StatZeroPage, z);
          void *pv = PGMPOOL_PAGE_2_PTR(pVM, pPage);
@@ -767,11 +776,11 @@ Index: src/VBox/VMM/VMMAll/PGMAllPool.cpp
          STAM_PROFILE_STOP(&pPool->StatZeroPage, z);
      }
  
-Index: src/VBox/VMM/VMMR3/PGMPhys.cpp
-===================================================================
---- src/VBox/VMM/VMMR3/PGMPhys.cpp	(revision 95063)
-+++ src/VBox/VMM/VMMR3/PGMPhys.cpp	(working copy)
-@@ -5898,23 +5898,23 @@
+diff --git a/src/VBox/VMM/VMMR3/PGMPhys.cpp b/src/VBox/VMM/VMMR3/PGMPhys.cpp
+index fb9fd668..747f5843 100644
+--- a/src/VBox/VMM/VMMR3/PGMPhys.cpp
++++ b/src/VBox/VMM/VMMR3/PGMPhys.cpp
+@@ -5912,23 +5912,23 @@ VMMR3DECL(int) PGMR3PhysAllocateHandyPages(PVM pVM)
              && rc != VERR_LOCK_FAILED)
              for (uint32_t i = 0; i < RT_ELEMENTS(pVM->pgm.s.aHandyPages); i++)
              {
@@ -812,10 +821,10 @@ Index: src/VBox/VMM/VMMR3/PGMPhys.cpp
              }
  
          if (rc == VERR_NO_MEMORY)
-Index: src/libs/xpcom18a4/nsprpub/pr/src/md/unix/os_Linux_x86_64.s
-===================================================================
---- src/libs/xpcom18a4/nsprpub/pr/src/md/unix/os_Linux_x86_64.s	(revision 95063)
-+++ src/libs/xpcom18a4/nsprpub/pr/src/md/unix/os_Linux_x86_64.s	(working copy)
+diff --git a/src/libs/xpcom18a4/nsprpub/pr/src/md/unix/os_Linux_x86_64.s b/src/libs/xpcom18a4/nsprpub/pr/src/md/unix/os_Linux_x86_64.s
+index 567ae12d..0dec1b90 100644
+--- a/src/libs/xpcom18a4/nsprpub/pr/src/md/unix/os_Linux_x86_64.s
++++ b/src/libs/xpcom18a4/nsprpub/pr/src/md/unix/os_Linux_x86_64.s
 @@ -1,42 +1,42 @@
 -/ -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 -/ 
@@ -898,7 +907,7 @@ Index: src/libs/xpcom18a4/nsprpub/pr/src/md/unix/os_Linux_x86_64.s
      .text
      .globl _PR_x86_64_AtomicIncrement
      .align 4
-@@ -47,11 +47,11 @@
+@@ -47,11 +47,11 @@ _PR_x86_64_AtomicIncrement:
      incl %eax
      ret
  
@@ -915,7 +924,7 @@ Index: src/libs/xpcom18a4/nsprpub/pr/src/md/unix/os_Linux_x86_64.s
      .text
      .globl _PR_x86_64_AtomicDecrement
      .align 4
-@@ -62,11 +62,11 @@
+@@ -62,11 +62,11 @@ _PR_x86_64_AtomicDecrement:
      decl %eax
      ret
  
@@ -932,7 +941,7 @@ Index: src/libs/xpcom18a4/nsprpub/pr/src/md/unix/os_Linux_x86_64.s
      .text
      .globl _PR_x86_64_AtomicSet
      .align 4
-@@ -76,11 +76,11 @@
+@@ -76,11 +76,11 @@ _PR_x86_64_AtomicSet:
      xchgl %eax, (%rdi)
      ret
  
@@ -949,7 +958,7 @@ Index: src/libs/xpcom18a4/nsprpub/pr/src/md/unix/os_Linux_x86_64.s
      .text
      .globl _PR_x86_64_AtomicAdd
      .align 4
-@@ -91,5 +91,5 @@
+@@ -91,5 +91,5 @@ _PR_x86_64_AtomicAdd:
      addl %esi, %eax
      ret
  
