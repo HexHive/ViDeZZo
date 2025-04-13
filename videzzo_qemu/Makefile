@@ -37,7 +37,7 @@ qemu-dep:
 		sudo apt-get install -y make autoconf automake libtool ninja-build libglib2.0-dev \
 			libfdt-dev libpixman-1-dev zlib1g-dev patchelf wget libattr1 libattr1-dev \
 			libcap-ng-dev pkg-config libvncserver-dev && \
-		git clone https://gitlab.com/qemu-project/qemu.git --depth 1; make patch; fi
+		git clone https://github.com/qemu/qemu.git --depth 1; make patch; fi
 
 qemu: qemu-dep
 	make compile
