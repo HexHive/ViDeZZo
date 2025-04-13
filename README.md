@@ -8,7 +8,7 @@ The [research paper](https://nebelwelt.net/files/23Oakland4.pdf) was accepted by
 
 Currently, ViDeZZo supports libFuzzer in combination with ASAN and UBSAN.
 
-Currently, ViDeZZo supports QEMU (6.1.50 and above) and VirtualBox (C++)
+Currently, ViDeZZo supports QEMU and VirtualBox (C++)
 covering Audio, Storage, Network, USB, and Graphics virtual devices, and
 covering i386, x86_64, ARM, and AArch64 builds.
 

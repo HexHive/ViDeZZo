@@ -1,6 +1,7 @@
 Changes in 20250413
 
 Brief summary: 
+ - Support QEMU 9.2.93
  - Adjust since QEMU has replaced the `--enable-sanitizers` option with
    `--enable-asan` and `--enable-ubsan`.
  - Adjust since QEMU requires rustc for compilation since
