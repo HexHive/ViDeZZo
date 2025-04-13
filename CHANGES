@@ -1,0 +1,9 @@
+Changes in 20250413
+
+Brief summary: 
+ - Adjust since QEMU has replaced the `--enable-sanitizers` option with
+   `--enable-asan` and `--enable-ubsan`.
+ - Adjust since QEMU requires rustc for compilation since
+   [a1dacb66](https://gitlab.com/qemu-project/qemu/-/commit/a1dacb66915eb7d08a0596cc97068a37c39930d3).
+ - Adjust since QEMU has renamed sysemu to system since
+   [32cad1ff](https://gitlab.com/qemu-project/qemu/-/commit/32cad1ffb81dcecf6f4a8af56d6e5892682839b1).
