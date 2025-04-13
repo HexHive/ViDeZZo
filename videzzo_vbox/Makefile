@@ -11,7 +11,7 @@ CFLAGS ?=
 patch:
 	echo "nothing to patch"
 	cp 0001-Update-VBOX-to-support-ViDeZZo-as-a-library.patch vbox
-	cd vbox && patch -p 0 < 0001-Update-VBOX-to-support-ViDeZZo-as-a-library.patch && \
+	cd vbox && patch -p 1 < 0001-Update-VBOX-to-support-ViDeZZo-as-a-library.patch && \
 		cd $(OLDPWD)
 
 compile:
@@ -33,8 +33,8 @@ vbox-dep:
 	# svn might fail due to network issues
 	# please run `svn cleanup && svn update` to finish
 	if [ ! -d "vbox" ]; then \
-		svn co -r 95063 https://www.virtualbox.org/svn/vbox/trunk vbox; make patch; fi
-
+		wget https://download.virtualbox.org/virtualbox/7.0.20/VirtualBox-7.0.20.tar.bz2 -O vbox.tar.bz2; \
+		mkdir vbox && tar -xf vbox.tar.bz2 -C vbox --strip-components=1; make patch; fi
 vbox: vbox-dep
 	make compile
 
