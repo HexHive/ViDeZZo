@@ -39,8 +39,8 @@
 #include "qemu/cutils.h"
 #include "qemu/datadir.h"
 #include "qemu/main-loop.h"
-#include "sysemu/qtest.h"
-#include "sysemu/sysemu.h"
+#include "system/qtest.h"
+#include "system/system.h"
 #include "videzzo.h"
 #ifdef CLANG_COV_DUMP
 #include "clangcovdump.h"

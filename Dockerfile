@@ -17,6 +17,7 @@ RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 RUN python3 get-pip.py
 RUN python3 -m pip install wllvm picire gdown pyyaml tomli
 
+
 WORKDIR /root
 
 # update binutils
@@ -30,6 +31,11 @@ RUN apt-get install -y gdb
 RUN wget -q -O ~/.gdbinit-gef.py https://raw.githubusercontent.com/hugsy/gef/main/gef.py
 RUN echo source /root/.gdbinit-gef.py >> ~/.gdbinit
 ENV LC_CTYPE=C.UTF-8
+
+
+# update rustc
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # virtualbox
 RUN apt-get install -y acpica-tools chrpath doxygen g++-multilib libasound2-dev libcap-dev \
