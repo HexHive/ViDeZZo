@@ -29,6 +29,7 @@ compile-debug:
 .PHONY: vbox
 
 vbox-dep:
+	bash -x 0007-update-gcc-for-kernel-modules.sh
 	# this will pull vbox and kbuild
 	# svn might fail due to network issues
 	# please run `svn cleanup && svn update` to finish
