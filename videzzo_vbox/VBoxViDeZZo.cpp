@@ -1008,6 +1008,38 @@ static void cleanup(int sig) {
     exit(0);
 }
 
+void find_and_apply_madvise() {
+    FILE *maps_file = fopen("/proc/self/maps", "r");
+    if (!maps_file) {
+        perror("fopen");
+        return;
+    }
+
+    char line[256];
+    unsigned long start, end;
+    char permissions[5];
+    char path[256];
+
+    // Iterate through each line in /proc/self/maps
+    while (fgets(line, sizeof(line), maps_file)) {
+        // Parse the line to extract the memory region info
+        if (sscanf(line, "%lx-%lx %4s %*s %*s %*s %s", &start, &end, permissions, path) == 4) {
+            // Check if the path matches VBoxVMM.so and permissions include rw-
+            if (strstr(path, "VBoxVMM.so") && strcmp(permissions, "rw-p") == 0) {
+                // Apply madvise with MADV_DONTFORK on the found segment
+                if (madvise((void *)start, end - start, MADV_DOFORK) != 0) {
+                    perror("madvise");
+                } else {
+                    printf("Applied MADV_DONTFORK on segment: %lx-%lx\n", start, end);
+                }
+                break;
+            }
+        }
+    }
+
+    fclose(maps_file);
+}
+
 int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
 {
     char *target_name = nullptr;
@@ -1131,6 +1163,9 @@ int LLVMFuzzerInitialize(int *argc, char ***argv, char ***envp)
     // signal(SIGINT,  SIG_DFL);
     // signal(SIGTERM, SIG_DFL);
     // signal(SIGUSR1, SIG_DFL);
+
+    // disable MADV_DONTFORK on VBoxVMM.so
+    find_and_apply_madvise();
 
     return 0;
 }
