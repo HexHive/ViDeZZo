@@ -543,8 +543,11 @@ class Model(object):
 """
         self.append_code(helpers)
 
-    def append_code(self, code):
-        self.code.append(' ' * self.indent * 4 + code)
+    def append_code(self, code, indent=None):
+        if indent != None:
+            self.code.append(' ' * indent * 4 + code)
+        else:
+            self.code.append(' ' * self.indent * 4 + code)
 
     def get_code(self):
         self.gen_license()
@@ -720,3 +723,150 @@ class Model(object):
     def get_xml(self):
         self.gen_data_model_xml()
         return '\n'.join(self.code)
+
+    def gen_field_size_devilang(self, field_size):
+        if field_size == 1:
+            return 'u8'
+        elif field_size == 2:
+            return 'u16'
+        elif field_size == 4:
+            return 'u32'
+        elif field_size == 8:
+            return 'u64'
+        else:
+            if field_size < 1024:
+                return f'bytes[{field_size}]'
+            else:
+                return f'bytes[{hex(field_size)}]'
+
+    def gen_sentinel(self, point_to):
+        return ' | '.join('{}.{}[{}]'.format(
+            flag['struct_type'],
+            flag['field_name'],
+            flag['bit']) for flag in point_to['flags'])
+
+    def get_data_model_devilang_with_syntactic_sugar(self):
+        pass
+
+    def get_data_model_devilang(self):
+        # w/o compiler sugars
+        for struct_type, fields in self.structs.items():
+            # structs
+            self.indent = 0
+            self.append_code('struct {} {{\n'.format(struct_type))
+            self.indent += 1
+            for field_name, metadata in fields.items():
+                # name:
+                self.append_code(f'{field_name}:')
+                # type:
+                field_size = metadata['field_size']
+                field_type = metadata['field_type']
+                if field_type & FIELD_POINTER:
+                    if field_size > 8:
+                        raise ValueError(f'invalid field size {field_size}')
+                    self.append_code(f' ptr<{self.gen_field_size_devilang(field_size)}>', indent=0)
+                else:
+                    self.append_code(f' {self.gen_field_size_devilang(field_size)}', indent=0)
+                # modifier
+                if field_type & FIELD_FLAG:
+                    self.append_code(' flag', indent=0)
+                if field_type & FIELD_RANDOM:
+                    self.append_code(' random', indent=0)
+                if field_type & FIELD_CONSTANT:
+                    self.append_code(' immediate', indent=0)
+                if field_type & FIELD_POINTER:
+                    assert 'point_to' in metadata
+                    if 'alignment' in metadata['point_to']:
+                        self.append_code(' align {}'.format(metadata['point_to']['alignment']), indent=0)
+                # bitBlock or immBlock
+                if field_type & FIELD_FLAG:
+                    self.append_code(' [\n', indent=0)
+                    assert 'flags' in metadata
+                    self.indent += 1
+                    for start, length_and_initvalue in metadata['flags'].items():
+                        start = int(start)
+                        length = length_and_initvalue['length']
+                        initvalue = length_and_initvalue['initvalue']
+                        if initvalue is not None:
+                            if initvalue < 1024:
+                                self.append_code(f'bits {start}..{start + length - 1} = {initvalue};\n')
+                            else:
+                                self.append_code(f'bits {start}..{start + length - 1} = {hex(initvalue)};\n')
+                        else:
+                            self.append_code(f'bits {start}..{start + length - 1};\n')
+                    self.indent -= 1
+                    self.append_code('];\n')
+                elif field_type & FIELD_CONSTANT:
+                    self.append_code(' [\n', indent=0)
+                    assert 'field_value' in metadata
+                    self.indent += 1
+                    for value in sorted(metadata['field_value']):
+                        if value < 1024:
+                            self.append_code(f'imm {value};\n')
+                        else:
+                            self.append_code(f'imm {hex(value)};\n')
+                    self.indent -= 1
+                    self.append_code('];\n')
+                else:
+                    self.append_code(';\n', indent=0)
+            self.indent -= 1
+            self.append_code('}\n')
+
+            # topologies
+            for field_name, metadata in fields.items():
+                # pointer
+                field_size = metadata['field_size']
+                field_type = metadata['field_type']
+                if not field_type & FIELD_POINTER:
+                    continue
+                assert 'point_to' in metadata
+                point_to = metadata['point_to']
+                if 'linked_list' in point_to and point_to['linked_list'] == 'single':
+                    self.append_code('\nlist<{}> {{\n'.format(' | '.join(point_to['types'].values())))
+                    self.indent += 1
+                    self.append_code(f'head = {struct_type}.{field_name};\n')
+                    self.append_code('tail = {}.{};\n'.format(point_to['tail']['struct_type'], point_to['tail']['field_name']))
+                    self.append_code('next = {};\n'.format(' | '.join(point_to['links'].values())))
+                    if 'flags' in point_to and point_to['flags'] is not None:
+                        self.append_code(f'sentinel = {self.gen_sentinel(point_to)};\n')
+                    if 'alignment' in point_to:
+                        self.append_code('align = {};\n'.format(point_to['alignment']))
+                    self.indent -= 1
+                    self.append_code('}\n')
+                    continue
+                if 'tail' in point_to and point_to['tail'] is True:
+                    continue
+                self.append_code('\npointer {\n')
+                self.indent += 1
+                self.append_code(f'from = {struct_type}.{field_name};\n')
+                self.append_code('to = {};\n'.format(' | '.join(point_to['types'].values())))
+                if 'flags' in point_to and point_to['flags'] is not None:
+                    self.append_code(f'sentinel = {self.gen_sentinel(point_to)};\n')
+                assert 'alignment' in point_to
+                self.append_code('align = {};\n'.format(point_to['alignment']))
+                self.indent -= 1
+                self.append_code('}\n')
+
+        # head
+        self.append_code('\nhead {\n')
+        self.indent += 1
+        head = self.get_head()
+        self.append_code('to = {};\n'.format(' '.join(head)))
+        positions = self.get_instrumentation_points();
+        for index, position in enumerate(positions):
+            if index == 0:
+                self.append_code('position = [\n')
+            self.indent += 1
+            self.append_code('filename = {};\n'.format(position['filename']))
+            self.append_code('caller = {};\n'.format(position['callstack'][0]))
+            self.append_code('callee = {};\n'.format(position['callstack'][1]))
+            self.append_code('call_depth = {};\n'.format(position['callstack'][2]))
+            self.append_code('argument_index = {};\n'.format(position['callstack'][3]))
+            self.indent -= 1
+            if index != len(positions) - 1:
+                self.append_code('] | [\n')
+            else:
+                self.append_code(']\n')
+        self.indent -= 1
+        self.append_code('}\n')
+        return ''.join(self.code)
